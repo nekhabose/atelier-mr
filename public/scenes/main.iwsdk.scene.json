@@ -155,6 +155,22 @@
       }
     },
     {
+      "id": "closet-panel",
+      "name": "Closet Panel",
+      "content": {
+        "type": "asset",
+        "asset": "closet-panel"
+      },
+      "transform": {
+        "position": [-0.52, 0.86, -0.78],
+        "rotationDeg": [-24, 34, 0],
+        "scale": 0.095
+      },
+      "components": {
+        "RayInteractable": {}
+      }
+    },
+    {
       "id": "key-light",
       "name": "Key Light",
       "transform": {

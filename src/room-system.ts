@@ -26,7 +26,7 @@ import {
 import { AtelierSystem } from './atelier-system.js';
 
 /** Scene nodes that make up the studio and move together. */
-const STUDIO_NODES = ['dress-form', 'clothing-rack', 'swatch-board', 'atelier-panel', 'shadow-catcher'];
+const STUDIO_NODES = ['dress-form', 'clothing-rack', 'swatch-board', 'atelier-panel', 'closet-panel', 'shadow-catcher'];
 /** Distance from the studio frame origin to the wall (deepest authored point + clearance). */
 const STUDIO_DEPTH = 2.05;
 /** Only walls in this range (metres along your gaze) are used for snapping. */

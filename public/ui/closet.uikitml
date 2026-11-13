@@ -1,0 +1,203 @@
+<!--
+  Digital Closet panel. ClosetSystem toggles between the browse state
+  (#browse-actions) and the design state (#design-section + #design-actions),
+  and updates #closet-title / #closet-note and chip highlights at runtime.
+-->
+<style>
+  .panel-root {
+    flex-direction: column;
+    width: 440px;
+  }
+
+  .panel-content {
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 10px;
+  }
+
+  .eyebrow {
+    color: #8a6a2f;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .eyebrow:dark {
+    color: #e2c27d;
+  }
+
+  .heading {
+    color: #1c1d20;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 34px;
+  }
+
+  .heading:dark {
+    color: #fafaf7;
+  }
+
+  .note {
+    color: #3a3b40;
+    font-size: 17px;
+    line-height: 23px;
+  }
+
+  .note:dark {
+    color: #d8d9dd;
+  }
+
+  .section {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .row-label {
+    color: #6b6f78;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+
+  .row-label:dark {
+    color: #a9acb4;
+  }
+
+  .row {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .chip {
+    flex-grow: 1;
+    flex-basis: 0;
+    align-items: center;
+    justify-content: center;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-radius: 10px;
+    border-width: 2px;
+    border-color: #d9d3c7;
+    background-color: #f3efe7;
+    color: #2b2118;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .chip:dark {
+    border-color: #4a4d55;
+    background-color: #2c2e33;
+    color: #f1ede4;
+  }
+
+  .dot {
+    width: 33px;
+    height: 33px;
+    border-radius: 17px;
+    border-width: 3px;
+    border-color: #d9d3c7;
+    cursor: pointer;
+  }
+
+  .dot:dark {
+    border-color: #4a4d55;
+  }
+
+  .actions {
+    flex-direction: row;
+    gap: 10px;
+    padding-top: 8px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 20px;
+  }
+
+  .button-label {
+    transform-translate-y: 1px;
+  }
+</style>
+<Panel class="panel-root">
+  <div class="panel-content">
+    <div id="closet-eyebrow" class="eyebrow">MY CLOSET</div>
+    <div id="closet-title" class="heading">Your closet</div>
+    <div id="closet-note" class="note">Recreate clothes you own, then mix them on the form.</div>
+    <div id="design-section" class="section" style="display: none">
+      <div class="row-label">GARMENT</div>
+      <div class="row">
+        <div id="tpl-top" class="chip">Top</div>
+        <div id="tpl-trousers" class="chip">Trousers</div>
+        <div id="tpl-skirt" class="chip">Skirt</div>
+        <div id="tpl-dress" class="chip">Dress</div>
+        <div id="tpl-jacket" class="chip">Jacket</div>
+      </div>
+      <div class="row-label">COLOUR</div>
+      <div class="row">
+        <div id="col-white" class="dot" style="background-color: #f4f2ec"></div>
+        <div id="col-cream" class="dot" style="background-color: #e9dcc0"></div>
+        <div id="col-camel" class="dot" style="background-color: #b98a5a"></div>
+        <div id="col-pink" class="dot" style="background-color: #e7a6b0"></div>
+        <div id="col-red" class="dot" style="background-color: #a8262f"></div>
+        <div id="col-green" class="dot" style="background-color: #4f6b45"></div>
+        <div id="col-blue" class="dot" style="background-color: #4a77b4"></div>
+        <div id="col-navy" class="dot" style="background-color: #1f2d52"></div>
+        <div id="col-grey" class="dot" style="background-color: #8b8d93"></div>
+        <div id="col-black" class="dot" style="background-color: #1a1a1d"></div>
+      </div>
+      <div class="row-label">FABRIC</div>
+      <div class="row">
+        <div id="mat-cotton" class="chip">Cotton</div>
+        <div id="mat-satin" class="chip">Satin</div>
+        <div id="mat-knit" class="chip">Knit</div>
+        <div id="mat-wool" class="chip">Wool</div>
+        <div id="mat-denim" class="chip">Denim</div>
+      </div>
+      <div class="row">
+        <div id="mat-stripe" class="chip">Stripe</div>
+        <div id="mat-check" class="chip">Check</div>
+        <div id="mat-plaid" class="chip">Plaid</div>
+        <div id="mat-dots" class="chip">Dots</div>
+        <div id="mat-floral" class="chip">Floral</div>
+      </div>
+    </div>
+  </div>
+  <div id="browse-actions" class="actions">
+    <Button id="new-button">
+      <ButtonIcon>
+        <Plus></Plus>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">New piece</ButtonLabel>
+    </Button>
+    <Button id="edit-button" variant="secondary">
+      <ButtonIcon>
+        <Pencil></Pencil>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Edit</ButtonLabel>
+    </Button>
+    <Button id="remove-button" variant="secondary">
+      <ButtonIcon>
+        <Trash2></Trash2>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Remove</ButtonLabel>
+    </Button>
+  </div>
+  <div id="design-actions" class="actions" style="display: none">
+    <Button id="save-button">
+      <ButtonIcon>
+        <Check></Check>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Save to closet</ButtonLabel>
+    </Button>
+    <Button id="cancel-button" variant="secondary">
+      <ButtonIcon>
+        <X></X>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Cancel</ButtonLabel>
+    </Button>
+  </div>
+</Panel>

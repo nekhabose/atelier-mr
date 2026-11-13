@@ -89,6 +89,7 @@ export class AtelierSystem extends createSystem({
   wearCount = 0;
   tailorCount = 0;
   fabricCount = 0;
+  private outfitName = '';
   private formEntity!: Entity;
   private outfit!: Group;
   private pieces: GarmentPiece[] = [];
@@ -448,9 +449,64 @@ export class AtelierSystem extends createSystem({
     }
   }
 
+  // ---------------------------------------------------------------- closet hooks
+
+  /** Name shown for the outfit currently on the form. */
+  get outfitTitle(): string {
+    return this.outfitName;
+  }
+
+  /** The pieces currently on the form (live objects; tailoring mutates them). */
+  get currentPieces(): GarmentPiece[] {
+    return this.pieces;
+  }
+
+  /**
+   * Dress the form in an arbitrary set of pieces (closet items, drafts).
+   * The array and its piece objects are used as-is, so callers can keep
+   * editing a draft piece by reference.
+   */
+  dress(pieces: GarmentPiece[], name: string, note: string, opts: { quiet?: boolean } = {}): void {
+    this.lookIndex = -1;
+    this.pieces = pieces;
+    this.selectedPiece = this.outermostPiece();
+    this.rebuildAll();
+    if (!opts.quiet) {
+      this.wearT = 0;
+      this.wearCount++;
+      AudioUtils.play(this.formEntity);
+    }
+    this.setPanel(name, note);
+    this.saveState();
+  }
+
+  /** Rebuild every worn piece after an external edit (e.g. template change). */
+  refreshAll(): void {
+    this.selectedPiece = this.outermostPiece();
+    this.rebuildAll();
+    this.saveState();
+  }
+
+  /** Rebuild one worn piece after an external edit (e.g. colour change). */
+  refreshPiece(index: number): void {
+    if (!this.pieces[index]) return;
+    this.rebuildPiece(index);
+    this.saveState();
+  }
+
+  /** Show or hide the designer looks on the rail (the closet swaps in its own). */
+  setDesignerRackVisible(visible: boolean): void {
+    for (const entity of this.queries.rackLooks.entities) {
+      entity.object3D!.visible = visible;
+      if (visible && !entity.hasComponent(RayInteractable)) entity.addComponent(RayInteractable);
+      if (!visible && entity.hasComponent(RayInteractable)) entity.removeComponent(RayInteractable);
+    }
+  }
+
   // ---------------------------------------------------------------- panel
 
-  private setPanel(name: string, note: string): void {
+  setPanel(name: string, note: string): void {
+    this.outfitName = name;
     this.panelText.name?.setProperties({ text: name });
     this.panelText.note?.setProperties({ text: note });
   }
@@ -465,7 +521,7 @@ export class AtelierSystem extends createSystem({
     try {
       localStorage.setItem(
         'atelier.state.v1',
-        JSON.stringify({ lookIndex: this.lookIndex, pieces: this.pieces }),
+        JSON.stringify({ lookIndex: this.lookIndex, pieces: this.pieces, name: this.outfitName }),
       );
     } catch {
       /* storage unavailable – fine */
@@ -476,14 +532,14 @@ export class AtelierSystem extends createSystem({
     try {
       const raw = localStorage.getItem('atelier.state.v1');
       if (!raw) return;
-      const data = JSON.parse(raw) as { lookIndex: number; pieces: GarmentPiece[] };
+      const data = JSON.parse(raw) as { lookIndex: number; pieces: GarmentPiece[]; name?: string };
       if (!Array.isArray(data.pieces) || data.pieces.length === 0) return;
       this.lookIndex = data.lookIndex;
       this.pieces = data.pieces;
       this.selectedPiece = this.outermostPiece();
       this.rebuildAll();
-      const look = LOOKS[this.lookIndex];
-      if (look) this.setPanel(look.name, 'Welcome back - your last look is still on the form.');
+      const name = LOOKS[this.lookIndex]?.name ?? data.name ?? 'Your mix';
+      this.setPanel(name, 'Welcome back - your last look is still on the form.');
     } catch {
       /* ignore corrupt state */
     }

@@ -69,8 +69,111 @@ export const SWATCH_WALL: string[] = [
   'olive-linen',
 ];
 
+// ------------------------------------------------------------ closet fabrics
+
+/** Colours offered by the closet builder. */
+export const CLOSET_COLORS = [
+  { key: 'white', name: 'White', hex: '#f4f2ec' },
+  { key: 'cream', name: 'Cream', hex: '#e9dcc0' },
+  { key: 'camel', name: 'Camel', hex: '#b98a5a' },
+  { key: 'pink', name: 'Pink', hex: '#e7a6b0' },
+  { key: 'red', name: 'Red', hex: '#a8262f' },
+  { key: 'green', name: 'Green', hex: '#4f6b45' },
+  { key: 'blue', name: 'Blue', hex: '#4a77b4' },
+  { key: 'navy', name: 'Navy', hex: '#1f2d52' },
+  { key: 'grey', name: 'Grey', hex: '#8b8d93' },
+  { key: 'black', name: 'Black', hex: '#1a1a1d' },
+] as const;
+export type ClosetColor = (typeof CLOSET_COLORS)[number]['key'];
+
+/** Fabric types offered by the closet builder (`adj` is used in item names). */
+export const CLOSET_MATERIALS = [
+  { key: 'cotton', name: 'Cotton', adj: 'cotton' },
+  { key: 'satin', name: 'Satin', adj: 'satin' },
+  { key: 'knit', name: 'Knit', adj: 'knit' },
+  { key: 'wool', name: 'Wool', adj: 'wool' },
+  { key: 'denim', name: 'Denim', adj: 'denim' },
+  { key: 'stripe', name: 'Stripe', adj: 'striped' },
+  { key: 'check', name: 'Check', adj: 'check' },
+  { key: 'plaid', name: 'Plaid', adj: 'plaid' },
+  { key: 'dots', name: 'Dots', adj: 'polka-dot' },
+  { key: 'floral', name: 'Floral', adj: 'floral' },
+] as const;
+export type ClosetMaterial = (typeof CLOSET_MATERIALS)[number]['key'];
+
+/** Fabric id for a closet colour + material, e.g. `c:stripe:navy`. */
+export function closetFabricId(material: ClosetMaterial, color: ClosetColor): string {
+  return `c:${material}:${color}`;
+}
+
+/** Parse a closet fabric id; undefined for library fabrics. */
+export function parseClosetFabric(
+  id: string,
+): { material: ClosetMaterial; color: ClosetColor } | undefined {
+  const [prefix, material, color] = id.split(':');
+  if (prefix !== 'c') return undefined;
+  if (!CLOSET_MATERIALS.some((m) => m.key === material)) return undefined;
+  if (!CLOSET_COLORS.some((c) => c.key === color)) return undefined;
+  return { material: material as ClosetMaterial, color: color as ClosetColor };
+}
+
+function shade(hex: string, amount: number): string {
+  const c = new Color(hex);
+  return '#' + (amount >= 0 ? c.lerp(new Color('#ffffff'), amount) : c.lerp(new Color('#000000'), -amount)).getHexString();
+}
+
+function isLight(hex: string): boolean {
+  const c = new Color(hex);
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b > 0.45;
+}
+
+const closetCache = new Map<string, Fabric>();
+
+function synthesizeClosetFabric(id: string): Fabric | undefined {
+  const parsed = parseClosetFabric(id);
+  if (!parsed) return undefined;
+  let fabric = closetCache.get(id);
+  if (fabric) return fabric;
+  const color = CLOSET_COLORS.find((c) => c.key === parsed.color)!;
+  const material = CLOSET_MATERIALS.find((m) => m.key === parsed.material)!;
+  const c = color.hex;
+  const contrast = isLight(c) ? '#20325e' : '#f2efe9';
+  const name = `${color.name} ${material.name}`;
+  const base = { id, name, tile: 0.2 } as const;
+  switch (parsed.material) {
+    case 'cotton':
+    case 'satin':
+    case 'knit':
+      fabric = { ...base, finish: parsed.material, pattern: 'solid', colors: [c] };
+      break;
+    case 'wool':
+      fabric = { ...base, finish: 'wool', pattern: 'herringbone', colors: [c, shade(c, isLight(c) ? -0.08 : 0.08)], tile: 0.05 };
+      break;
+    case 'denim':
+      fabric = { ...base, finish: 'denim', pattern: 'denim', colors: [c, shade(c, 0.25), shade(c, -0.25)], tile: 0.06 };
+      break;
+    case 'stripe':
+      fabric = { ...base, finish: 'knit', pattern: 'stripe', colors: [c, contrast], tile: 0.05 };
+      break;
+    case 'check':
+      fabric = { ...base, finish: 'cotton', pattern: 'gingham', colors: [isLight(c) ? '#f8f5ef' : shade(c, 0.85), isLight(c) ? '#20325e' : c], tile: 0.04 };
+      break;
+    case 'plaid':
+      fabric = { ...base, finish: 'wool', pattern: 'plaid', colors: [c, '#2b2622', '#e9d6a3'], tile: 0.12 };
+      break;
+    case 'dots':
+      fabric = { ...base, finish: 'silk', pattern: 'polka', colors: [c, contrast], tile: 0.05 };
+      break;
+    case 'floral':
+      fabric = { ...base, finish: 'cotton', pattern: 'floral', colors: [c, isLight(c) ? '#d4567a' : '#f4ead8', '#5c8a5a'], tile: 0.14 };
+      break;
+  }
+  closetCache.set(id, fabric);
+  return fabric;
+}
+
 export function fabricById(id: string): Fabric {
-  return FABRICS.find((f) => f.id === id) ?? FABRICS[0];
+  return FABRICS.find((f) => f.id === id) ?? synthesizeClosetFabric(id) ?? FABRICS[0];
 }
 
 const FINISH: Record<

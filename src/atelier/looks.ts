@@ -13,7 +13,7 @@ export interface Look {
 
 type PieceInit = Partial<GarmentPiece> & { kind: PieceKind; fabric: string };
 
-function piece(init: PieceInit): GarmentPiece {
+export function piece(init: PieceInit): GarmentPiece {
   const defaults: Record<PieceKind, Omit<GarmentPiece, 'kind' | 'fabric'>> = {
     dress: { hem: 0.5, neck: 0.05, sleeve: 0, fit: 0.7, flare: 0.12 },
     top: { hem: 0.95, neck: 0.03, sleeve: 0.14, fit: 0.5, flare: 0 },

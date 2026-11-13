@@ -19,4 +19,5 @@ export default defineAssets({
   'clothing-rack': createClothingRack(),
   'swatch-board': createSwatchBoard(),
   'atelier-panel': uikitml('atelier.uikitml', 'Atelier Panel'),
+  'closet-panel': uikitml('closet.uikitml', 'Closet Panel'),
 });

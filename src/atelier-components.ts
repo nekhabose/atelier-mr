@@ -35,3 +35,13 @@ export const WornPiece = createComponent('WornPiece', {
 
 /** The brass turntable under the mannequin – grab it to spin the form. */
 export const Turntable = createComponent('Turntable', {});
+
+/** A hanger on the closet rail. slot >= 0 is a saved item; -1 is "+ New piece". */
+export const ClosetSlot = createComponent('ClosetSlot', {
+  slot: { type: Types.Int16, default: 0 },
+});
+
+/** A tab above the rail that switches it between designer looks and the closet. */
+export const RackTab = createComponent('RackTab', {
+  closet: { type: Types.Boolean, default: false },
+});
