@@ -72,6 +72,13 @@ npm run typecheck  # app + serverless function
 npm run build      # static output in dist/
 ```
 
+Regression checks against the emulator (dev server running, XR session entered):
+
+```sh
+bash scripts/e2e-emulator.sh                         # 30-step hands-free journey
+npx @iwsdk/cli browser run scripts/check-face-upload.mjs  # needs dev up --allow-browser-automation
+```
+
 Pushes to `main` deploy to Vercel (Git integration) and to GitHub Pages
 (`.github/workflows/deploy.yml`).
 
