@@ -1,0 +1,109 @@
+<!--
+  Atelier status panel. Text nodes with ids are updated at runtime by
+  AtelierPanelSystem (look name, designer note, contextual hint).
+-->
+<style>
+  .panel-root {
+    flex-direction: column;
+    width: 440px;
+  }
+
+  .panel-content {
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 22px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 14px;
+  }
+
+  .eyebrow {
+    color: #8a6a2f;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .eyebrow:dark {
+    color: #e2c27d;
+  }
+
+  .heading {
+    color: #1c1d20;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 38px;
+  }
+
+  .heading:dark {
+    color: #fafaf7;
+  }
+
+  .note {
+    color: #3a3b40;
+    font-size: 19px;
+    line-height: 26px;
+  }
+
+  .note:dark {
+    color: #d8d9dd;
+  }
+
+  .hint {
+    margin-top: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 14px;
+    padding-right: 14px;
+    border-radius: 14px;
+    background-color: #f3ead8;
+    color: #5a4520;
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .hint:dark {
+    background-color: #3a3122;
+    color: #f1dfb6;
+  }
+
+  .actions {
+    flex-direction: row;
+    gap: 10px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 22px;
+  }
+
+  .button-label {
+    transform-translate-y: 1px;
+  }
+</style>
+<Panel class="panel-root">
+  <div class="panel-content">
+    <div class="eyebrow">ATELIER  |  HANDS-FIRST STUDIO</div>
+    <div id="look-name" class="heading">Choose a look</div>
+    <div id="look-note" class="note">Tap any outfit on the brass rail to dress the form.</div>
+    <div id="hint" class="hint">Pinch a gold pin and pull to tailor. Drop a fabric swatch on the form to re-skin it.</div>
+  </div>
+  <div class="actions">
+    <Button id="xr-button">
+      <ButtonIcon>
+        <RectangleGoggles></RectangleGoggles>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Enter Atelier</ButtonLabel>
+    </Button>
+    <Button id="exit-button" style="display: none">
+      <ButtonIcon>
+        <LogIn></LogIn>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Exit</ButtonLabel>
+    </Button>
+    <Button id="reset-button">
+      <ButtonIcon>
+        <RotateCcw></RotateCcw>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Reset look</ButtonLabel>
+    </Button>
+  </div>
+</Panel>
