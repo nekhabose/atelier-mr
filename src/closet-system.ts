@@ -22,6 +22,7 @@ import {
   UIKitMLAsset,
 } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
+import { sfx } from './atelier/sfx.js';
 import { ClosetSlot, RackLook, RackTab } from './atelier-components.js';
 import {
   CLOSET_CAPACITY,
@@ -325,6 +326,7 @@ export class ClosetSystem extends createSystem({
       this.items.push(item);
     }
     saveCloset(this.items);
+    sfx.success();
     this.selectedId = item.id;
     this.design = undefined;
     this.atelier.draftOpen = false;
@@ -431,6 +433,7 @@ export class ClosetSystem extends createSystem({
   }
 
   private showBrowse(note?: string): void {
+    this.atelier.stylistOpen = false;
     const selected = this.items.find((i) => i.id === this.selectedId);
     this.ui.eyebrow?.setProperties({ text: 'MY CLOSET' });
     this.ui.title?.setProperties({
@@ -484,6 +487,14 @@ export class ClosetSystem extends createSystem({
     this.atelier.dress(pieces, name, note);
     this.rebuildRail();
     return true;
+  }
+
+  /** Dress the form in explicit pieces (stylist refinements). */
+  wearPieces(pieces: GarmentPiece[], name: string, note: string): void {
+    if (this.design) this.endDesign();
+    this.selectedId = undefined;
+    this.atelier.dress(pieces, name, note);
+    this.rebuildRail();
   }
 
   private showDesign(): void {

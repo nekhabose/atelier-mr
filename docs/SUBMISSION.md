@@ -32,15 +32,19 @@ designer looks to dress the form. Pull the coloured pins to change hem,
 neckline, sleeves and waist; the garment is regenerated from measurements every
 frame while you drag. Drop a swatch onto one layer of the outfit (satin, velvet,
 silk, denim, linen, plaid, pinstripe and more) and only that piece changes.
-Undo, redo, reset and turn the form without leaving your seat.
+Undo, redo, reset and turn the form without leaving your seat. The studio is
+saved against a persistent world anchor, so next time it is waiting in the same
+corner of your room.
 
 The Digital Closet lets you recreate the clothes you actually own: pick a
 template, colour and fabric, then pull the pins until the length and fit match.
 The stylist then works for you, not as a chat window. Choose occasion, weather
 and mood; it weighs every wearable combination in your closet, puts its best
 idea on the form as a preview, and waits for you to Keep it, see the Next idea,
-or Undo. Change the weather and it re-plans. It also tells you which piece your
-closet is missing for that kind of day. Save the looks you love to a lookbook
+or Undo. Change the weather and it re-plans. Ask it to make the look warmer,
+dressier or more colourful and it edits the garments on the form - lets a hem
+down, adds sleeves, switches to knit or satin, layers your jacket - and tells
+you what it changed. It also tells you which piece your closet is missing. Save the looks you love to a lookbook
 and log an Outfit of the Day to keep a streak, a reason to come back each
 morning.
 
@@ -54,8 +58,7 @@ deterministic offline planner gives the same preview, keep and undo flow when th
 network or the key is unavailable, so the studio never depends on a third-party
 service.
 
-**What's next.** Persistent spatial anchors so the studio returns to the same
-corner of your room; a photo-to-garment flow to recreate clothes faster; voice
+**What's next.** A photo-to-garment flow to recreate clothes faster; voice
 for choosing occasions; sharing lookbooks with friends; and tuning on the Meta
 VR Glasses' narrower view.
 
@@ -79,8 +82,10 @@ demonstrates the three core gestures on first launch instead of a wall of text.
 3. Try: pinch a look on the rail, pull the coloured pins, drop a swatch on the
    jacket, tap **Turn**, then **Undo**.
 4. On the left panel: **Ask stylist**, choose Interview / Cold / Classic,
-   **Style me**, then **Next idea**, change the weather, then **Keep**.
-5. **Save look** and **Wear today**; reload the page and your look, lookbook and
+   **Style me**, then **Next idea**, tap **Warmer** and watch the outfit change,
+   then **Keep**.
+5. Leave and come back: the studio returns to the same spot in your room.
+6. **Save look** and **Wear today**; reload the page and your look, lookbook and
    streak are still there.
 
 Works without any API key (the stylist shows "OFFLINE"). With the key
@@ -90,11 +95,11 @@ configured it shows "CLAUDE".
 
 | Works today (verified in the IWSDK emulator and production URL) | Future |
 |---|---|
-| Room-aware placement on floor/wall planes, manual re-place | Persistent spatial anchors across sessions |
+| Room-aware placement on floor/wall planes, manual re-place, persistent anchor restore (emulator-verified) | Multi-anchor layouts (panels on separate surfaces) |
 | 8 looks, live tailoring of 4 regions, undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
 | 12 fabrics applied per garment | Photo-to-garment closet entry |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
-| Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, closet gaps, offline fallback | Voice constraints, calendar and weather context |
+| Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints, calendar and weather context |
 | Lookbook (6) and Outfit of the Day streak | Sharing, social lookbooks |
 | Claude stylist endpoint deployed, guarded, awaiting key | Tuning for Meta VR Glasses field of view |
 
@@ -114,7 +119,7 @@ the IWSDK emulator. Show only real footage; no AI-generated video.
 | 0:30-0:45 | Drag a satin swatch onto only the jacket; tap Turn to see the back | "Fabric per garment. Turn without standing up." |
 | 0:45-1:00 | Undo, Redo, Reset look | "Experiment freely; every change is undoable." |
 | 1:00-1:25 | Closet: New piece, Dress, green, satin, pull pins to match, Save | "Recreate the clothes you actually own." |
-| 1:25-2:05 | Ask stylist: Interview, Cold, Classic, Style me; preview badge; Next idea; switch to Warm, it re-plans; Keep | "It plans from your closet, shows you, and waits for your call." |
+| 1:25-2:05 | Ask stylist: Interview, Cold, Classic, Style me; preview badge; Next idea; tap Warmer, the hem drops and a jacket appears; Keep | "It plans from your closet, edits on request, and waits for your call." |
 | 2:05-2:25 | Save look, Wear today, streak badge turns gold; reload, look restored | "Save the looks you love; come back tomorrow." |
 | 2:25-2:40 | Wide shot of the studio; title card with URL | "Atelier. Open it in your Quest browser." |
 
@@ -128,10 +133,10 @@ on-device captures when a Quest is available.
 
 | Criterion (25% each) | Strengths | Gaps to close |
 |---|---|---|
-| Innovation & Creativity | Life-size tailoring with real generated geometry; room-aware studio; stylist that acts on a 3D form | Anchors not yet used |
+| Innovation & Creativity | Life-size tailoring with real generated geometry; room-aware studio that persists via anchors; stylist that edits a 3D garment | Anchor accuracy unverified on device |
 | Experience Design | Seated, ray and pinch at distance; ghost-hand tour; undo everywhere; daily loop | Needs a real-device comfort pass; panels sit low for very tall standing users |
 | Technical Implementation | ECS systems, procedural assets, scene understanding, validated serverless AI with offline fallback, typecheck + regression script | 60 fps on Quest unmeasured (emulator: p50 16.7 ms display-capped, p95 33.9 ms on desktop) |
-| Polish & Presentation | Cohesive brass and walnut studio, chime, wear animation, editorial panel copy | Video and on-device screenshots still to capture |
+| Polish & Presentation | Cohesive brass and walnut studio, synthesised sound design, wear animation, editorial panel copy | Video and on-device screenshots still to capture |
 
 Special awards worth claiming: **Best Agentic Interaction** (plan, act on the
 form, confirm or undo, re-plan), **Best Reason to Come Back** (closet, lookbook,

@@ -8,6 +8,7 @@
  */
 import { createSystem, UIKit, UIKitMLAsset } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
+import { sfx } from './atelier/sfx.js';
 import { localDate } from './atelier/ootd.js';
 import { LOOKBOOK_CAPACITY, loadLookbook, removeLook, SavedLook, saveLook } from './atelier/lookbook.js';
 
@@ -64,6 +65,7 @@ export class LookbookSystem extends createSystem({}) {
     this.looks = saveLook(this.looks, name, pieces, localDate());
     this.wornId = this.looks[0].id;
     this.render();
+    sfx.success();
     this.say(
       `Saved "${this.looks[0].name}" to your lookbook.` +
         (full ? ' Your oldest look made room for it.' : ' Tap it any day to wear it again.'),
@@ -83,12 +85,13 @@ export class LookbookSystem extends createSystem({}) {
       return;
     }
     this.wornId = look.id;
+    this.render();
     this.atelier.dress(
       look.pieces.map((p) => ({ ...p })),
       look.name,
       `From your lookbook, saved ${look.date}.`,
     );
-    this.say(`Wearing "${look.name}". Tap it again to remove it from the lookbook.`);
+    this.say(`Wearing "${look.name}". Tap the gold chip again to remove it from the lookbook.`);
   }
 
   private say(text: string): void {
@@ -99,7 +102,19 @@ export class LookbookSystem extends createSystem({}) {
     this.empty?.setProperties({ display: this.looks.length === 0 ? 'flex' : 'none' });
     this.chips.forEach((chip, i) => {
       const look = this.looks[i];
-      chip?.setProperties(look ? { display: 'flex', text: shorten(look.name) } : { display: 'none' });
+      if (!look) {
+        chip?.setProperties({ display: 'none' });
+        return;
+      }
+      // The look on the form is gold, so "tap again to remove" has a visible target.
+      const worn = look.id === this.wornId;
+      chip?.setProperties({
+        display: 'flex',
+        text: worn ? `${shorten(look.name)}  x` : shorten(look.name),
+        backgroundColor: worn ? '#e2c27d' : '#2c2e33',
+        borderColor: worn ? '#e2c27d' : '#4a4d55',
+        color: worn ? '#2b2118' : '#f1ede4',
+      });
     });
   }
 }

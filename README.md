@@ -23,6 +23,9 @@ you can click.
 - **Purposeful passthrough:** on entry the studio is placed on your real floor,
   snapped against a detected wall when one is in a comfortable range, or set in
   front of you when no planes are reported. **Move studio** re-places it.
+- **Remembers your room:** the studio is saved against a persistent world
+  anchor, so next time it returns to the same spot in your room (falls back to
+  plane placement when the anchor cannot be restored).
 - **Tap to wear:** eight original designer looks hang on the rail.
 - **Live tailoring:** garments are generated from measurements, so dragging a
   pin rebuilds the cloth every frame. **Undo / Redo / Reset look** cover every
@@ -35,13 +38,20 @@ you can click.
   10 fabrics, tailor them to match, then mix them on the form. Edit and remove.
 - **Agentic stylist:** pick occasion, weather and mood. The stylist weighs every
   wearable combination in your closet, previews its best idea on the form, and
-  waits: **Keep**, **Next idea** or **Undo**. Change a chip and it re-plans. It
-  also points out the piece your closet is missing for that kind of day.
+  waits: **Keep**, **Next idea** or **Undo**. Change a chip and it re-plans.
+  **Refine** it - Warmer, Dressier, More colour - and the stylist edits the
+  outfit on the form (longer hems, sleeves, knit or satin, a colour, a jacket
+  from your closet) and says what it changed. It also points out the piece your
+  closet is missing for that kind of day.
   Claude plans when the server has a key; a deterministic offline planner
   answers otherwise, so the stylist always works.
 - **Lookbook and Outfit of the Day:** save whole outfits (with tailoring) and
   put them back on any day; **Wear today** logs a daily streak.
-- **Ghost-hand tour:** a translucent hand demonstrates pinch, pull and drop.
+- **Ghost-hand tour:** a translucent hand demonstrates pinch, pull, drop and
+  asking the stylist.
+- **Sound design:** taps, a ratchet while you pull a pin, a cloth swish, a
+  settle when the studio lands and a sparkle when the stylist acts, all
+  synthesised with Web Audio (no audio files).
 
 ## Develop
 
@@ -82,7 +92,7 @@ src/atelier-system.ts     wear, tailor, fabric drop, undo/redo, turntable
 src/closet-system.ts      Digital Closet rail and builder
 src/stylist-system.ts     stylist proposals, Outfit of the Day
 src/lookbook-system.ts    saved looks
-src/room-system.ts        floor / wall placement from scene understanding
+src/room-system.ts        floor / wall placement + persistent anchor
 src/onboarding-system.ts  ghost-hand tour
 public/scenes/            scene composition (JSON)
 public/ui/                spatial panels (UIKitML)

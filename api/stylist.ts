@@ -1,9 +1,13 @@
 /**
  * POST /api/stylist – Atelier's AI stylist (Vercel Function, Node runtime).
  *
- * The headset sends an occasion, the weather, a mood and a description of the
- * user's closet; Claude picks an outfit by item id and explains it. The API key
- * lives only in the ANTHROPIC_API_KEY environment variable.
+ * Two modes, both answered with schema-validated JSON:
+ *  - style: occasion, weather, mood and the user's closet in; up to three
+ *    ranked outfits (closet item ids + explanation) out.
+ *  - refine: the outfit on the form plus "warmer" / "dressier" / "colour" in;
+ *    a short list of garment edits (length, sleeves, material, colour, an
+ *    optional closet jacket) out, which the headset applies to the form.
+ * The API key lives only in the ANTHROPIC_API_KEY environment variable.
  *
  * Guardrails for a public endpoint:
  *  - POST only, JSON only, small body cap, allow-listed browser origins;
@@ -29,6 +33,14 @@ import {
   OCCASIONS,
   SLEEVES,
   MAX_OPTIONS,
+  COLOR_KEYS,
+  KEEP,
+  MATERIAL_KEYS,
+  MAX_EDITS,
+  PieceEdit,
+  REFINES,
+  RefineReply,
+  RefineRequest,
   StylistItem,
   StylistReply,
   StylistRequest,
@@ -87,6 +99,45 @@ const SCHEMA = {
   additionalProperties: false,
 } as const;
 
+const REFINE_SYSTEM = `You are the stylist inside Atelier, a mixed-reality fashion studio. \
+An outfit you proposed is on a mannequin. The user asks you to make it warmer, dressier, or add colour. \
+Change it with a few concrete garment edits that are applied to the mannequin, and say what you did.
+
+Rules:
+- Edit only the outfit pieces listed (ids p0, p1, ...). Use "keep" for anything you leave alone.
+- At most ${MAX_EDITS} edits, and only edits that serve the request. Fewer is better.
+- length and sleeves use the given vocabulary; material and color must come from the allowed lists.
+- addItemId: optionally layer ONE jacket from the closet list (by id) when the outfit has no jacket and \
+it serves the request; otherwise "".
+- warmer: longer hems and sleeves, warmer materials (wool, knit), a jacket. dressier: refined materials \
+(satin, wool), cleaner lengths, structure. colour: one confident colour or pattern, keep the rest calm.
+- summary: one sentence (max 30 words), first person, naming what you changed, e.g. \
+"Warmer: I layered your black wool jacket and let the skirt down to midi."`;
+
+const EDIT_SCHEMA = {
+  type: 'object',
+  properties: {
+    piece: { type: 'string' },
+    length: { type: 'string', enum: [...LENGTHS, KEEP] },
+    sleeves: { type: 'string', enum: [...SLEEVES, KEEP] },
+    material: { type: 'string', enum: [...MATERIAL_KEYS, KEEP] },
+    color: { type: 'string', enum: [...COLOR_KEYS, KEEP] },
+  },
+  required: ['piece', 'length', 'sleeves', 'material', 'color'],
+  additionalProperties: false,
+} as const;
+
+const REFINE_SCHEMA = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    addItemId: { type: 'string' },
+    edits: { type: 'array', items: EDIT_SCHEMA },
+  },
+  required: ['summary', 'addItemId', 'edits'],
+  additionalProperties: false,
+} as const;
+
 // ------------------------------------------------------------------ guardrails
 
 const hits = new Map<string, number[]>();
@@ -141,16 +192,11 @@ function json(status: number, body: unknown, headers: Record<string, string>): R
 const oneOf = <T extends readonly string[]>(list: T, v: unknown): v is T[number] =>
   typeof v === 'string' && (list as readonly string[]).includes(v);
 
-/** Strictly validate the request; returns null when anything is off. */
-function parseRequest(raw: unknown): StylistRequest | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const r = raw as Record<string, unknown>;
-  if (!oneOf(OCCASIONS, r.occasion) || !oneOf(WEATHERS, r.weather) || !oneOf(MOODS, r.mood)) {
-    return null;
-  }
-  if (!Array.isArray(r.items) || r.items.length === 0 || r.items.length > MAX_ITEMS) return null;
+/** Validate a list of described pieces; null when anything is off. */
+function parseItems(raw: unknown, max: number): StylistItem[] | null {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > max) return null;
   const items: StylistItem[] = [];
-  for (const it of r.items as Record<string, unknown>[]) {
+  for (const it of raw as Record<string, unknown>[]) {
     if (
       !it ||
       typeof it.id !== 'string' ||
@@ -177,10 +223,96 @@ function parseRequest(raw: unknown): StylistRequest | null {
       sleeves: it.sleeves,
     });
   }
+  return items;
+}
+
+/** Strictly validate a style request; returns null when anything is off. */
+function parseRequest(raw: unknown): StylistRequest | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (!oneOf(OCCASIONS, r.occasion) || !oneOf(WEATHERS, r.weather) || !oneOf(MOODS, r.mood)) {
+    return null;
+  }
+  const items = parseItems(r.items, MAX_ITEMS);
+  if (!items) return null;
   return { occasion: r.occasion, weather: r.weather, mood: r.mood, items };
 }
 
+/** Strictly validate a refine request. */
+function parseRefine(raw: unknown): RefineRequest | null {
+  const base = parseRequest(raw);
+  const r = raw as Record<string, unknown>;
+  if (!base || r.mode !== 'refine' || !oneOf(REFINES, r.refine)) return null;
+  const outfit = parseItems(r.outfit, 4);
+  if (!outfit || !outfit.every((i, n) => i.id === `p${n}`)) return null;
+  return { ...base, mode: 'refine', refine: r.refine, outfit };
+}
+
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '...' : s);
+
+const line = (i: StylistItem) =>
+  `- id ${i.id}: ${i.name} (${i.kind}; colour ${i.color}; fabric ${i.fabric}; ` +
+  `length ${i.length}; sleeves ${i.sleeves})`;
+
+function failure(error: unknown, headers: Record<string, string>): Response {
+  if (error instanceof Anthropic.RateLimitError) return json(429, { error: 'busy' }, headers);
+  if (error instanceof Anthropic.AuthenticationError) {
+    return json(503, { error: 'stylist_not_configured' }, headers);
+  }
+  if (error instanceof Anthropic.APIError) {
+    return json(502, { error: 'upstream_error', status: error.status }, headers);
+  }
+  return json(502, { error: 'stylist_failed' }, headers);
+}
+
+/** Ask Claude for a few concrete edits to the outfit on the form. */
+async function refine(req: RefineRequest, headers: Record<string, string>): Promise<Response> {
+  const prompt =
+    `Request: ${req.refine}\nOccasion: ${req.occasion}\nWeather: ${req.weather}\nMood: ${req.mood}\n\n` +
+    `Outfit on the mannequin:\n${req.outfit.map(line).join('\n')}\n\n` +
+    `Closet (jackets may be added):\n${req.items.map(line).join('\n')}`;
+  const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 3000,
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: REFINE_SCHEMA } },
+      system: REFINE_SYSTEM,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    if (response.stop_reason === 'refusal') return json(422, { error: 'declined' }, headers);
+    if (response.stop_reason === 'max_tokens') return json(502, { error: 'no_answer' }, headers);
+    const block = response.content.find((b) => b.type === 'text');
+    if (!block || block.type !== 'text') return json(502, { error: 'no_answer' }, headers);
+    const answer = JSON.parse(block.text) as Partial<RefineReply>;
+    const ids = new Set(req.outfit.map((i) => i.id));
+    const edits: PieceEdit[] = [];
+    for (const e of Array.isArray(answer.edits) ? answer.edits : []) {
+      if (
+        e &&
+        ids.has(e.piece) &&
+        oneOf([...LENGTHS, KEEP] as const, e.length) &&
+        oneOf([...SLEEVES, KEEP] as const, e.sleeves) &&
+        oneOf([...MATERIAL_KEYS, KEEP] as const, e.material) &&
+        oneOf([...COLOR_KEYS, KEEP] as const, e.color)
+      ) {
+        edits.push({ piece: e.piece, length: e.length, sleeves: e.sleeves, material: e.material, color: e.color });
+      }
+      if (edits.length >= MAX_EDITS) break;
+    }
+    const jacket = req.items.find((i) => i.id === answer.addItemId && i.kind === 'jacket');
+    const hasJacket = req.outfit.some((i) => i.kind === 'jacket');
+    const reply: RefineReply = {
+      summary: clip(String(answer.summary ?? ''), 200),
+      addItemId: jacket && !hasJacket ? jacket.id : '',
+      edits,
+    };
+    if (reply.edits.length === 0 && !reply.addItemId) return json(502, { error: 'no_edits' }, headers);
+    return json(200, reply, headers);
+  } catch (error) {
+    return failure(error, headers);
+  }
+}
 
 // ------------------------------------------------------------------ handlers
 
@@ -202,21 +334,21 @@ export async function POST(request: Request): Promise<Response> {
 
   const text = await request.text();
   if (text.length > MAX_BODY) return json(413, { error: 'too_large' }, headers);
-  let parsed: StylistRequest | null = null;
+  let body: unknown = null;
   try {
-    parsed = parseRequest(JSON.parse(text));
+    body = JSON.parse(text);
   } catch {
-    parsed = null;
+    body = null;
   }
+  if (body && typeof body === 'object' && (body as Record<string, unknown>).mode === 'refine') {
+    const req = parseRefine(body);
+    if (!req) return json(400, { error: 'invalid_request' }, headers);
+    return refine(req, headers);
+  }
+  const parsed = parseRequest(body);
   if (!parsed) return json(400, { error: 'invalid_request' }, headers);
 
-  const closet = parsed.items
-    .map(
-      (i) =>
-        `- id ${i.id}: ${i.name} (${i.kind}; colour ${i.color}; fabric ${i.fabric}; ` +
-        `length ${i.length}; sleeves ${i.sleeves})`,
-    )
-    .join('\n');
+  const closet = parsed.items.map(line).join('\n');
   const prompt =
     `Occasion: ${parsed.occasion}\nWeather: ${parsed.weather}\nMood: ${parsed.mood}\n\n` +
     `Closet:\n${closet}`;
@@ -255,13 +387,6 @@ export async function POST(request: Request): Promise<Response> {
     const reply: StylistReply = { options };
     return json(200, reply, headers);
   } catch (error) {
-    if (error instanceof Anthropic.RateLimitError) return json(429, { error: 'busy' }, headers);
-    if (error instanceof Anthropic.AuthenticationError) {
-      return json(503, { error: 'stylist_not_configured' }, headers);
-    }
-    if (error instanceof Anthropic.APIError) {
-      return json(502, { error: 'upstream_error', status: error.status }, headers);
-    }
-    return json(502, { error: 'stylist_failed' }, headers);
+    return failure(error, headers);
   }
 }

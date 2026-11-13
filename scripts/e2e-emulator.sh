@@ -13,7 +13,7 @@ click() { local T; T=$(tgt "$1"); if [ -z "$T" ]; then echo "no target $1"; retu
   $C xr look-at --input-json "{\"device\":\"controller-right\",\"target\":{$T}}" >/dev/null 2>&1; sleep 0.35
   $C xr select --input-json "{\"device\":\"controller-right\",\"duration\":0.2}" >/dev/null 2>&1; sleep 0.7; }
 eid() { $C ecs find --input-json "{\"namePattern\":\"$1\",\"limit\":1}" 2>&1 | grep -o "\"entityIndex\": *[0-9]*" | grep -o "[0-9]*$"; }
-uitext() { $C ui inspect --input-json "{\"entityIndex\":$1}" 2>&1 | tr -d "\n" | grep -oE "\"id\": *\"$2\".{0,250}" | grep -oE "\"(text|display)\": *\"[^\"]*\"" | head -2 | tr "\n" " "; }
+uitext() { $C ui inspect --input-json "{\"entityIndex\":$1,\"selector\":\"#$2\"}" 2>&1 | grep -m1 "\"text\"" | sed "s/^ *//"; }
 AP=$(eid "^Atelier Panel$"); CP=$(eid "^Closet Panel$")
 pass=0; fail=0
 check() { # panel id expected-substring label
@@ -44,6 +44,8 @@ click style-button; sleep 2;        check $CP closet-eyebrow "PREVIEW 1 OF" "sty
                                     check $CP stylist-meta "Weighed" "stylist shows what it considered"
 click next-button;                  check $CP closet-eyebrow "PREVIEW 2 OF" "next idea cycles alternatives"
 click wx-warm; sleep 2;             check $CP closet-eyebrow "PREVIEW 1 OF" "changing weather re-plans"
+click refine-warmer; sleep 2;       check $CP closet-eyebrow "REFINED" "refine warmer edits the preview"
+                                    check $CP stylist-tip "Warmer" "refine explains what changed"
 click revert-button;                check $AP look-name "Boardroom" "undo restores pre-stylist outfit"
                                     check $CP closet-note "Undone" "undo message"
 click style-button; sleep 2; click keep-button

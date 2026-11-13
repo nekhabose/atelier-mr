@@ -9,10 +9,19 @@
  *  - with no usable wall, the studio is placed in front of where you look.
  * "Move studio" on the panel re-runs the placement for wherever you face now.
  * Leaving XR restores the authored layout for the desktop view.
+ *
+ * Persistence: IWSDK keeps one persistent world anchor per device (restored
+ * across sessions by its saved id). The studio frame is stored relative to
+ * that anchor, so on the next visit - once the same anchor is restored - the
+ * studio returns to the same spot in the real room. If the anchor cannot be
+ * restored (new room, cleared space, unsupported runtime) placement falls
+ * back to scene understanding as above.
  */
 import {
   createSystem,
+  Entity,
   Group,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   Object3D,
@@ -20,10 +29,13 @@ import {
   RingGeometry,
   UIKitMLAsset,
   Vector3,
+  SceneUnderstandingSystem,
   VisibilityState,
+  XRAnchor,
   XRPlane,
 } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
+import { sfx } from './atelier/sfx.js';
 
 /** Scene nodes that make up the studio and move together. */
 const STUDIO_NODES = ['dress-form', 'clothing-rack', 'swatch-board', 'atelier-panel', 'closet-panel', 'shadow-catcher'];
@@ -35,6 +47,28 @@ const WALL_MAX = 2.8; // farther walls tend to have furniture in between
 /** Wait this long for planes before falling back to "in front of you". */
 const PLANE_WAIT = 2.5;
 const RING_TIME = 1.4;
+/** How long to wait for a saved anchor to come back before placing afresh. */
+const ANCHOR_WAIT = 4;
+const ROOM_KEY = 'atelier.room.v1';
+/** Where IWSDK stores its persistent anchor id. */
+const IWSDK_ANCHOR_KEY = 'iwsdk_scene_anchor_uuid';
+
+/** The studio frame relative to the persistent anchor. */
+interface SavedRoom {
+  uuid: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+}
+
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
 interface StudioNode {
   obj: Object3D;
@@ -48,7 +82,7 @@ interface DetectedPlane {
   polygon?: ArrayLike<{ x: number; z: number }>;
 }
 
-export type PlacementResult = 'wall' | 'front' | 'authored';
+export type PlacementResult = 'wall' | 'front' | 'restored' | 'authored';
 
 export class RoomPlacementSystem extends createSystem({
   planes: { required: [XRPlane] },
@@ -64,6 +98,20 @@ export class RoomPlacementSystem extends createSystem({
   /** Last placement, for scripted checks. */
   lastPlacement: PlacementResult = 'authored';
   wallDistance = 0;
+  /** True once the current placement is saved against the room anchor. */
+  anchored = false;
+  private frame = { x: 0, y: 0, z: 0, yaw: 0 };
+  private saved: SavedRoom | null = null;
+  private anchorMarker!: Object3D;
+  private anchorEntity!: Entity;
+  private anchorFrames = 0;
+  private needsSave = false;
+  private m = new Matrix4();
+  private mInv = new Matrix4();
+  private v = new Vector3();
+  private anchorQ = new Quaternion();
+  private scratchPos = new Vector3();
+  private scratchScale = new Vector3();
 
   private head = new Vector3();
   private dir = new Vector3();
@@ -103,6 +151,19 @@ export class RoomPlacementSystem extends createSystem({
       parent: this.world.requireSceneEntity('dress-form'),
     });
 
+    // An invisible marker parented to IWSDK's world anchor gives us the
+    // anchor's frame each frame (its parent is the anchored group).
+    this.anchorMarker = new Object3D();
+    this.anchorMarker.name = 'room-anchor-marker';
+    this.anchorEntity = this.world.createTransformEntity(this.anchorMarker);
+    this.anchorEntity.addComponent(XRAnchor);
+    try {
+      const raw = readStorage(ROOM_KEY);
+      this.saved = raw ? (JSON.parse(raw) as SavedRoom) : null;
+    } catch {
+      this.saved = null;
+    }
+
     const panel = this.world.getSceneObject<UIKitMLAsset>('atelier-panel');
     const moveButton = panel?.getElementById('place-button');
     if (moveButton) {
@@ -121,6 +182,8 @@ export class RoomPlacementSystem extends createSystem({
         if (inXR) {
           this.placed = false;
           this.waitT = 0;
+          this.anchorFrames = 0;
+          this.anchored = false;
         } else {
           this.applyFrame(0, 0, 0, 0);
           this.lastPlacement = 'authored';
@@ -196,6 +259,9 @@ export class RoomPlacementSystem extends createSystem({
     this.lastPlacement = result;
     this.ringT = 0;
     this.ring.visible = true;
+    this.needsSave = true;
+    this.anchored = false;
+    sfx.settle();
 
     const atelier = this.world.getSystem(AtelierSystem);
     if (atelier && (announce || result === 'wall')) {
@@ -248,15 +314,98 @@ export class RoomPlacementSystem extends createSystem({
       node.obj.quaternion.premultiply(this.qDelta);
     }
     this.yaw = yaw;
+    this.frame.x = x;
+    this.frame.y = y;
+    this.frame.z = z;
+    this.frame.yaw = yaw;
+  }
+
+  // ---------------------------------------------------------------- anchor
+
+  /** Is IWSDK's world anchor live this session, with our marker attached? */
+  private anchorLive(): boolean {
+    const su = this.world.getSystem(SceneUnderstandingSystem) as unknown as { xrAnchor?: unknown } | undefined;
+    const live = !!su?.xrAnchor && this.anchorEntity.getValue(XRAnchor, 'attached') === true;
+    this.anchorFrames = live ? this.anchorFrames + 1 : 0;
+    // One extra frame so the anchored group has taken the anchor's pose.
+    return this.anchorFrames > 2;
+  }
+
+  /** The anchor frame (world matrix of the anchored group). */
+  private anchorMatrix(): Matrix4 | null {
+    const group = this.anchorMarker.parent;
+    if (!group) return null;
+    group.updateMatrixWorld(true);
+    return this.m.copy(group.matrixWorld);
+  }
+
+  private yawOf(m: Matrix4): number {
+    m.decompose(this.scratchPos, this.anchorQ, this.scratchScale);
+    this.dir.set(0, 0, -1).applyQuaternion(this.anchorQ);
+    return Math.atan2(-this.dir.x, -this.dir.z);
+  }
+
+  /** Store the current studio frame relative to the anchor. */
+  private saveToAnchor(): void {
+    const uuid = readStorage(IWSDK_ANCHOR_KEY);
+    const m = this.anchorMatrix();
+    if (!uuid || !m) return;
+    this.mInv.copy(m).invert();
+    this.v.set(this.frame.x, this.frame.y, this.frame.z).applyMatrix4(this.mInv);
+    const record: SavedRoom = {
+      uuid,
+      x: this.v.x,
+      y: this.v.y,
+      z: this.v.z,
+      yaw: this.frame.yaw - this.yawOf(m),
+    };
+    try {
+      localStorage.setItem(ROOM_KEY, JSON.stringify(record));
+      this.saved = record;
+      this.anchored = true;
+    } catch {
+      /* storage unavailable */
+    }
+  }
+
+  /** Put the studio back where it was saved last time. */
+  private restoreFromAnchor(saved: SavedRoom): void {
+    const m = this.anchorMatrix();
+    if (!m) return;
+    this.v.set(saved.x, saved.y, saved.z).applyMatrix4(m);
+    this.applyFrame(this.v.x, this.v.y, this.v.z, saved.yaw + this.yawOf(m));
+    this.placed = true;
+    this.anchored = true;
+    this.needsSave = false;
+    this.lastPlacement = 'restored';
+    sfx.settle();
+    this.ringT = 0;
+    this.ring.visible = true;
+    this.world
+      .getSystem(AtelierSystem)
+      ?.setHint('Welcome back - your studio is right where you left it in your room.');
   }
 
   update(delta: number): void {
+    const live = this.inXR && this.anchorLive();
     if (this.inXR && !this.placed) {
       this.waitT += delta;
-      // Give plane detection a moment, then place (with or without planes).
-      if ((this.queries.planes.entities.size > 0 && this.waitT > 0.6) || this.waitT > PLANE_WAIT) {
-        this.place(false);
+      const saved = this.saved;
+      const sameAnchor = live && !!saved && readStorage(IWSDK_ANCHOR_KEY) === saved.uuid;
+      if (sameAnchor && saved) {
+        this.restoreFromAnchor(saved);
+      } else {
+        // Waiting for a saved anchor? Give it a moment; otherwise (or once a
+        // different anchor is live) place from planes.
+        const waitingForAnchor = !!saved && !live && this.waitT < ANCHOR_WAIT;
+        const planesReady =
+          (this.queries.planes.entities.size > 0 && this.waitT > 0.6) || this.waitT > PLANE_WAIT;
+        if (!waitingForAnchor && planesReady) this.place(false);
       }
+    }
+    if (this.needsSave && live) {
+      this.needsSave = false;
+      this.saveToAnchor();
     }
     if (this.ringT < RING_TIME) {
       this.ringT += delta;

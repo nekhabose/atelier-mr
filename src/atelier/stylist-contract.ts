@@ -64,3 +64,46 @@ export function isWearable(kinds: string[]): boolean {
   if (dress === 1) return top === 0 && bottoms === 0;
   return dress === 0 && top === 1 && bottoms === 1;
 }
+
+// ------------------------------------------------------------------ refine
+
+/** Ways the user can ask the stylist to change the previewed outfit. */
+export const REFINES = ['warmer', 'dressier', 'colour'] as const;
+export type Refine = (typeof REFINES)[number];
+
+/** Closet fabric vocabulary (mirrors CLOSET_MATERIALS / CLOSET_COLORS keys). */
+export const MATERIAL_KEYS = ['cotton', 'satin', 'knit', 'wool', 'denim', 'stripe', 'check', 'plaid', 'dots', 'floral'] as const;
+export const COLOR_KEYS = ['white', 'cream', 'camel', 'pink', 'red', 'green', 'blue', 'navy', 'grey', 'black'] as const;
+export const KEEP = 'keep';
+
+/** One change to a piece on the form; KEEP leaves that attribute alone. */
+export interface PieceEdit {
+  /** Id of the outfit piece (p0, p1, ...). */
+  piece: string;
+  length: (typeof LENGTHS)[number] | typeof KEEP;
+  sleeves: (typeof SLEEVES)[number] | typeof KEEP;
+  material: (typeof MATERIAL_KEYS)[number] | typeof KEEP;
+  color: (typeof COLOR_KEYS)[number] | typeof KEEP;
+}
+
+export interface RefineRequest {
+  mode: 'refine';
+  refine: Refine;
+  occasion: Occasion;
+  weather: Weather;
+  mood: Mood;
+  /** What is on the form now, ids p0..pN. */
+  outfit: StylistItem[];
+  /** The closet (a jacket from it may be added). */
+  items: StylistItem[];
+}
+
+export interface RefineReply {
+  /** One sentence on what changed and why. */
+  summary: string;
+  /** A closet jacket to layer on, or '' for none. */
+  addItemId: string;
+  edits: PieceEdit[];
+}
+
+export const MAX_EDITS = 4;

@@ -19,6 +19,7 @@ import {
   MeshBasicMaterial,
   TorusGeometry,
   UIKit,
+  Object3D,
   UIKitMLAsset,
   Vector3,
 } from '@iwsdk/core';
@@ -32,22 +33,27 @@ const DEMO_LOOK = 1; // Riviera Sundress
 const DEMO_SWATCH = 1;
 const LOOP = 3.8;
 
-type StepKey = 'wear' | 'tailor' | 'fabric';
+type StepKey = 'wear' | 'tailor' | 'fabric' | 'style';
 const STEPS: { key: StepKey; chip: string; hint: string }[] = [
   {
     key: 'wear',
-    chip: 'STEP 1 OF 3  ·  PINCH A LOOK',
-    hint: 'Step 1 of 3: pinch any outfit on the brass rail to dress the form.',
+    chip: 'STEP 1 OF 4  ·  PINCH A LOOK',
+    hint: 'Step 1 of 4: pinch any outfit on the brass rail to dress the form.',
   },
   {
     key: 'tailor',
-    chip: 'STEP 2 OF 3  ·  PULL A PIN',
-    hint: 'Step 2 of 3: pinch a coloured pin and pull it to tailor the cut.',
+    chip: 'STEP 2 OF 4  ·  PULL A PIN',
+    hint: 'Step 2 of 4: pinch a coloured pin and pull it to tailor the cut.',
   },
   {
     key: 'fabric',
-    chip: 'STEP 3 OF 3  ·  DROP A FABRIC',
-    hint: 'Step 3 of 3: pinch a fabric swatch and drop it on the outfit.',
+    chip: 'STEP 3 OF 4  ·  DROP A FABRIC',
+    hint: 'Step 3 of 4: pinch a fabric swatch and drop it on the outfit.',
+  },
+  {
+    key: 'style',
+    chip: 'STEP 4 OF 4  ·  ASK THE STYLIST',
+    hint: 'Step 4 of 4: tap Ask stylist, pick a moment, then Style me.',
   },
 ];
 
@@ -157,7 +163,7 @@ export class OnboardingSystem extends createSystem({
     this.atelier?.setHint(
       skipped
         ? 'Tour skipped. Tap Tour any time to see the gestures again.'
-        : 'Tour complete - the studio is yours. Mix looks, cut and fabrics freely.',
+        : 'Tour complete - the studio is yours. Save looks you love and log today\'s outfit.',
     );
   }
 
@@ -183,6 +189,7 @@ export class OnboardingSystem extends createSystem({
   private counter(key: StepKey): number {
     const a = this.atelier;
     if (!a) return 0;
+    if (key === 'style') return a.styleCount;
     return key === 'wear' ? a.wearCount : key === 'tailor' ? a.tailorCount : a.fabricCount;
   }
 
@@ -216,6 +223,16 @@ export class OnboardingSystem extends createSystem({
 
   /** Fill this.target / this.end for the current step. Returns false if no target. */
   private resolveTargets(key: StepKey): boolean {
+    if (key === 'style') {
+      // Point at Ask stylist, or at Style me once the stylist is open.
+      const panel = this.world.getSceneObject<UIKitMLAsset>('closet-panel');
+      const id = this.atelier?.stylistOpen ? 'style-button' : 'stylist-button';
+      const button = panel?.getElementById(id) as unknown as Object3D | undefined;
+      if (!button?.getWorldPosition) return false;
+      button.getWorldPosition(this.target);
+      this.end.copy(this.target);
+      return true;
+    }
     if (key === 'wear') {
       const e = this.findLook();
       if (!e?.object3D) return false;

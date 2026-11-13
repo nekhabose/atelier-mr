@@ -266,6 +266,14 @@
       </div>
       <div id="stylist-tip" class="tip" style="display: none">Tip</div>
       <div id="stylist-meta" class="streak-sub" style="display: none">Meta</div>
+      <div id="refine-section" class="section" style="display: none">
+        <div class="row-label">REFINE THIS LOOK</div>
+        <div class="row">
+          <div id="refine-warmer" class="chip">Warmer</div>
+          <div id="refine-dressier" class="chip">Dressier</div>
+          <div id="refine-colour" class="chip">More colour</div>
+        </div>
+      </div>
     </div>
     <div id="design-section" class="section" style="display: none">
       <div class="row-label">GARMENT</div>

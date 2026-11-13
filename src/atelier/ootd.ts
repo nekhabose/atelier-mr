@@ -54,6 +54,12 @@ export function currentStreak(s: OotdState, today = localDate()): number {
   return s.lastDate === today || s.lastDate === yesterday(today) ? s.streak : 0;
 }
 
+/** A streak that lapsed (last log before yesterday), for a gentle nudge. */
+export function lapsedStreak(s: OotdState, today = localDate()): number {
+  if (!s.lastDate || s.lastDate === today || s.lastDate === yesterday(today)) return 0;
+  return s.streak;
+}
+
 export function loggedToday(s: OotdState, today = localDate()): boolean {
   return s.lastDate === today;
 }

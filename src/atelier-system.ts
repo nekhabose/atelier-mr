@@ -49,6 +49,7 @@ import {
   TailorParam,
 } from './atelier/garments.js';
 import { makeLabel } from './atelier/labels.js';
+import { sfx } from './atelier/sfx.js';
 import { cloneLook, LOOKS } from './atelier/looks.js';
 import { createHanger, RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
 
@@ -94,11 +95,16 @@ export class AtelierSystem extends createSystem({
   pins: { required: [TailorPin] },
   pinsGrabbed: { required: [TailorPin, Grabbed] },
   forms: { required: [DressForm] },
+  anyPressed: { required: [RayInteractable, Pressed] },
 }) {
   /** Counters other systems (onboarding) watch to see what the user has done. */
   wearCount = 0;
   tailorCount = 0;
   fabricCount = 0;
+  /** Stylist proposals shown (the tour's last step watches it). */
+  styleCount = 0;
+  /** Whether the stylist view is open on the closet panel. */
+  stylistOpen = false;
   private outfitName = '';
   /** Set by the closet while a draft piece is open (history is paused). */
   draftOpen = false;
@@ -150,6 +156,8 @@ export class AtelierSystem extends createSystem({
     this.wirePanel();
 
     this.cleanupFuncs.push(
+      // One tactile tap for every pinch on anything interactive.
+      this.queries.anyPressed.subscribe('qualify', () => sfx.tap()),
       this.queries.rackPressed.subscribe('qualify', (entity) => {
         this.wearLook(entity.getValue(RackLook, 'lookIndex') ?? 0);
       }),
@@ -395,6 +403,7 @@ export class AtelierSystem extends createSystem({
     this.checkpoint();
     piece.fabric = fabricId;
     this.fabricCount++;
+    sfx.swish();
     this.selectedPiece = idx;
     this.rebuildPiece(idx);
     const kind = piece.kind === 'top' ? 'top' : piece.kind;
@@ -572,6 +581,7 @@ export class AtelierSystem extends createSystem({
       return;
     }
     this.future.push(this.snapshot());
+    sfx.rewind();
     this.restore(prev, 'Undone. Redo brings it back.');
     this.setHint(`Undo  |  ${this.past.length} more step${this.past.length === 1 ? '' : 's'} back.`);
   }
@@ -587,6 +597,7 @@ export class AtelierSystem extends createSystem({
       return;
     }
     this.past.push(this.snapshot());
+    sfx.rewind();
     this.restore(next, 'Redone.');
     this.setHint(`Redo  |  ${this.future.length} more step${this.future.length === 1 ? '' : 's'} ahead.`);
   }
@@ -751,6 +762,7 @@ export class AtelierSystem extends createSystem({
       if (Math.abs(value - piece[param]) > 0.002) {
         piece[param] = value;
         this.rebuildPiece(this.pieces.indexOf(piece));
+        sfx.tick();
       }
     }
 
