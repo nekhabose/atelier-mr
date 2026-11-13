@@ -40,7 +40,7 @@ click save-look-button;             check $CP closet-note "Saved" "save look to 
 click stylist-button;               check $CP closet-title "Where are you headed" "open stylist"
 click occ-interview; click wx-cold; click mood-classic
 click style-button; sleep 2;        check $CP closet-eyebrow "PREVIEW 1 OF" "stylist previews option 1"
-                                    check $CP closet-eyebrow "OFFLINE" "no key -> offline fallback"
+                                    check $CP closet-eyebrow "ON-DEVICE" "no key -> on-device fallback"
                                     check $CP stylist-meta "Weighed" "stylist shows what it considered"
 click next-button;                  check $CP closet-eyebrow "PREVIEW 2 OF" "next idea cycles alternatives"
 click wx-warm; sleep 2;             check $CP closet-eyebrow "PREVIEW 1 OF" "changing weather re-plans"

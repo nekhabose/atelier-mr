@@ -11,10 +11,12 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noise: AudioBuffer | null = null;
 let muted = false;
+/** Paused by the platform (system menu open); separate from a user mute. */
+let paused = false;
 let lastTick = 0;
 
 function audio(): AudioContext | null {
-  if (muted) return null;
+  if (muted || paused) return null;
   try {
     if (!ctx) {
       ctx = new AudioContext();
@@ -109,5 +111,17 @@ export const sfx = {
   },
   setMuted(value: boolean): void {
     muted = value;
+  },
+  /** The session lost focus (e.g. the system menu): silence everything. */
+  pause(): void {
+    paused = true;
+    if (ctx && ctx.state === 'running') void ctx.suspend();
+  },
+  resume(): void {
+    paused = false;
+    if (ctx && ctx.state === 'suspended') void ctx.resume();
+  },
+  get paused(): boolean {
+    return paused;
   },
 };

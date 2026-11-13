@@ -93,8 +93,8 @@ demonstrates the three core gestures on first launch instead of a wall of text.
 6. **Save look** and **Wear today**; reload the page and your look, lookbook and
    streak are still there.
 
-Works without any API key (the stylist shows "OFFLINE"). With the key
-configured it shows "CLAUDE".
+Works without any API key (the stylist header shows "ON-DEVICE"). With the
+server key configured it shows "LIVE AI".
 
 ## Works today vs. future
 
@@ -133,16 +133,19 @@ the IWSDK emulator. Show only real footage; no AI-generated video.
 
 ## Screenshots
 
-`docs/screenshots/` (IWSDK emulator, Quest 3 profile, simulated living room):
-01-studio, 02-stylist-preview, 03-turned, 04-closet-builder. Replace with
-on-device captures when a Quest is available.
+`docs/screenshots/` (Immersive Web Emulator, simulated living room):
+01-studio (opening reveal), 02-stylist-preview (after "Warmer"), 03-turned,
+04-closet-builder, 05-start-page (make the form you), 06-boutique-verdict,
+07-glasses-compact-layout (Meta VR Glasses profile, area outside the glasses'
+view masked black). Replace with on-device captures when a Quest is available.
+Use only your own face if you show the photo feature.
 
 ## Readiness scorecard (self-assessment)
 
 | Criterion (25% each) | Strengths | Gaps to close |
 |---|---|---|
 | Innovation & Creativity | Life-size tailoring with real generated geometry; room-aware studio that persists via anchors; stylist that edits a 3D garment | Anchor accuracy unverified on device |
-| Experience Design | Seated, ray and pinch at distance; ghost-hand tour; undo everywhere; daily loop | Needs a real-device comfort pass; panels sit low for very tall standing users |
+| Experience Design | Seated, ray and pinch at distance; five-step ghost-hand tour; undo everywhere; daily loop; FoV-aware compact layout for narrow-view devices; clean pause/resume | Needs a real-device comfort pass; in the compact layout panels sit below a standing user's view |
 | Technical Implementation | ECS systems, procedural assets, scene understanding, validated serverless AI with offline fallback, typecheck + regression script | 60 fps on Quest unmeasured (emulator: p50 16.7 ms display-capped, p95 33.9 ms on desktop) |
 | Polish & Presentation | Cohesive brass and walnut studio, synthesised sound design, wear animation, editorial panel copy | Video and on-device screenshots still to capture |
 

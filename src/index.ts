@@ -5,6 +5,7 @@ import { ClosetSystem } from './closet-system.js';
 import { LookbookSystem } from './lookbook-system.js';
 import { BoutiqueSystem } from './boutique-system.js';
 import { MeSystem } from './me-system.js';
+import { sfx } from './atelier/sfx.js';
 import { StylistSystem } from './stylist-system.js';
 import { OnboardingSystem } from './onboarding-system.js';
 import { RoomPlacementSystem } from './room-system.js';
@@ -29,6 +30,7 @@ World.create(
   g.lookbook = world.getSystem(LookbookSystem);
   g.boutique = world.getSystem(BoutiqueSystem);
   g.me = world.getSystem(MeSystem);
+  g.sfx = sfx;
   g.room = world.getSystem(RoomPlacementSystem);
   g.tour = world.getSystem(OnboardingSystem);
 });

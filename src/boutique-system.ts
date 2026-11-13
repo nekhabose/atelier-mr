@@ -221,6 +221,7 @@ export class BoutiqueSystem extends createSystem({
     if (!b) return;
     const switching = this.shop !== index;
     this.shop = index;
+    this.atelier.boutiqueCount++;
     this.selected = undefined;
     this.analysis = undefined;
     this.closet.openBoutique();
@@ -287,7 +288,7 @@ export class BoutiqueSystem extends createSystem({
     const v = VERDICT_STYLE[a.verdict];
     const b = BOUTIQUES[this.shop];
     this.ui['closet-eyebrow']?.setProperties({
-      text: `${b.name.toUpperCase()}  |  ${this.source === 'claude' ? 'CLAUDE' : 'OFFLINE'} STYLIST`,
+      text: `${b.name.toUpperCase()}  |  ${this.source === 'claude' ? 'LIVE AI' : 'ON-DEVICE'} STYLIST`,
     });
     this.ui['closet-title']?.setProperties({ text: `${bp.name}  $${bp.price}` });
     this.ui['closet-note']?.setProperties({ display: 'none' });

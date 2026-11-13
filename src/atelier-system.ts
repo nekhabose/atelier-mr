@@ -103,6 +103,8 @@ export class AtelierSystem extends createSystem({
   fabricCount = 0;
   /** Stylist proposals shown (the tour's last step watches it). */
   styleCount = 0;
+  /** Boutique visits (the tour's last step watches it). */
+  boutiqueCount = 0;
   /** Whether the stylist view is open on the closet panel. */
   stylistOpen = false;
   private outfitName = '';
@@ -147,6 +149,13 @@ export class AtelierSystem extends createSystem({
     this.cleanupFuncs.push(
       this.world.visibilityState.subscribe((state) => {
         this.world.scene.background = state === VisibilityState.NonImmersive ? backdrop : null;
+        // Pause: the system menu blurs the session. Go quiet and keep state.
+        if (state === VisibilityState.VisibleBlurred) {
+          sfx.pause();
+          this.saveState();
+        } else {
+          sfx.resume();
+        }
       }),
     );
 

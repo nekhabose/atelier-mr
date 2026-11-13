@@ -34,27 +34,32 @@ const DEMO_LOOK = 1; // Riviera Sundress
 const DEMO_SWATCH = 1;
 const LOOP = 3.8;
 
-type StepKey = 'wear' | 'tailor' | 'fabric' | 'style';
+type StepKey = 'wear' | 'tailor' | 'fabric' | 'style' | 'boutique';
 const STEPS: { key: StepKey; chip: string; hint: string }[] = [
   {
     key: 'wear',
-    chip: 'STEP 1 OF 4  ·  PINCH A LOOK',
-    hint: 'Step 1 of 4: pinch any outfit on the brass rail to dress the form.',
+    chip: 'STEP 1 OF 5  ·  PINCH A LOOK',
+    hint: 'Step 1 of 5: pinch any outfit on the brass rail to dress the form.',
   },
   {
     key: 'tailor',
-    chip: 'STEP 2 OF 4  ·  PULL A PIN',
-    hint: 'Step 2 of 4: pinch a coloured pin and pull it to tailor the cut.',
+    chip: 'STEP 2 OF 5  ·  PULL A PIN',
+    hint: 'Step 2 of 5: pinch a coloured pin and pull it to tailor the cut.',
   },
   {
     key: 'fabric',
-    chip: 'STEP 3 OF 4  ·  DROP A FABRIC',
-    hint: 'Step 3 of 4: pinch a fabric swatch and drop it on the outfit.',
+    chip: 'STEP 3 OF 5  ·  DROP A FABRIC',
+    hint: 'Step 3 of 5: pinch a fabric swatch and drop it on the outfit.',
   },
   {
     key: 'style',
-    chip: 'STEP 4 OF 4  ·  ASK THE STYLIST',
-    hint: 'Step 4 of 4: tap Ask stylist, pick a moment, then Style me.',
+    chip: 'STEP 4 OF 5  ·  ASK THE STYLIST',
+    hint: 'Step 4 of 5: tap Ask stylist, pick a moment, then Style me.',
+  },
+  {
+    key: 'boutique',
+    chip: 'STEP 5 OF 5  ·  VISIT THE BOUTIQUE',
+    hint: 'Step 5 of 5: tap BOUTIQUE above the rail to shop against your closet.',
   },
 ];
 
@@ -191,6 +196,7 @@ export class OnboardingSystem extends createSystem({
     const a = this.atelier;
     if (!a) return 0;
     if (key === 'style') return a.styleCount;
+    if (key === 'boutique') return a.boutiqueCount;
     return key === 'wear' ? a.wearCount : key === 'tailor' ? a.tailorCount : a.fabricCount;
   }
 
@@ -224,6 +230,13 @@ export class OnboardingSystem extends createSystem({
 
   /** Fill this.target / this.end for the current step. Returns false if no target. */
   private resolveTargets(key: StepKey): boolean {
+    if (key === 'boutique') {
+      const tab = this.world.getSceneObject('clothing-rack')?.getObjectByName('rack-tab-boutique');
+      if (!tab) return false;
+      tab.getWorldPosition(this.target);
+      this.end.copy(this.target);
+      return true;
+    }
     if (key === 'style') {
       // Point at Ask stylist, or at Style me once the stylist is open.
       const panel = this.world.getSceneObject<UIKitMLAsset>('closet-panel');

@@ -57,8 +57,17 @@ you can click.
   and the ATELIER title card appears before the tour starts.
 - **Lookbook and Outfit of the Day:** save whole outfits (with tailoring) and
   put them back on any day; **Wear today** logs a daily streak.
-- **Ghost-hand tour:** a translucent hand demonstrates pinch, pull, drop and
-  asking the stylist.
+- **Ghost-hand tour:** five steps - pinch a look, pull a pin, drop a fabric,
+  ask the stylist, visit the boutique - each demonstrated by a translucent hand.
+- **FoV-aware layout:** the studio reads the headset's real field of view (and
+  whether gaze tracking was granted) when the session starts. On narrow-view
+  devices such as Meta VR Glasses it switches to a compact layout that keeps
+  the form, rack, fabric board and both panels within about +-35 degrees of a
+  seated user's view; Quest keeps the roomier layout. Gaze and pinch select
+  everything on the glasses.
+- **Pause and resume:** opening the system menu (session blurred) silences
+  sound and saves state; resuming, or leaving and re-entering, brings back the
+  outfit and the studio exactly where it was.
 - **Sound design:** taps, a ratchet while you pull a pin, a cloth swish, a
   settle when the studio lands and a sparkle when the stylist acts, all
   synthesised with Web Audio (no audio files).
@@ -76,7 +85,9 @@ Regression checks against the emulator (dev server running, XR session entered):
 
 ```sh
 bash scripts/e2e-emulator.sh                         # 30-step hands-free journey
-npx @iwsdk/cli browser run scripts/check-face-upload.mjs  # needs dev up --allow-browser-automation
+npx @iwsdk/cli browser run scripts/check-face-upload.mjs   # needs dev up --allow-browser-automation
+npx @iwsdk/cli browser run scripts/check-pause-resume.mjs  # system menu blur / resume
+npx @iwsdk/cli browser run scripts/check-layout.mjs        # FoV-aware layout decision
 ```
 
 Pushes to `main` deploy to Vercel (Git integration) and to GitHub Pages

@@ -232,7 +232,7 @@ export class StylistSystem extends createSystem({
     sfx.sparkle();
     this.atelier.styleCount++;
     this.atelier.setBadge(`STYLIST PREVIEW  ${p.index + 1}/${p.options.length}`);
-    const source = opt.source === 'claude' ? 'CLAUDE' : 'OFFLINE';
+    const source = opt.source === 'claude' ? 'LIVE AI' : 'ON-DEVICE';
     this.ui.eyebrow?.setProperties({ text: `PREVIEW ${p.index + 1} OF ${p.options.length}  |  ${source}` });
     this.ui.title?.setProperties({ text: opt.title });
     // The reason is on the studio panel (look-note); keep this panel short
@@ -295,7 +295,7 @@ export class StylistSystem extends createSystem({
     sfx.sparkle();
     this.atelier.setBadge(`STYLIST PREVIEW  |  ${kind === 'colour' ? 'MORE COLOUR' : kind.toUpperCase()}`);
     this.lastSource = source;
-    this.ui.eyebrow?.setProperties({ text: `REFINED  |  ${source === 'claude' ? 'CLAUDE' : 'OFFLINE'}` });
+    this.ui.eyebrow?.setProperties({ text: `REFINED  |  ${source === 'claude' ? 'LIVE AI' : 'ON-DEVICE'}` });
     this.ui.tip?.setProperties({ display: 'flex', text: reply.summary });
     this.atelier.setHint('Like the change? Keep it. Undo goes back to your outfit from before.');
   }

@@ -20,6 +20,7 @@
 import {
   createSystem,
   Entity,
+  Euler,
   Group,
   Matrix4,
   Mesh,
@@ -76,7 +77,26 @@ interface StudioNode {
   obj: Object3D;
   basePos: Vector3;
   baseScale: Vector3;
+  /** The authored pose (desktop view and wide-FoV headsets). */
+  authoredPos: Vector3;
+  authoredQuat: Quaternion;
+  authoredScale: Vector3;
 }
+
+/**
+ * FoV-aware layout. On a headset with a narrow field of view (Meta VR
+ * Glasses: about 37 degrees each side, 25 up, 43 down) the authored layout puts
+ * the panels, rack and fabric board at the edge of view. The compact layout
+ * pulls them toward the centre and slightly lower so everything essential
+ * sits within about +-35 degrees of a seated user's straight-ahead view.
+ */
+const NARROW_FOV_DEG = 45;
+const COMPACT: Record<string, { pos: [number, number, number]; rotDeg: [number, number, number]; scale: number }> = {
+  'clothing-rack': { pos: [-0.75, 0, -2.05], rotDeg: [0, 28, 0], scale: 0.85 },
+  'swatch-board': { pos: [0.75, 0, -2.05], rotDeg: [0, -28, 0], scale: 0.85 },
+  'atelier-panel': { pos: [0.32, 0.92, -0.74], rotDeg: [-20, -23, 0], scale: 0.08 },
+  'closet-panel': { pos: [-0.32, 0.92, -0.74], rotDeg: [-20, 23, 0], scale: 0.08 },
+};
 
 /**
  * The opening reveal: each studio piece settles into place in turn, then the
@@ -124,6 +144,14 @@ export class RoomPlacementSystem extends createSystem({
   /** Seconds into the opening reveal (Infinity when not revealing). */
   private revealT = Infinity;
   private revealedThisSession = false;
+  /** The FoV-aware layout in use this session (for scripted checks). */
+  compact = false;
+  /** Measured horizontal half field of view (degrees), 0 until known. */
+  fovHalfDeg = 0;
+  /** Why the compact layout was chosen ('none' when it was not). */
+  narrowReason: 'fov' | 'gaze' | 'none' = 'none';
+  private layoutDecided = false;
+  private euler = new Euler(0, 0, 0, 'XYZ');
   private title!: Group;
   private titleMats: MeshBasicMaterial[] = [];
   /** Last placement, for scripted checks. */
@@ -161,7 +189,17 @@ export class RoomPlacementSystem extends createSystem({
   init(): void {
     for (const id of STUDIO_NODES) {
       const obj = this.world.getSceneObject(id);
-      if (obj) this.nodes.push({ id, obj, basePos: obj.position.clone(), baseScale: obj.scale.clone() });
+      if (obj) {
+        this.nodes.push({
+          id,
+          obj,
+          basePos: obj.position.clone(),
+          baseScale: obj.scale.clone(),
+          authoredPos: obj.position.clone(),
+          authoredQuat: obj.quaternion.clone(),
+          authoredScale: obj.scale.clone(),
+        });
+      }
     }
 
     // A soft ring that blooms on the floor under the form when it lands.
@@ -248,6 +286,7 @@ export class RoomPlacementSystem extends createSystem({
         moveButton?.setProperties({ display: inXR ? 'flex' : 'none' });
         if (inXR) {
           this.revealedThisSession = false;
+          this.layoutDecided = false;
           // Hidden until placed, so the reveal is the first thing you see.
           for (const node of this.nodes) node.obj.visible = false;
           this.placed = false;
@@ -257,6 +296,7 @@ export class RoomPlacementSystem extends createSystem({
         } else {
           this.finishReveal();
           this.applyFrame(0, 0, 0, 0);
+          this.useLayout(false);
           this.lastPlacement = 'authored';
         }
       }),
@@ -316,7 +356,7 @@ export class RoomPlacementSystem extends createSystem({
     if (bestT < Infinity) {
       // Studio frame: -Z points into the wall, origin STUDIO_DEPTH out from it.
       const yaw = Math.atan2(this.bestN.x, this.bestN.z);
-      this.origin.copy(this.bestN).multiplyScalar(STUDIO_DEPTH).add(this.bestHit);
+      this.origin.copy(this.bestN).multiplyScalar(STUDIO_DEPTH + (this.compact ? 0.35 : 0)).add(this.bestHit);
       this.applyFrame(this.origin.x, floorY, this.origin.z, yaw);
       result = 'wall';
       this.wallDistance = bestT;
@@ -459,6 +499,49 @@ export class RoomPlacementSystem extends createSystem({
       ?.setHint('Welcome back - your studio is right where you left it in your room.');
   }
 
+  // ---------------------------------------------------------------- FoV
+
+  /**
+   * Read the session's real field of view from the XR camera's per-eye
+   * projections (outer edges of the left and right eyes). Null until known.
+   */
+  private measureFov(): number | null {
+    const xrCam = this.world.renderer.xr.getCamera();
+    // Typed as a fixed pair, but empty until the session's first frame.
+    const eyes: readonly { projectionMatrix: { elements: ArrayLike<number> } }[] = xrCam.cameras;
+    if (eyes.length === 0) return null;
+    let left = 0;
+    let right = 0;
+    for (const eye of eyes) {
+      const p = eye.projectionMatrix.elements;
+      if (!p[0] || !Number.isFinite(p[0])) return null;
+      // P[0] = 2n/(r-l), P[8] = (r+l)/(r-l)
+      left = Math.max(left, Math.atan((1 - p[8]) / p[0]));
+      right = Math.max(right, Math.atan((1 + p[8]) / p[0]));
+    }
+    return (Math.min(left, right) * 180) / Math.PI;
+  }
+
+  /** Switch the studio's base layout (call while the frame yaw is 0). */
+  private useLayout(compact: boolean): void {
+    this.compact = compact;
+    for (const node of this.nodes) {
+      const c = compact ? COMPACT[node.id] : undefined;
+      if (c) {
+        node.basePos.set(c.pos[0], c.pos[1], c.pos[2]);
+        this.euler.set((c.rotDeg[0] * Math.PI) / 180, (c.rotDeg[1] * Math.PI) / 180, (c.rotDeg[2] * Math.PI) / 180);
+        node.obj.quaternion.setFromEuler(this.euler);
+        node.baseScale.setScalar(c.scale);
+      } else {
+        node.basePos.copy(node.authoredPos);
+        if (node.id !== 'dress-form') node.obj.quaternion.copy(node.authoredQuat);
+        node.baseScale.copy(node.authoredScale);
+      }
+      node.obj.position.copy(node.basePos);
+      node.obj.scale.copy(node.baseScale);
+    }
+  }
+
   // ---------------------------------------------------------------- reveal
 
   /** True while the opening reveal is still playing (or not yet placed). */
@@ -512,8 +595,27 @@ export class RoomPlacementSystem extends createSystem({
       else this.stepReveal(this.revealT);
     }
     const live = this.inXR && this.anchorLive();
+    if (this.inXR && !this.placed && !this.layoutDecided) {
+      // Decide the layout from the measured field of view before placing.
+      const fov = this.measureFov();
+      if (fov !== null || this.waitT > 1.2) {
+        this.layoutDecided = true;
+        this.fovHalfDeg = fov ?? 0;
+        // Narrow-view devices: a measured FoV under the threshold, or a granted
+        // gaze-tracking feature (Meta VR Glasses; Quest 3/3S do not grant it).
+        const session = this.world.renderer.xr.getSession();
+        const gaze = !!session?.enabledFeatures?.includes('gaze-tracking');
+        this.narrowReason = fov !== null && fov < NARROW_FOV_DEG ? 'fov' : gaze ? 'gaze' : 'none';
+        if (this.narrowReason !== 'none') {
+          this.applyFrame(0, 0, 0, 0);
+          this.useLayout(true);
+          for (const node of this.nodes) node.obj.visible = false;
+        }
+      }
+    }
     if (this.inXR && !this.placed) {
       this.waitT += delta;
+      if (!this.layoutDecided) return;
       const saved = this.saved;
       const sameAnchor = live && !!saved && readStorage(IWSDK_ANCHOR_KEY) === saved.uuid;
       if (sameAnchor && saved) {
