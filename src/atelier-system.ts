@@ -85,6 +85,10 @@ export class AtelierSystem extends createSystem({
   pinsGrabbed: { required: [TailorPin, Grabbed] },
   forms: { required: [DressForm] },
 }) {
+  /** Counters other systems (onboarding) watch to see what the user has done. */
+  wearCount = 0;
+  tailorCount = 0;
+  fabricCount = 0;
   private formEntity!: Entity;
   private outfit!: Group;
   private pieces: GarmentPiece[] = [];
@@ -130,6 +134,7 @@ export class AtelierSystem extends createSystem({
         this.onSwatchReleased(entity);
       }),
       this.queries.pinsGrabbed.subscribe('disqualify', () => {
+        this.tailorCount++;
         this.layoutPins();
         this.setHint('Nice cut. Drop a fabric on the form, or tap another look.');
       }),
@@ -327,6 +332,7 @@ export class AtelierSystem extends createSystem({
     this.selectedPiece = this.outermostPiece();
     this.rebuildAll();
     this.wearT = 0;
+    this.wearCount++;
     AudioUtils.play(this.formEntity);
     this.setPanel(look.name, look.note);
     this.setHint('Pinch a coloured pin and pull to tailor. Grab the form to spin it.');
@@ -343,6 +349,7 @@ export class AtelierSystem extends createSystem({
     const piece = this.pieces[idx];
     if (!piece) return;
     piece.fabric = fabricId;
+    this.fabricCount++;
     this.selectedPiece = idx;
     this.rebuildPiece(idx);
     const kind = piece.kind === 'top' ? 'top' : piece.kind;
@@ -448,7 +455,7 @@ export class AtelierSystem extends createSystem({
     this.panelText.note?.setProperties({ text: note });
   }
 
-  private setHint(text: string): void {
+  setHint(text: string): void {
     this.panelText.hint?.setProperties({ text });
   }
 
