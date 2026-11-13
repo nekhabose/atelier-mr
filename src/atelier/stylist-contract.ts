@@ -107,3 +107,29 @@ export interface RefineReply {
 }
 
 export const MAX_EDITS = 4;
+
+// ------------------------------------------------------------------ boutique
+
+export const VERDICTS = ['buy', 'maybe', 'skip'] as const;
+export type BoutiqueVerdict = (typeof VERDICTS)[number];
+
+/** "Should I buy this?" - the candidate has id "new"; facts are precomputed. */
+export interface BoutiqueRequest {
+  mode: 'boutique';
+  occasion: Occasion;
+  candidate: StylistItem;
+  price: number;
+  newOutfits: number;
+  costPerOutfit: number;
+  /** Name of a near-duplicate already owned, or ''. */
+  duplicate: string;
+  items: StylistItem[];
+}
+
+export interface BoutiqueReply {
+  verdict: BoutiqueVerdict;
+  /** One or two sentences, max ~35 words, grounded in the given numbers. */
+  reason: string;
+  /** Best pairing: item ids including "new". */
+  itemIds: string[];
+}

@@ -3,6 +3,8 @@ import projectOptions from 'virtual:iwsdk-project';
 import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { LookbookSystem } from './lookbook-system.js';
+import { BoutiqueSystem } from './boutique-system.js';
+import { MeSystem } from './me-system.js';
 import { StylistSystem } from './stylist-system.js';
 import { OnboardingSystem } from './onboarding-system.js';
 import { RoomPlacementSystem } from './room-system.js';
@@ -14,6 +16,8 @@ World.create(
   world.registerSystem(AtelierSystem);
   world.registerSystem(ClosetSystem);
   world.registerSystem(LookbookSystem);
+  world.registerSystem(BoutiqueSystem);
+  world.registerSystem(MeSystem);
   world.registerSystem(StylistSystem);
   world.registerSystem(RoomPlacementSystem);
   world.registerSystem(OnboardingSystem);
@@ -23,6 +27,8 @@ World.create(
   g.closet = world.getSystem(ClosetSystem);
   g.stylist = world.getSystem(StylistSystem);
   g.lookbook = world.getSystem(LookbookSystem);
+  g.boutique = world.getSystem(BoutiqueSystem);
+  g.me = world.getSystem(MeSystem);
   g.room = world.getSystem(RoomPlacementSystem);
   g.tour = world.getSystem(OnboardingSystem);
 });

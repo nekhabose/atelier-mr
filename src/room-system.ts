@@ -36,6 +36,7 @@ import {
 } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
 import { sfx } from './atelier/sfx.js';
+import { makeLabel } from './atelier/labels.js';
 
 /** Scene nodes that make up the studio and move together. */
 const STUDIO_NODES = ['dress-form', 'clothing-rack', 'swatch-board', 'atelier-panel', 'closet-panel', 'shadow-catcher'];
@@ -71,8 +72,33 @@ function readStorage(key: string): string | null {
 }
 
 interface StudioNode {
+  id: string;
   obj: Object3D;
   basePos: Vector3;
+  baseScale: Vector3;
+}
+
+/**
+ * The opening reveal: each studio piece settles into place in turn, then the
+ * title appears. Delays are seconds from the moment the studio is placed.
+ */
+const REVEAL: Record<string, number> = {
+  'shadow-catcher': 0,
+  'dress-form': 0.05,
+  'clothing-rack': 0.35,
+  'swatch-board': 0.5,
+  'atelier-panel': 0.85,
+  'closet-panel': 0.95,
+};
+const REVEAL_DUR = 0.7;
+const TITLE_IN = 1.2;
+const TITLE_OUT = 4.2;
+
+/** Ease out with a small overshoot, so pieces "land". */
+function easeOutBack(t: number): number {
+  const c1 = 1.4;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
 /** Minimal view of the WebXR XRPlane we read. */
@@ -95,6 +121,11 @@ export class RoomPlacementSystem extends createSystem({
   private ring!: Mesh;
   private ringMat!: MeshBasicMaterial;
   private ringT = RING_TIME;
+  /** Seconds into the opening reveal (Infinity when not revealing). */
+  private revealT = Infinity;
+  private revealedThisSession = false;
+  private title!: Group;
+  private titleMats: MeshBasicMaterial[] = [];
   /** Last placement, for scripted checks. */
   lastPlacement: PlacementResult = 'authored';
   wallDistance = 0;
@@ -130,7 +161,7 @@ export class RoomPlacementSystem extends createSystem({
   init(): void {
     for (const id of STUDIO_NODES) {
       const obj = this.world.getSceneObject(id);
-      if (obj) this.nodes.push({ obj, basePos: obj.position.clone() });
+      if (obj) this.nodes.push({ id, obj, basePos: obj.position.clone(), baseScale: obj.scale.clone() });
     }
 
     // A soft ring that blooms on the floor under the form when it lands.
@@ -164,6 +195,42 @@ export class RoomPlacementSystem extends createSystem({
       this.saved = null;
     }
 
+    // Title card for the opening moment.
+    this.title = new Group();
+    this.title.name = 'studio-title';
+    const word = makeLabel('ATELIER', {
+      width: 1.05,
+      fontSize: 62,
+      weight: 500,
+      color: '#f6e7c4',
+      background: 'rgba(28,24,20,0.62)',
+      pill: true,
+      letterSpacing: 20,
+      font: 'Didot, "Bodoni 72", Georgia, "Times New Roman", serif',
+    });
+    const sub = makeLabel('YOUR STUDIO IS READY', {
+      width: 0.6,
+      fontSize: 34,
+      weight: 600,
+      color: '#2b2118',
+      background: 'rgba(226,194,125,0.92)',
+      pill: true,
+      letterSpacing: 6,
+    });
+    sub.position.y = -0.16;
+    this.title.add(word, sub);
+    for (const m of [word, sub]) {
+      const mat = m.material as MeshBasicMaterial;
+      mat.opacity = 0;
+      this.titleMats.push(mat);
+      m.raycast = () => {};
+    }
+    this.title.visible = false;
+    this.world.createTransformEntity(this.title, {
+      parent: this.world.requireSceneEntity('dress-form'),
+    });
+    this.title.position.set(0, 2.08, 0.05);
+
     const panel = this.world.getSceneObject<UIKitMLAsset>('atelier-panel');
     const moveButton = panel?.getElementById('place-button');
     if (moveButton) {
@@ -180,11 +247,15 @@ export class RoomPlacementSystem extends createSystem({
         this.inXR = inXR;
         moveButton?.setProperties({ display: inXR ? 'flex' : 'none' });
         if (inXR) {
+          this.revealedThisSession = false;
+          // Hidden until placed, so the reveal is the first thing you see.
+          for (const node of this.nodes) node.obj.visible = false;
           this.placed = false;
           this.waitT = 0;
           this.anchorFrames = 0;
           this.anchored = false;
         } else {
+          this.finishReveal();
           this.applyFrame(0, 0, 0, 0);
           this.lastPlacement = 'authored';
         }
@@ -262,6 +333,7 @@ export class RoomPlacementSystem extends createSystem({
     this.needsSave = true;
     this.anchored = false;
     sfx.settle();
+    this.startReveal();
 
     const atelier = this.world.getSystem(AtelierSystem);
     if (atelier && (announce || result === 'wall')) {
@@ -379,6 +451,7 @@ export class RoomPlacementSystem extends createSystem({
     this.needsSave = false;
     this.lastPlacement = 'restored';
     sfx.settle();
+    this.startReveal();
     this.ringT = 0;
     this.ring.visible = true;
     this.world
@@ -386,7 +459,58 @@ export class RoomPlacementSystem extends createSystem({
       ?.setHint('Welcome back - your studio is right where you left it in your room.');
   }
 
+  // ---------------------------------------------------------------- reveal
+
+  /** True while the opening reveal is still playing (or not yet placed). */
+  get revealing(): boolean {
+    return (this.inXR && !this.placed) || this.revealT !== Infinity;
+  }
+
+  /** First placement of a session: play the opening reveal. */
+  private startReveal(): void {
+    if (this.revealedThisSession) return;
+    this.revealedThisSession = true;
+    this.revealT = 0;
+    this.title.visible = true;
+    this.stepReveal(0);
+  }
+
+  private stepReveal(t: number): void {
+    for (const node of this.nodes) {
+      const delay = REVEAL[node.id] ?? 0;
+      const p = Math.min(1, Math.max(0, (t - delay) / REVEAL_DUR));
+      const s = p <= 0 ? 0.001 : Math.max(0.001, easeOutBack(p));
+      node.obj.scale.copy(node.baseScale).multiplyScalar(s);
+      node.obj.visible = p > 0;
+    }
+    // Title: fade in, hold, fade out, drifting up a touch.
+    const fadeIn = Math.min(1, Math.max(0, (t - TITLE_IN) / 0.6));
+    const fadeOut = Math.min(1, Math.max(0, (TITLE_OUT - t) / 0.8));
+    const a = Math.min(fadeIn, fadeOut);
+    for (const m of this.titleMats) m.opacity = a;
+    this.title.position.y = 2.02 + 0.06 * fadeIn;
+    this.world.camera.getWorldPosition(this.head);
+    this.title.lookAt(this.head);
+  }
+
+  private finishReveal(): void {
+    if (this.revealT === Infinity) return;
+    this.revealT = Infinity;
+    for (const node of this.nodes) {
+      node.obj.scale.copy(node.baseScale);
+      node.obj.visible = true;
+    }
+    this.title.visible = false;
+  }
+
   update(delta: number): void {
+    if (this.revealT !== Infinity) {
+      const before = this.revealT;
+      this.revealT += delta;
+      if (before < TITLE_IN && this.revealT >= TITLE_IN) sfx.sparkle();
+      if (this.revealT > TITLE_OUT + 0.2) this.finishReveal();
+      else this.stepReveal(this.revealT);
+    }
     const live = this.inXR && this.anchorLive();
     if (this.inXR && !this.placed) {
       this.waitT += delta;

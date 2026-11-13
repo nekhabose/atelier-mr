@@ -45,6 +45,16 @@ you can click.
   closet is missing for that kind of day.
   Claude plans when the server has a key; a deterministic offline planner
   answers otherwise, so the stylist always works.
+- **Boutique - shop against your closet:** three original labels (Maison
+  Lune, Studio Nord, Sol & Sable) hang their pieces on the rail, each tagged
+  with how many new outfits it unlocks with *your* closet. Tap one: it is tried
+  on the form with the pieces you own, and the boutique stylist gives a verdict
+  - BUY / MAYBE / SKIP - with new outfits, cost per outfit and near-duplicates.
+  Add to closet keeps it. (Original labels only; no real brands or catalogues.)
+- **Make the form you:** on the start page, add a photo (kept on the device,
+  never uploaded) and pick a skin tone; your face and tone appear on the form.
+- **Opening reveal:** on entry the studio settles into your room piece by piece
+  and the ATELIER title card appears before the tour starts.
 - **Lookbook and Outfit of the Day:** save whole outfits (with tailoring) and
   put them back on any day; **Wear today** logs a daily streak.
 - **Ghost-hand tour:** a translucent hand demonstrates pinch, pull, drop and
@@ -92,6 +102,8 @@ src/atelier-system.ts     wear, tailor, fabric drop, undo/redo, turntable
 src/closet-system.ts      Digital Closet rail and builder
 src/stylist-system.ts     stylist proposals, Outfit of the Day
 src/lookbook-system.ts    saved looks
+src/boutique-system.ts    boutique rail, try-on and buy / maybe / skip verdicts
+src/me-system.ts          face photo + skin tone for the form (device-only)
 src/room-system.ts        floor / wall placement + persistent anchor
 src/onboarding-system.ts  ghost-hand tour
 public/scenes/            scene composition (JSON)

@@ -197,6 +197,30 @@
     color: #f1dfb6;
   }
 
+  .verdict {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  .verdict-badge {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 70px;
+    border-radius: 16px;
+    background-color: #34363c;
+  }
+
+  .verdict-word {
+    color: #f1ede4;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
   .actions {
     flex-direction: row;
     gap: 10px;
@@ -273,6 +297,27 @@
           <div id="refine-dressier" class="chip">Dressier</div>
           <div id="refine-colour" class="chip">More colour</div>
         </div>
+      </div>
+    </div>
+    <div id="boutique-section" class="section" style="display: none">
+      <div class="row-label">BOUTIQUES</div>
+      <div class="row">
+        <div id="shop-0" class="chip">Maison Lune</div>
+        <div id="shop-1" class="chip">Studio Nord</div>
+        <div id="shop-2" class="chip">Sol and Sable</div>
+      </div>
+      <div id="verdict-card" class="section" style="display: none">
+        <div class="verdict">
+          <div id="verdict-badge" class="verdict-badge">
+            <div id="verdict-word" class="verdict-word">BUY</div>
+            <div class="badge-label">VERDICT</div>
+          </div>
+          <div class="streak-text">
+            <div id="verdict-stat" class="streak-title">+6 new outfits</div>
+            <div id="verdict-sub" class="streak-sub">About $24 per outfit</div>
+          </div>
+        </div>
+        <div id="verdict-reason" class="tip">Reason</div>
       </div>
     </div>
     <div id="design-section" class="section" style="display: none">
@@ -386,6 +431,26 @@
         <Undo2></Undo2>
       </ButtonIcon>
       <ButtonLabel class="button-label">Undo</ButtonLabel>
+    </Button>
+  </div>
+  <div id="boutique-actions" class="actions" style="display: none">
+    <Button id="add-closet-button">
+      <ButtonIcon>
+        <ShoppingBag></ShoppingBag>
+      </ButtonIcon>
+      <ButtonLabel id="add-closet-label" class="button-label">Add to closet</ButtonLabel>
+    </Button>
+    <Button id="pairing-button" variant="secondary">
+      <ButtonIcon>
+        <Shuffle></Shuffle>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Next pairing</ButtonLabel>
+    </Button>
+    <Button id="boutique-back" variant="secondary">
+      <ButtonIcon>
+        <ArrowLeft></ArrowLeft>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Back</ButtonLabel>
     </Button>
   </div>
   <div id="design-actions" class="actions" style="display: none">

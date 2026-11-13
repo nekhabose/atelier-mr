@@ -44,7 +44,12 @@ idea on the form as a preview, and waits for you to Keep it, see the Next idea,
 or Undo. Change the weather and it re-plans. Ask it to make the look warmer,
 dressier or more colourful and it edits the garments on the form - lets a hem
 down, adds sleeves, switches to knit or satin, layers your jacket - and tells
-you what it changed. It also tells you which piece your closet is missing. Save the looks you love to a lookbook
+you what it changed. It also tells you which piece your closet is missing. The boutique turns shopping around: three original labels hang their pieces
+on your rail, each tagged with how many new outfits it unlocks with what you
+already own. Try one on and the boutique stylist tries it with your clothes and
+says buy, maybe or skip, with the cost per new outfit. Add your photo and skin
+tone on the start page (kept on your device) and the form becomes you.
+Save the looks you love to a lookbook
 and log an Outfit of the Day to keep a streak, a reason to come back each
 morning.
 
@@ -101,6 +106,8 @@ configured it shows "CLAUDE".
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints, calendar and weather context |
 | Lookbook (6) and Outfit of the Day streak | Sharing, social lookbooks |
+| Boutique: 3 original labels, 15 pieces, try-on with your closet, buy / maybe / skip with new-outfit count and cost per outfit, add to closet | Official retailer feeds through partner programs |
+| Face photo (device-only) and 6 skin tones on the form | Body measurements to size the form to you |
 | Claude stylist endpoint deployed, guarded, awaiting key | Tuning for Meta VR Glasses field of view |
 
 Not yet verified: frame rate and hand tracking on a physical Quest, and
@@ -114,14 +121,15 @@ the IWSDK emulator. Show only real footage; no AI-generated video.
 
 | Time | Shot | Voice-over / caption |
 |---|---|---|
-| 0:00-0:12 | Enter Atelier in passthrough; studio lands on the real floor with the gold ring | "Your room is now a fashion studio." |
+| 0:00-0:12 | Enter Atelier in passthrough; studio pieces settle into the real room one by one, ATELIER title card | "Your room is now a fashion studio." |
 | 0:12-0:30 | Pinch Velvet Hour; outfit drops on; pull the hem pin, the dress shortens live | "Dress it, then tailor it, with your hands." |
 | 0:30-0:45 | Drag a satin swatch onto only the jacket; tap Turn to see the back | "Fabric per garment. Turn without standing up." |
 | 0:45-1:00 | Undo, Redo, Reset look | "Experiment freely; every change is undoable." |
 | 1:00-1:25 | Closet: New piece, Dress, green, satin, pull pins to match, Save | "Recreate the clothes you actually own." |
 | 1:25-2:05 | Ask stylist: Interview, Cold, Classic, Style me; preview badge; Next idea; tap Warmer, the hem drops and a jacket appears; Keep | "It plans from your closet, edits on request, and waits for your call." |
-| 2:05-2:25 | Save look, Wear today, streak badge turns gold; reload, look restored | "Save the looks you love; come back tomorrow." |
-| 2:25-2:40 | Wide shot of the studio; title card with URL | "Atelier. Open it in your Quest browser." |
+| 2:05-2:20 | BOUTIQUE tab: pieces slide onto the rail with "+4 OUTFITS" tags; try the silk blouse, verdict BUY, Add to closet | "Shop against what you own." |
+| 2:20-2:30 | Wear today, streak badge turns gold | "Come back tomorrow." |
+| 2:30-2:40 | Wide shot of the studio; title card with URL | "Atelier. Open it in your Quest browser." |
 
 ## Screenshots
 

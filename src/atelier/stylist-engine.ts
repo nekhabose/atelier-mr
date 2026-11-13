@@ -85,7 +85,7 @@ const fabricKey = (i: StylistItem) => word(i.fabric);
 const isNeutral = (i: StylistItem) => NEUTRAL.has(i.color.toLowerCase());
 const isPattern = (i: StylistItem) => PATTERNED.has(fabricKey(i));
 
-function score(outfit: StylistItem[], occasion: Occasion, weather: Weather, mood: Mood): number {
+export function score(outfit: StylistItem[], occasion: Occasion, weather: Weather, mood: Mood): number {
   const jacket = outfit.some((i) => i.kind === 'jacket');
   let formality = outfit.reduce((s, i) => s + (FORMALITY[fabricKey(i)] ?? 0.5), 0) / outfit.length;
   if (jacket) formality += 0.15;

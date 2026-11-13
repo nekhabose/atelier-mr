@@ -45,3 +45,11 @@ export const ClosetSlot = createComponent('ClosetSlot', {
 export const RackTab = createComponent('RackTab', {
   closet: { type: Types.Boolean, default: false },
 });
+
+/** A boutique piece hanging on the rail (index into the open boutique). */
+export const BoutiqueSlot = createComponent('BoutiqueSlot', {
+  index: { type: Types.Int16, default: 0 },
+});
+
+/** The BOUTIQUE tab above the rail. */
+export const BoutiqueTab = createComponent('BoutiqueTab', {});

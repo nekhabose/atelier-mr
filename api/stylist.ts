@@ -7,6 +7,9 @@
  *  - refine: the outfit on the form plus "warmer" / "dressier" / "colour" in;
  *    a short list of garment edits (length, sleeves, material, colour, an
  *    optional closet jacket) out, which the headset applies to the form.
+ *  - boutique: a candidate piece plus precomputed facts (new outfits it
+ *    unlocks with the closet, cost per outfit, near-duplicate) in; a verdict
+ *    (buy / maybe / skip), a reason and the best pairing out.
  * The API key lives only in the ANTHROPIC_API_KEY environment variable.
  *
  * Guardrails for a public endpoint:
@@ -41,6 +44,9 @@ import {
   REFINES,
   RefineReply,
   RefineRequest,
+  BoutiqueReply,
+  BoutiqueRequest,
+  VERDICTS,
   StylistItem,
   StylistReply,
   StylistRequest,
@@ -50,7 +56,7 @@ import {
 
 const MODEL = 'claude-opus-5-5';
 const MAX_BODY = 8_000;
-const RATE_LIMIT = 20; // requests per window per IP (per warm instance)
+const RATE_LIMIT = 40; // requests per window per IP (per warm instance)
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 const DEFAULT_ORIGINS = [
@@ -135,6 +141,31 @@ const REFINE_SCHEMA = {
     edits: { type: 'array', items: EDIT_SCHEMA },
   },
   required: ['summary', 'addItemId', 'edits'],
+  additionalProperties: false,
+} as const;
+
+const BOUTIQUE_SYSTEM = `You are the boutique stylist inside Atelier, a mixed-reality fashion studio. \
+The user is shopping against their own closet: should they buy this piece? Decide like an honest \
+personal stylist who would rather they buy less, better.
+
+Rules:
+- The numbers you are given (new outfits it unlocks with the closet, cost per outfit, near-duplicate) \
+are computed facts. Use them; never invent or change numbers.
+- verdict: "buy" only when it clearly earns its place (several new outfits, fair cost per outfit, not a \
+duplicate); "maybe" when useful but not essential; "skip" for duplicates or pieces that add little.
+- itemIds: the best outfit with it - "new" plus closet ids. A wearable outfit is exactly one dress, OR one \
+top plus one bottom (trousers or skirt), plus at most one jacket.
+- reason: one or two sentences, max 35 words, naming which owned pieces it works with and quoting the \
+number of new outfits. Warm, direct, no hype.`;
+
+const BOUTIQUE_SCHEMA = {
+  type: 'object',
+  properties: {
+    verdict: { type: 'string', enum: [...VERDICTS] },
+    reason: { type: 'string' },
+    itemIds: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['verdict', 'reason', 'itemIds'],
   additionalProperties: false,
 } as const;
 
@@ -238,6 +269,29 @@ function parseRequest(raw: unknown): StylistRequest | null {
   return { occasion: r.occasion, weather: r.weather, mood: r.mood, items };
 }
 
+/** Strictly validate a boutique request. */
+function parseBoutique(raw: unknown): BoutiqueRequest | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (r.mode !== 'boutique' || !oneOf(OCCASIONS, r.occasion)) return null;
+  const items = parseItems(r.items, MAX_ITEMS);
+  const cand = parseItems([r.candidate], 1);
+  const num = (v: unknown, max: number) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max;
+  if (!items || !cand || cand[0].id !== 'new' || items.some((i) => i.id === 'new')) return null;
+  if (!num(r.price, 100_000) || !num(r.newOutfits, 10_000) || !num(r.costPerOutfit, 100_000)) return null;
+  if (typeof r.duplicate !== 'string' || (r.duplicate !== '' && !NAME_PATTERN.test(r.duplicate))) return null;
+  return {
+    mode: 'boutique',
+    occasion: r.occasion,
+    candidate: cand[0],
+    price: r.price as number,
+    newOutfits: r.newOutfits as number,
+    costPerOutfit: r.costPerOutfit as number,
+    duplicate: r.duplicate,
+    items,
+  };
+}
+
 /** Strictly validate a refine request. */
 function parseRefine(raw: unknown): RefineRequest | null {
   const base = parseRequest(raw);
@@ -314,6 +368,47 @@ async function refine(req: RefineRequest, headers: Record<string, string>): Prom
   }
 }
 
+/** Buy, maybe or skip: Claude judges a boutique piece against the closet. */
+async function boutique(req: BoutiqueRequest, headers: Record<string, string>): Promise<Response> {
+  const facts =
+    `Occasion this boutique dresses for: ${req.occasion}\n` +
+    `Candidate: ${line(req.candidate)}\nPrice: $${req.price}\n` +
+    `New outfits it unlocks with the closet: ${req.newOutfits}\n` +
+    `Cost per new outfit: $${req.costPerOutfit}\n` +
+    `Near-duplicate already owned: ${req.duplicate || 'none'}\n\n` +
+    `Closet:\n${req.items.map(line).join('\n')}`;
+  const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 3000,
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: BOUTIQUE_SCHEMA } },
+      system: BOUTIQUE_SYSTEM,
+      messages: [{ role: 'user', content: facts }],
+    });
+    if (response.stop_reason === 'refusal') return json(422, { error: 'declined' }, headers);
+    if (response.stop_reason === 'max_tokens') return json(502, { error: 'no_answer' }, headers);
+    const block = response.content.find((b) => b.type === 'text');
+    if (!block || block.type !== 'text') return json(502, { error: 'no_answer' }, headers);
+    const answer = JSON.parse(block.text) as Partial<BoutiqueReply>;
+    if (!oneOf(VERDICTS, answer.verdict)) return json(502, { error: 'no_answer' }, headers);
+    const kinds = new Map(req.items.map((i) => [i.id, i.kind as string]));
+    kinds.set('new', req.candidate.kind);
+    const ids = [...new Set(Array.isArray(answer.itemIds) ? answer.itemIds : [])].filter(
+      (id): id is string => typeof id === 'string' && kinds.has(id),
+    );
+    const pairing = ids.includes('new') && isWearable(ids.map((id) => kinds.get(id)!)) ? ids : [];
+    const reply: BoutiqueReply = {
+      verdict: answer.verdict,
+      reason: clip(String(answer.reason ?? ''), 240),
+      itemIds: pairing,
+    };
+    return json(200, reply, headers);
+  } catch (error) {
+    return failure(error, headers);
+  }
+}
+
 // ------------------------------------------------------------------ handlers
 
 export function OPTIONS(request: Request): Response {
@@ -339,6 +434,11 @@ export async function POST(request: Request): Promise<Response> {
     body = JSON.parse(text);
   } catch {
     body = null;
+  }
+  if (body && typeof body === 'object' && (body as Record<string, unknown>).mode === 'boutique') {
+    const req = parseBoutique(body);
+    if (!req) return json(400, { error: 'invalid_request' }, headers);
+    return boutique(req, headers);
   }
   if (body && typeof body === 'object' && (body as Record<string, unknown>).mode === 'refine') {
     const req = parseRefine(body);

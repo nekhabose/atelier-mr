@@ -69,6 +69,10 @@ export class ClosetSystem extends createSystem({
 }) {
   items: ClosetItem[] = [];
   closetMode = false;
+  /** The boutique has the rail (BoutiqueSystem owns its hangers). */
+  boutiqueOpen = false;
+  /** Called when a rack tab takes the rail back from the boutique. */
+  onLeaveBoutique?: () => void;
   selectedId?: string;
   design?: Design;
   private atelier!: AtelierSystem;
@@ -108,7 +112,7 @@ export class ClosetSystem extends createSystem({
       const group = new Group();
       group.name = `rack-tab-${closet ? 'closet' : 'designer'}`;
       const on = makeLabel(text, {
-        width: 0.3,
+        width: 0.28,
         fontSize: 36,
         color: '#2b2118',
         background: '#e2c27d',
@@ -117,7 +121,7 @@ export class ClosetSystem extends createSystem({
       });
       on.name = 'on';
       const off = makeLabel(text, {
-        width: 0.3,
+        width: 0.28,
         fontSize: 36,
         color: '#6b5a44',
         background: 'rgba(250,246,238,0.85)',
@@ -125,21 +129,21 @@ export class ClosetSystem extends createSystem({
         letterSpacing: 3,
       });
       off.name = 'off';
-      const hit = new Mesh(new BoxGeometry(0.3, 0.07, 0.03), this.hitMaterial);
+      const hit = new Mesh(new BoxGeometry(0.28, 0.07, 0.03), this.hitMaterial);
       group.add(on, off, hit);
       group.position.set(x, RACK.barY + 0.2, 0.02);
       const entity = this.world.createTransformEntity(group, { parent: rack });
       entity.addComponent(RackTab, { closet });
       entity.addComponent(RayInteractable);
     };
-    make('DESIGNER LOOKS', false, -0.17);
-    make('MY CLOSET', true, 0.17);
+    make('DESIGNER LOOKS', false, -0.31);
+    make('MY CLOSET', true, 0);
     this.paintTabs();
   }
 
   private paintTabs(): void {
     for (const e of this.queries.tabs.entities) {
-      const active = (e.getValue(RackTab, 'closet') === true) === this.closetMode;
+      const active = !this.boutiqueOpen && (e.getValue(RackTab, 'closet') === true) === this.closetMode;
       const g = e.object3D!;
       g.getObjectByName('on')!.visible = active;
       g.getObjectByName('off')!.visible = !active;
@@ -148,6 +152,10 @@ export class ClosetSystem extends createSystem({
 
   /** Switch the rail between designer looks and the closet. */
   setMode(closet: boolean): void {
+    if (this.boutiqueOpen) {
+      this.boutiqueOpen = false;
+      this.onLeaveBoutique?.();
+    }
     this.closetMode = closet;
     this.atelier.setDesignerRackVisible(!closet);
     this.paintTabs();
@@ -402,6 +410,8 @@ export class ClosetSystem extends createSystem({
       stylistActions: el('stylist-actions'),
       proposalActions: el('proposal-actions'),
       lookbook: el('lookbook-section'),
+      boutique: el('boutique-section'),
+      boutiqueActions: el('boutique-actions'),
     };
     const on = (id: string, fn: () => void) => {
       const node = panel.getElementById(id);
@@ -449,12 +459,14 @@ export class ClosetSystem extends createSystem({
   }
 
   /** Show exactly one of the panel's three states. */
-  private panelSections(state: 'browse' | 'design' | 'stylist'): void {
+  panelSections(state: 'browse' | 'design' | 'stylist' | 'boutique'): void {
     const show = (el: El, on: boolean) => el?.setProperties({ display: on ? 'flex' : 'none' });
     show(this.ui.browse, state === 'browse');
     show(this.ui.browse2, state === 'browse');
     show(this.ui.streak, state === 'browse');
     show(this.ui.lookbook, state === 'browse');
+    show(this.ui.boutique, state === 'boutique');
+    show(this.ui.boutiqueActions, state === 'boutique');
     show(this.ui.proposalActions, false);
     show(this.ui.note, true);
     show(this.ui.design, state === 'design');
@@ -487,6 +499,27 @@ export class ClosetSystem extends createSystem({
     this.atelier.dress(pieces, name, note);
     this.rebuildRail();
     return true;
+  }
+
+  /** Hand the rail and panel to the boutique. */
+  openBoutique(): void {
+    if (this.design) this.endDesign();
+    this.boutiqueOpen = true;
+    this.closetMode = false;
+    this.atelier.setDesignerRackVisible(false);
+    this.clearRail();
+    this.paintTabs();
+    this.panelSections('boutique');
+  }
+
+  /** Add a piece to the closet (from the boutique). Null when the rail is full. */
+  addItem(piece: GarmentPiece, name: string): ClosetItem | null {
+    if (this.items.length >= CLOSET_CAPACITY) return null;
+    const item = newClosetItem({ ...piece });
+    item.name = name;
+    this.items.push(item);
+    saveCloset(this.items);
+    return item;
   }
 
   /** Dress the form in explicit pieces (stylist refinements). */

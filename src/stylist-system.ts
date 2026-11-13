@@ -36,6 +36,7 @@ import {
 } from './atelier/stylist-contract.js';
 import { describeItem, planOffline, StylistPlan, StylistResult } from './atelier/stylist-engine.js';
 import { sfx } from './atelier/sfx.js';
+import { postStylist } from './atelier/stylist-client.js';
 import { applyRefine, describeOutfit, planRefineOffline } from './atelier/refine.js';
 
 interface Proposal {
@@ -47,8 +48,6 @@ interface Proposal {
   gap?: string;
 }
 
-const ENDPOINT: string = import.meta.env.VITE_STYLIST_URL || 'api/stylist';
-const TIMEOUT_MS = 15_000;
 const ON = { bg: '#e2c27d', border: '#e2c27d', text: '#2b2118' };
 const OFF = { bg: '#2c2e33', border: '#4a4d55', text: '#f1ede4' };
 
@@ -349,21 +348,8 @@ export class StylistSystem extends createSystem({
     this.closet.backToBrowse();
   }
 
-  /** POST to the stylist endpoint; null on any non-200 answer or timeout. */
-  private async post<T>(body: object): Promise<T | null> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      const res = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      return res.ok ? ((await res.json()) as T) : null;
-    } finally {
-      clearTimeout(timer);
-    }
+  private post<T>(body: object): Promise<T | null> {
+    return postStylist<T>(body);
   }
 
   private async askClaude(items: StylistItem[]): Promise<StylistResult[]> {

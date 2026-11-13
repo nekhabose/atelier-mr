@@ -24,6 +24,7 @@ import {
   Vector3,
 } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
+import { RoomPlacementSystem } from './room-system.js';
 import { DressForm, FabricSwatch, RackLook, TailorPin } from './atelier-components.js';
 import { createGhostHand, GhostHand } from './atelier/ghost-hand.js';
 import { makeLabel } from './atelier/labels.js';
@@ -266,6 +267,13 @@ export class OnboardingSystem extends createSystem({
 
   update(delta: number): void {
     if (!this.active) return;
+    // Let the opening reveal play before the ghost hand appears.
+    if (this.world.getSystem(RoomPlacementSystem)?.revealing) {
+      this.hand.setOpacity(0);
+      this.pulseMat.opacity = 0;
+      this.chips[this.step].visible = false;
+      return;
+    }
     const step = STEPS[this.step];
 
     // Advance when the user has done the step themselves.

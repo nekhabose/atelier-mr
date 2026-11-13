@@ -19,6 +19,8 @@ export interface LabelStyle {
   weight?: number;
   letterSpacing?: number;
   pill?: boolean;
+  /** CSS font family (default: a clean sans). */
+  font?: string;
 }
 
 export function makeLabel(text: string, style: LabelStyle): Mesh {
@@ -36,7 +38,7 @@ export function makeLabel(text: string, style: LabelStyle): Mesh {
     ctx.fill();
   }
   ctx.fillStyle = style.color ?? '#2b2118';
-  ctx.font = `${style.weight ?? 700} ${style.fontSize ?? 46}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  ctx.font = `${style.weight ?? 700} ${style.fontSize ?? 46}px ${style.font ?? '"Helvetica Neue", Helvetica, Arial, sans-serif'}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   if (style.letterSpacing) {

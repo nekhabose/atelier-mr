@@ -1,5 +1,7 @@
 import { defineComponents } from '@iwsdk/core';
 import {
+  BoutiqueSlot,
+  BoutiqueTab,
   ClosetSlot,
   DressForm,
   FabricSwatch,
@@ -19,4 +21,6 @@ export default defineComponents([
   Turntable,
   ClosetSlot,
   RackTab,
+  BoutiqueSlot,
+  BoutiqueTab,
 ]);
