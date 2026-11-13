@@ -1,7 +1,8 @@
 <!--
-  Digital Closet panel. ClosetSystem toggles between the browse state
-  (#browse-actions) and the design state (#design-section + #design-actions),
-  and updates #closet-title / #closet-note and chip highlights at runtime.
+  Digital Closet panel with three states, toggled by ClosetSystem:
+  browse (streak, lookbook, closet + stylist actions), design (garment
+  builder chips) and stylist (occasion / weather / mood chips, then a
+  previewed proposal with Keep / Next idea / Undo).
 -->
 <style>
   .panel-root {
@@ -109,6 +110,93 @@
     border-color: #4a4d55;
   }
 
+  .streak {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .badge {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 86px;
+    height: 70px;
+    border-radius: 16px;
+    background-color: #e6e1d8;
+  }
+
+  .badge:dark {
+    background-color: #34363c;
+  }
+
+  .badge-count {
+    color: #2b2118;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 32px;
+  }
+
+  .badge-count:dark {
+    color: #f1ede4;
+  }
+
+  .badge-label {
+    color: #6b5a44;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .badge-label:dark {
+    color: #c9c3b6;
+  }
+
+  .streak-text {
+    flex-direction: column;
+    flex-shrink: 1;
+    gap: 2px;
+  }
+
+  .streak-title {
+    color: #1c1d20;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .streak-title:dark {
+    color: #fafaf7;
+  }
+
+  .streak-sub {
+    color: #5b5f68;
+    font-size: 14px;
+    line-height: 19px;
+  }
+
+  .streak-sub:dark {
+    color: #b9bcc4;
+  }
+
+  .tip {
+    margin-top: 8px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 12px;
+    background-color: #f3ead8;
+    color: #5a4520;
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  .tip:dark {
+    background-color: #3a3122;
+    color: #f1dfb6;
+  }
+
   .actions {
     flex-direction: row;
     gap: 10px;
@@ -127,6 +215,58 @@
     <div id="closet-eyebrow" class="eyebrow">MY CLOSET</div>
     <div id="closet-title" class="heading">Your closet</div>
     <div id="closet-note" class="note">Recreate clothes you own, then mix them on the form.</div>
+    <div id="streak-row" class="streak">
+      <div id="streak-badge" class="badge">
+        <div id="streak-count" class="badge-count">0</div>
+        <div class="badge-label">DAY STREAK</div>
+      </div>
+      <div class="streak-text">
+        <div id="streak-title" class="streak-title">Outfit of the Day</div>
+        <div id="streak-sub" class="streak-sub">Dress the form, then tap Wear today.</div>
+      </div>
+    </div>
+    <div id="lookbook-section" class="section">
+      <div class="row-label">LOOKBOOK</div>
+      <div id="lookbook-empty" class="streak-sub">Save a look you love and it waits for you here.</div>
+      <div class="row">
+        <div id="lb-0" class="chip" style="display: none">Look</div>
+        <div id="lb-1" class="chip" style="display: none">Look</div>
+        <div id="lb-2" class="chip" style="display: none">Look</div>
+      </div>
+      <div class="row">
+        <div id="lb-3" class="chip" style="display: none">Look</div>
+        <div id="lb-4" class="chip" style="display: none">Look</div>
+        <div id="lb-5" class="chip" style="display: none">Look</div>
+      </div>
+    </div>
+    <div id="stylist-section" class="section" style="display: none">
+      <div class="row-label">OCCASION</div>
+      <div class="row">
+        <div id="occ-work" class="chip">Work</div>
+        <div id="occ-interview" class="chip">Interview</div>
+        <div id="occ-date" class="chip">Date</div>
+      </div>
+      <div class="row">
+        <div id="occ-weekend" class="chip">Weekend</div>
+        <div id="occ-party" class="chip">Party</div>
+        <div id="occ-travel" class="chip">Travel</div>
+      </div>
+      <div class="row-label">WEATHER</div>
+      <div class="row">
+        <div id="wx-warm" class="chip">Warm</div>
+        <div id="wx-mild" class="chip">Mild</div>
+        <div id="wx-cold" class="chip">Cold</div>
+        <div id="wx-rainy" class="chip">Rainy</div>
+      </div>
+      <div class="row-label">MOOD</div>
+      <div class="row">
+        <div id="mood-classic" class="chip">Classic</div>
+        <div id="mood-bold" class="chip">Bold</div>
+        <div id="mood-relaxed" class="chip">Relaxed</div>
+      </div>
+      <div id="stylist-tip" class="tip" style="display: none">Tip</div>
+      <div id="stylist-meta" class="streak-sub" style="display: none">Meta</div>
+    </div>
     <div id="design-section" class="section" style="display: none">
       <div class="row-label">GARMENT</div>
       <div class="row">
@@ -166,7 +306,7 @@
       </div>
     </div>
   </div>
-  <div id="browse-actions" class="actions">
+  <div id="browse-actions" class="actions" style="padding-bottom: 0px">
     <Button id="new-button">
       <ButtonIcon>
         <Plus></Plus>
@@ -184,6 +324,60 @@
         <Trash2></Trash2>
       </ButtonIcon>
       <ButtonLabel class="button-label">Remove</ButtonLabel>
+    </Button>
+  </div>
+  <div id="browse-actions-2" class="actions">
+    <Button id="stylist-button">
+      <ButtonIcon>
+        <Sparkles></Sparkles>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Ask stylist</ButtonLabel>
+    </Button>
+    <Button id="today-button" variant="secondary">
+      <ButtonIcon>
+        <CalendarCheck></CalendarCheck>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Wear today</ButtonLabel>
+    </Button>
+    <Button id="save-look-button" variant="secondary">
+      <ButtonIcon>
+        <Bookmark></Bookmark>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Save look</ButtonLabel>
+    </Button>
+  </div>
+  <div id="stylist-actions" class="actions" style="display: none">
+    <Button id="style-button">
+      <ButtonIcon>
+        <Sparkles></Sparkles>
+      </ButtonIcon>
+      <ButtonLabel id="style-label" class="button-label">Style me</ButtonLabel>
+    </Button>
+    <Button id="stylist-back" variant="secondary">
+      <ButtonIcon>
+        <ArrowLeft></ArrowLeft>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Back</ButtonLabel>
+    </Button>
+  </div>
+  <div id="proposal-actions" class="actions" style="display: none">
+    <Button id="keep-button">
+      <ButtonIcon>
+        <Check></Check>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Keep</ButtonLabel>
+    </Button>
+    <Button id="next-button" variant="secondary">
+      <ButtonIcon>
+        <Shuffle></Shuffle>
+      </ButtonIcon>
+      <ButtonLabel id="next-label" class="button-label">Next idea</ButtonLabel>
+    </Button>
+    <Button id="revert-button" variant="secondary">
+      <ButtonIcon>
+        <Undo2></Undo2>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Undo</ButtonLabel>
     </Button>
   </div>
   <div id="design-actions" class="actions" style="display: none">

@@ -268,6 +268,7 @@ export class ClosetSystem extends createSystem({
     const draft = item
       ? { ...item.piece }
       : templatePiece('top', closetFabricId('cotton', 'white'));
+    this.atelier.draftOpen = true;
     this.design = {
       draft,
       editingId: item?.id,
@@ -326,6 +327,7 @@ export class ClosetSystem extends createSystem({
     saveCloset(this.items);
     this.selectedId = item.id;
     this.design = undefined;
+    this.atelier.draftOpen = false;
     this.atelier.setPanel(name, 'Saved to your closet. Mix it with anything on the rail.');
     this.rebuildRail();
     this.showBrowse(`Saved "${name}". ${this.items.length} pieces in your closet.`);
@@ -335,6 +337,7 @@ export class ClosetSystem extends createSystem({
     const d = this.design;
     if (!d) return;
     this.design = undefined;
+    this.atelier.draftOpen = false;
     if (d.stash.length > 0) {
       this.atelier.dress(d.stash, d.stashName || 'Your mix', 'Back to what you were wearing.', {
         quiet: true,
@@ -350,6 +353,7 @@ export class ClosetSystem extends createSystem({
   /** Close the builder without restoring (the user moved on). */
   private endDesign(): void {
     this.design = undefined;
+    this.atelier.draftOpen = false;
     this.showBrowse();
   }
 
@@ -390,6 +394,12 @@ export class ClosetSystem extends createSystem({
       design: el('design-section'),
       browse: el('browse-actions'),
       designActions: el('design-actions'),
+      browse2: el('browse-actions-2'),
+      streak: el('streak-row'),
+      stylist: el('stylist-section'),
+      stylistActions: el('stylist-actions'),
+      proposalActions: el('proposal-actions'),
+      lookbook: el('lookbook-section'),
     };
     const on = (id: string, fn: () => void) => {
       const node = panel.getElementById(id);
@@ -432,9 +442,48 @@ export class ClosetSystem extends createSystem({
           ? 'Tap a piece on the rail to wear it. Mix tops, bottoms and jackets.'
           : 'Recreate clothes you own. Tap MY CLOSET above the rail to see them.'),
     );
-    this.ui.design?.setProperties({ display: 'none' });
-    this.ui.designActions?.setProperties({ display: 'none' });
-    this.ui.browse?.setProperties({ display: 'flex' });
+    this.panelSections('browse');
+  }
+
+  /** Show exactly one of the panel's three states. */
+  private panelSections(state: 'browse' | 'design' | 'stylist'): void {
+    const show = (el: El, on: boolean) => el?.setProperties({ display: on ? 'flex' : 'none' });
+    show(this.ui.browse, state === 'browse');
+    show(this.ui.browse2, state === 'browse');
+    show(this.ui.streak, state === 'browse');
+    show(this.ui.lookbook, state === 'browse');
+    show(this.ui.proposalActions, false);
+    show(this.ui.note, true);
+    show(this.ui.design, state === 'design');
+    show(this.ui.designActions, state === 'design');
+    show(this.ui.stylist, state === 'stylist');
+    show(this.ui.stylistActions, state === 'stylist');
+  }
+
+  /** Switch the panel to the stylist (StylistSystem owns its content). */
+  openStylistView(): void {
+    if (this.design) this.endDesign();
+    if (!this.closetMode) this.setMode(true);
+    this.panelSections('stylist');
+  }
+
+  /** Return the panel to the closet overview. */
+  backToBrowse(note?: string): void {
+    this.showBrowse(note);
+  }
+
+  /** Dress the form in several closet items at once (used by the stylist). */
+  wearOutfit(itemIds: string[], name: string, note: string): boolean {
+    const pieces = itemIds
+      .map((id) => this.items.find((i) => i.id === id))
+      .filter((i): i is ClosetItem => !!i)
+      .map((i) => ({ ...i.piece }));
+    if (pieces.length === 0) return false;
+    if (this.design) this.endDesign();
+    this.selectedId = undefined;
+    this.atelier.dress(pieces, name, note);
+    this.rebuildRail();
+    return true;
   }
 
   private showDesign(): void {
@@ -443,9 +492,7 @@ export class ClosetSystem extends createSystem({
     this.ui.eyebrow?.setProperties({ text: d.editingId ? 'MY CLOSET  |  EDITING' : 'MY CLOSET  |  NEW PIECE' });
     this.ui.title?.setProperties({ text: pieceName(d.draft) });
     this.setNote('Garment, colour, fabric - then pull the pins to match yours.');
-    this.ui.design?.setProperties({ display: 'flex' });
-    this.ui.designActions?.setProperties({ display: 'flex' });
-    this.ui.browse?.setProperties({ display: 'none' });
+    this.panelSections('design');
     this.paintChips();
   }
 

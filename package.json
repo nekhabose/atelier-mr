@@ -10,11 +10,12 @@
     "dev:status": "iwsdk dev status",
     "reference:status": "iwsdk reference status",
     "reference:warmup": "iwsdk reference warmup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.api.json",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@iwsdk/core": "1.1.0-rc.2",
     "@pmndrs/uikit": "^1.0.74",
     "@pmndrs/uikit-horizon": "^1.0.74",
@@ -22,8 +23,8 @@
     "three": "npm:super-three@0.185.0"
   },
   "devDependencies": {
-    "@iwsdk/reference": "1.1.0-rc.2",
     "@iwsdk/cli": "1.1.0-rc.2",
+    "@iwsdk/reference": "1.1.0-rc.2",
     "@iwsdk/vite-plugin-dev": "1.1.0-rc.2",
     "@meta-quest/metavr": "^1.8.1",
     "@types/three": "^0.185.0",

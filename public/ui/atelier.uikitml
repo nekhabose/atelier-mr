@@ -106,6 +106,26 @@
       <ButtonLabel class="button-label">Reset look</ButtonLabel>
     </Button>
   </div>
+  <div id="edit-actions" class="actions">
+    <Button id="undo-button" variant="secondary">
+      <ButtonIcon>
+        <Undo2></Undo2>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Undo</ButtonLabel>
+    </Button>
+    <Button id="redo-button" variant="secondary">
+      <ButtonIcon>
+        <Redo2></Redo2>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Redo</ButtonLabel>
+    </Button>
+    <Button id="turn-button" variant="secondary">
+      <ButtonIcon>
+        <RotateCw></RotateCw>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Turn</ButtonLabel>
+    </Button>
+  </div>
   <div class="actions">
     <Button id="place-button" variant="secondary">
       <ButtonIcon>

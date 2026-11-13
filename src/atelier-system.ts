@@ -68,6 +68,16 @@ const PARAMS: TailorParam[] = ['hem', 'neck', 'sleeve', 'fit'];
 const WEAR_DURATION = 0.45;
 const MINI_SCALE = 0.19;
 
+/** A restorable outfit state for undo / redo / reset and the stylist preview. */
+export interface Snapshot {
+  pieces: GarmentPiece[];
+  name: string;
+  lookIndex: number;
+}
+const HISTORY_LIMIT = 30;
+const TURN_STEP = Math.PI / 4;
+const BADGE_HEIGHT = 1.86;
+
 interface PinState {
   entity: Entity;
   param: TailorParam;
@@ -90,6 +100,14 @@ export class AtelierSystem extends createSystem({
   tailorCount = 0;
   fabricCount = 0;
   private outfitName = '';
+  /** Set by the closet while a draft piece is open (history is paused). */
+  draftOpen = false;
+  private past: Snapshot[] = [];
+  private future: Snapshot[] = [];
+  private origin?: Snapshot;
+  private turnTarget: number | null = null;
+  private badge?: Mesh;
+  private badgeT = 0;
   private formEntity!: Entity;
   private outfit!: Group;
   private pieces: GarmentPiece[] = [];
@@ -137,9 +155,11 @@ export class AtelierSystem extends createSystem({
       this.queries.pinsGrabbed.subscribe('disqualify', () => {
         this.tailorCount++;
         this.layoutPins();
-        this.setHint('Nice cut. Drop a fabric on the form, or tap another look.');
+        this.saveState();
+        this.setHint('Nice cut. Undo if you change your mind, or drop a fabric on the form.');
       }),
       this.queries.pinsGrabbed.subscribe('qualify', (entity) => {
+        this.checkpoint();
         const param = entity.getValue(TailorPin, 'param') as TailorParam;
         const target = pieceForParam(this.pieces, param);
         if (target) this.selectedPiece = this.pieces.indexOf(target);
@@ -294,12 +314,19 @@ export class AtelierSystem extends createSystem({
     const exitButton = panel.getElementById('exit-button');
     const resetButton = panel.getElementById('reset-button');
     if (resetButton) {
-      const onReset = () => {
-        if (this.lookIndex >= 0) this.wearLook(this.lookIndex);
-      };
+      const onReset = () => this.resetLook();
       resetButton.addEventListener('click', onReset);
       this.cleanupFuncs.push(() => resetButton.removeEventListener('click', onReset));
     }
+    const wire = (id: string, fn: () => void) => {
+      const node = panel.getElementById(id);
+      if (!node) return;
+      node.addEventListener('click', fn);
+      this.cleanupFuncs.push(() => node.removeEventListener('click', fn));
+    };
+    wire('undo-button', () => this.undo());
+    wire('redo-button', () => this.redo());
+    wire('turn-button', () => this.turnForm(1));
     if (xrButton && exitButton) {
       if (!this.world.xrEnabled) {
         xrButton.setProperties({ display: 'none' });
@@ -328,6 +355,8 @@ export class AtelierSystem extends createSystem({
   wearLook(index: number): void {
     const look = LOOKS[index];
     if (!look) return;
+    this.setBadge(null);
+    this.checkpoint();
     this.lookIndex = index;
     this.pieces = cloneLook(look);
     this.selectedPiece = this.outermostPiece();
@@ -336,7 +365,8 @@ export class AtelierSystem extends createSystem({
     this.wearCount++;
     AudioUtils.play(this.formEntity);
     this.setPanel(look.name, look.note);
-    this.setHint('Pinch a coloured pin and pull to tailor. Grab the form to spin it.');
+    this.setHint('Pinch a coloured pin and pull to tailor. Tap Turn to see the back.');
+    this.origin = this.snapshot();
     this.saveState();
   }
 
@@ -349,6 +379,8 @@ export class AtelierSystem extends createSystem({
     const idx = pieceIndex >= 0 ? pieceIndex : this.outermostPiece();
     const piece = this.pieces[idx];
     if (!piece) return;
+    if (piece.fabric === fabricId) return;
+    this.checkpoint();
     piece.fabric = fabricId;
     this.fabricCount++;
     this.selectedPiece = idx;
@@ -467,6 +499,8 @@ export class AtelierSystem extends createSystem({
    * editing a draft piece by reference.
    */
   dress(pieces: GarmentPiece[], name: string, note: string, opts: { quiet?: boolean } = {}): void {
+    this.setBadge(null);
+    if (!opts.quiet && !this.draftOpen) this.checkpoint();
     this.lookIndex = -1;
     this.pieces = pieces;
     this.selectedPiece = this.outermostPiece();
@@ -477,7 +511,113 @@ export class AtelierSystem extends createSystem({
       AudioUtils.play(this.formEntity);
     }
     this.setPanel(name, note);
+    if (!opts.quiet) this.origin = this.snapshot();
     this.saveState();
+  }
+
+  // ---------------------------------------------------------------- history
+
+  /** A deep copy of what is on the form now. */
+  snapshot(): Snapshot {
+    return {
+      pieces: this.pieces.map((p) => ({ ...p })),
+      name: this.outfitName,
+      lookIndex: this.lookIndex,
+    };
+  }
+
+  /** Remember the current state so the next change can be undone. */
+  checkpoint(): void {
+    if (this.draftOpen || this.pieces.length === 0) return;
+    this.past.push(this.snapshot());
+    if (this.past.length > HISTORY_LIMIT) this.past.shift();
+    this.future.length = 0;
+  }
+
+  /** Put a snapshot back on the form (no history entry of its own). */
+  restore(s: Snapshot, note: string): void {
+    this.lookIndex = s.lookIndex;
+    this.pieces = s.pieces.map((p) => ({ ...p }));
+    this.selectedPiece = this.outermostPiece();
+    this.rebuildAll();
+    this.wearT = 0.55;
+    this.setPanel(s.name || 'Choose a look', note);
+    this.saveState();
+  }
+
+  get canUndo(): boolean {
+    return this.past.length > 0;
+  }
+
+  undo(): void {
+    if (this.draftOpen) {
+      this.setHint('Save or cancel the closet piece first.');
+      return;
+    }
+    const prev = this.past.pop();
+    if (!prev) {
+      this.setHint('Nothing to undo yet.');
+      return;
+    }
+    this.future.push(this.snapshot());
+    this.restore(prev, 'Undone. Redo brings it back.');
+    this.setHint(`Undo  |  ${this.past.length} more step${this.past.length === 1 ? '' : 's'} back.`);
+  }
+
+  redo(): void {
+    if (this.draftOpen) {
+      this.setHint('Save or cancel the closet piece first.');
+      return;
+    }
+    const next = this.future.pop();
+    if (!next) {
+      this.setHint('Nothing to redo.');
+      return;
+    }
+    this.past.push(this.snapshot());
+    this.restore(next, 'Redone.');
+    this.setHint(`Redo  |  ${this.future.length} more step${this.future.length === 1 ? '' : 's'} ahead.`);
+  }
+
+  /** Back to the outfit as it was first dressed, before tailoring and fabrics. */
+  resetLook(): void {
+    if (!this.origin || this.draftOpen) {
+      this.setHint('Dress the form first - tap a look on the rail.');
+      return;
+    }
+    this.checkpoint();
+    this.restore(this.origin, 'Reset to how it first came off the rail. Undo to go back.');
+    this.setHint('Fresh start. Pull a pin to tailor again.');
+  }
+
+  /** Turn the form on its turntable by 45 degrees (no reaching needed). */
+  turnForm(direction: 1 | -1): void {
+    const form = this.formEntity.object3D!;
+    this.tmpEuler.setFromQuaternion(form.quaternion, 'YXZ');
+    const from = this.turnTarget ?? this.tmpEuler.y;
+    this.turnTarget = from + direction * TURN_STEP;
+    this.setHint('Turning the form. Grab it with a pinch to spin it freely.');
+  }
+
+  /** A floating tag over the form (e.g. STYLIST PREVIEW); null hides it. */
+  setBadge(text: string | null): void {
+    if (this.badge) {
+      this.badge.removeFromParent();
+      const mat = this.badge.material as unknown as { map?: { dispose(): void } | null; dispose(): void };
+      mat.map?.dispose();
+      mat.dispose();
+      this.badge.geometry.dispose();
+      this.badge = undefined;
+    }
+    if (!text) return;
+    this.badge = makeLabel(text, {
+      width: 0.42,
+      fontSize: 44,
+      color: '#2b2118',
+      background: '#e2c27d',
+      pill: true,
+    });
+    this.formEntity.object3D!.parent?.add(this.badge);
   }
 
   /** Rebuild every worn piece after an external edit (e.g. template change). */
@@ -553,6 +693,31 @@ export class AtelierSystem extends createSystem({
     this.tmpEuler.setFromQuaternion(form.quaternion, 'YXZ');
     if (this.tmpEuler.x !== 0 || this.tmpEuler.z !== 0) {
       form.rotation.set(0, this.tmpEuler.y, 0, 'YXZ');
+    }
+    if (this.turnTarget !== null) {
+      if (this.formEntity.hasComponent(Grabbed)) {
+        this.turnTarget = null;
+      } else {
+        const yaw = this.tmpEuler.y;
+        let diff = this.turnTarget - yaw;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        if (Math.abs(diff) < 0.004) {
+          form.rotation.set(0, this.turnTarget, 0, 'YXZ');
+          this.turnTarget = null;
+        } else {
+          form.rotation.set(0, yaw + diff * Math.min(1, delta * 7), 0, 'YXZ');
+        }
+      }
+    }
+    if (this.badge) {
+      // Float above the form's head and face the viewer.
+      this.badge.position.set(
+        form.position.x,
+        form.position.y + BADGE_HEIGHT * form.scale.y + Math.sin(this.badgeT += delta * 1.6) * 0.008,
+        form.position.z,
+      );
+      this.world.camera.getWorldPosition(this.tmpVec);
+      this.badge.lookAt(this.tmpVec);
     }
 
     // Wear animation: the outfit drops onto the form with a soft settle.
