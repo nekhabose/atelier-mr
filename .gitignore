@@ -46,3 +46,4 @@ pids/
 
 # Vercel project link
 .vercel/
+.vercel

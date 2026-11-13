@@ -135,6 +135,15 @@ export class AtelierSystem extends createSystem({
     this.outfit.name = 'outfit';
     formObject.add(this.outfit);
 
+    // A warm studio backdrop for the flat page (judges' first look in the
+    // browser); cleared in XR so passthrough shows the real room.
+    const backdrop = new Color('#ece5d8');
+    this.cleanupFuncs.push(
+      this.world.visibilityState.subscribe((state) => {
+        this.world.scene.background = state === VisibilityState.NonImmersive ? backdrop : null;
+      }),
+    );
+
     this.buildRack();
     this.buildSwatches();
     this.buildPins();
@@ -232,7 +241,7 @@ export class AtelierSystem extends createSystem({
       const x = -width / 2 + cellW * (col + 0.5);
       const y = centerY + height / 2 - cellH * (row + 0.5);
       const swatch = new Mesh(new BoxGeometry(0.15, 0.15, 0.008), swatchMaterial(fabricId));
-      swatch.castShadow = true;
+      swatch.castShadow = false; // flush to the board: no visible shadow
       swatch.name = `swatch-${fabricId}`;
       swatch.position.set(x, y + 0.016, 0.016);
       const entity = this.world.createTransformEntity(swatch, { parent: boardEntity });
@@ -379,7 +388,10 @@ export class AtelierSystem extends createSystem({
     const idx = pieceIndex >= 0 ? pieceIndex : this.outermostPiece();
     const piece = this.pieces[idx];
     if (!piece) return;
-    if (piece.fabric === fabricId) return;
+    if (piece.fabric === fabricId) {
+      this.setHint(`The ${piece.kind} is already ${fabricById(fabricId).name}. Try another swatch.`);
+      return;
+    }
     this.checkpoint();
     piece.fabric = fabricId;
     this.fabricCount++;

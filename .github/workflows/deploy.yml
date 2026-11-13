@@ -28,6 +28,8 @@ jobs:
       - run: npm run build
         env:
           NODE_ENV: production
+          # The Pages mirror asks the stylist hosted on Vercel (allow-listed origin).
+          VITE_STYLIST_URL: https://atelier-mr.vercel.app/api/stylist
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

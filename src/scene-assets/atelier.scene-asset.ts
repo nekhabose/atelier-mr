@@ -53,10 +53,11 @@ const linen = createSceneMaterial({
   roughness: 0.95,
 });
 
-function mesh(name: string, geometry: Mesh['geometry'], material: Mesh['material']): Mesh {
+function mesh(name: string, geometry: Mesh['geometry'], material: Mesh['material'], cast = true): Mesh {
   const m = new Mesh(geometry, material);
   m.name = name;
-  m.castShadow = true;
+  // Thin, small parts (hangers) skip the shadow pass: invisible gain, real cost.
+  m.castShadow = cast;
   m.receiveShadow = true;
   return m;
 }
@@ -233,14 +234,14 @@ export function createSwatchBoard(): Group {
 export function createHanger(): Group {
   const root = new Group();
   root.name = 'Hanger';
-  const hook = mesh('hanger-hook', new TorusGeometry(0.018, 0.0028, 8, 24, Math.PI * 1.4), brass);
+  const hook = mesh('hanger-hook', new TorusGeometry(0.018, 0.0028, 8, 24, Math.PI * 1.4), brass, false);
   hook.rotation.z = Math.PI * 0.3;
   hook.position.set(0, -0.012, 0);
   root.add(hook);
-  const neck = mesh('hanger-neck', new CylinderGeometry(0.0028, 0.0028, 0.03, 8), brass);
+  const neck = mesh('hanger-neck', new CylinderGeometry(0.0028, 0.0028, 0.03, 8), brass, false);
   neck.position.set(0, -0.045, 0);
   root.add(neck);
-  const bar = mesh('hanger-bar', new CylinderGeometry(0.004, 0.004, 0.13, 8), brass);
+  const bar = mesh('hanger-bar', new CylinderGeometry(0.004, 0.004, 0.13, 8), brass, false);
   bar.rotation.z = Math.PI / 2;
   bar.position.set(0, -0.062, 0);
   root.add(bar);
