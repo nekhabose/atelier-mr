@@ -143,10 +143,11 @@ placed on the room's floor by scene understanding, the opening reveal plays,
 and the emulated headset moves through the studio like a person's head while
 the tour drives the real systems. Captions are burned in; the soundtrack is an
 original synthesised music bed, the app's kinds of UI sounds, and narration
-from macOS text-to-speech (Samantha). Describe it on Devpost as emulator
-footage with a synthetic voice. Recording your own voice over the same lines
-sounds better: save them as `docs/video/vo/l0.aiff` ... `l10.aiff` (any
-format ffmpeg reads, renamed) and run the mix again.
+from Piper neural text-to-speech (voice "Cori", trained on public-domain
+LibriVox recordings), run locally. Describe it on Devpost as emulator footage
+with a synthetic voice. Recording your own voice over the same lines
+sounds better: save them as `docs/video/vo/l0.wav` ... `l10.wav` and run the mix
+again.
 
 Rebuild it:
 
