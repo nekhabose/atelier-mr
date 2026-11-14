@@ -99,7 +99,9 @@ export function sideSection(id: string, order: number, title?: string, open = tr
       el.appendChild(s);
     }
   }
-  panel.appendChild(el);
+  // In order in the document too, so screen readers read it as it looks.
+  const next = [...panel.children].find((c) => Number((c as HTMLElement).style.order) > order);
+  panel.insertBefore(el, next ?? null);
   return el;
 }
 
