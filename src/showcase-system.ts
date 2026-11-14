@@ -6,17 +6,22 @@
  *   - "Watch the tour" on the start page, or open the page with ?showcase;
  *   - ?showcase=record starts automatically without the exit button and sets
  *     `window.showcaseDone` when the end card has shown.
+ *   - ?showcase=mr (or mr-record) is the mixed-reality cut for the video: in
+ *     the IWSDK emulator it enters XR in the simulated room, plays the opening
+ *     reveal, then moves the emulated headset through the studio like a head.
+ *     It needs the emulator (window.IWER_DEVICE); elsewhere it plays flat.
  *
  * It drives the real systems (rail, tailoring, fabrics, stylist, boutique,
  * accessibility panel): nothing in the tour is pre-rendered.
  */
-import { createSystem, Quaternion, Vector3, VisibilityState } from '@iwsdk/core';
+import { createSystem, Matrix4, Quaternion, Vector3, VisibilityState } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { StylistSystem } from './stylist-system.js';
 import { BoutiqueSystem } from './boutique-system.js';
 import { AccessSystem } from './access-system.js';
 import { OnboardingSystem } from './onboarding-system.js';
+import { RoomPlacementSystem } from './room-system.js';
 
 interface Shot {
   pos: [number, number, number];
@@ -45,6 +50,35 @@ const SHOTS: Record<string, Shot> = {
 };
 const TOTAL = 49;
 
+/**
+ * Head poses for the mixed-reality cut, in the studio's own frame (the
+ * authored layout: form at 0,0,-1.55). Standing eye height, as a person would.
+ */
+const MR_SHOTS: Record<string, Shot> = {
+  wide: { pos: [0, 1.6, 0.3], target: [0, 1.05, -1.5] },
+  rack: { pos: [-0.3, 1.55, -0.2], target: [-1.05, 1.2, -1.35] },
+  hem: { pos: [0.15, 1.35, -0.62], target: [0, 0.72, -1.55] },
+  form: { pos: [0.2, 1.5, -0.45], target: [0, 1.05, -1.55] },
+  board: { pos: [0.35, 1.55, -0.35], target: [1.05, 1.2, -1.3] },
+  stylist: { pos: [-0.1, 1.5, 0.05], target: [-0.35, 0.95, -1.15] },
+  boutique: { pos: [-0.25, 1.52, 0.05], target: [-0.75, 1.0, -1.2] },
+  access: { pos: [0.25, 1.4, -0.12], target: [0.52, 0.85, -0.8] },
+  end: { pos: [0.1, 1.62, 0.45], target: [0, 1.05, -1.5] },
+};
+/** The opening reveal plays first in the mixed-reality cut. */
+const MR_REVEAL = 5;
+
+/** The emulated headset (IWER), present only under the IWSDK dev server. */
+interface EmulatedDevice {
+  position: { set(x: number, y: number, z: number): void; x: number; y: number; z: number };
+  quaternion: { set(x: number, y: number, z: number, w: number): void; x: number; y: number; z: number; w: number };
+  controllers?: Record<string, { position?: { set(x: number, y: number, z: number): void } } | undefined>;
+}
+
+function emulatedDevice(): EmulatedDevice | undefined {
+  return (globalThis as unknown as { IWER_DEVICE?: EmulatedDevice }).IWER_DEVICE;
+}
+
 export class ShowcaseSystem extends createSystem({}) {
   /** Whether the tour is playing. */
   playing = false;
@@ -66,17 +100,30 @@ export class ShowcaseSystem extends createSystem({}) {
   private moveT = MOVE;
   private hemFrom = 0;
   private hemT = -1;
+  /** 'flat' moves the page camera; 'mr' moves the emulated headset in XR. */
+  mode: 'flat' | 'mr' = 'flat';
+  private pendingMR = false;
+  private m4 = new Matrix4();
+  private q = new Quaternion();
+  private eye = new Vector3();
+  /** Current head position in the studio frame (mixed-reality cut). */
+  private headLocal = new Vector3();
+  private look = new Vector3();
+  private up = new Vector3(0, 1, 0);
 
   init(): void {
     this.buildOverlay();
     const params = new URLSearchParams(location.search);
     if (params.has('showcase')) {
-      this.record = params.get('showcase') === 'record';
-      setTimeout(() => this.start(), this.record ? 2500 : 1200);
+      const v = params.get('showcase') ?? '';
+      this.record = v.endsWith('record');
+      const mode = v.startsWith('mr') ? 'mr' : 'flat';
+      setTimeout(() => this.start(mode), this.record ? 2500 : 1200);
     }
     this.cleanupFuncs.push(
       this.world.visibilityState.subscribe((state) => {
-        if (state !== VisibilityState.NonImmersive && this.playing) this.stop();
+        const inXR = state !== VisibilityState.NonImmersive;
+        if (this.playing && inXR !== (this.mode === 'mr')) this.stop();
       }),
       () => this.overlay?.remove(),
     );
@@ -86,11 +133,29 @@ export class ShowcaseSystem extends createSystem({}) {
     return this.world.getSystem(AtelierSystem)!;
   }
 
-  start(): void {
-    if (this.playing || this.world.visibilityState.peek() !== VisibilityState.NonImmersive) return;
+  start(mode: 'flat' | 'mr' = 'flat'): void {
+    if (this.playing || this.pendingMR) return;
+    const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
+    if (mode === 'mr' && (!emulatedDevice() || !this.world.xrEnabled)) mode = 'flat';
+    if (mode === 'flat' && inXR) return;
+    this.mode = mode;
+    if (mode === 'mr') {
+      // Dress the form first, so the reveal shows a look; then enter XR and
+      // begin once the studio has been placed in the room.
+      if (this.atelier.currentPieces.length === 0) this.atelier.wearLook(0);
+      this.pendingMR = true;
+      this.setTourHeld(true);
+      if (!inXR) this.world.launchXR();
+      return;
+    }
     const cam = this.world.camera;
     this.savedPos.copy(cam.position);
     this.savedQuat.copy(cam.quaternion);
+    this.begin();
+    this.jump(SHOTS.wide);
+  }
+
+  private begin(): void {
     this.curTarget.set(0, 1, -1.5);
     this.steps = this.script();
     this.next = 0;
@@ -103,7 +168,15 @@ export class ShowcaseSystem extends createSystem({}) {
     this.overlay?.querySelector<HTMLElement>('[data-exit]')?.style.setProperty('display', this.record ? 'none' : 'block');
     this.setCaption('', '');
     this.endCard!.style.opacity = '0';
-    this.jump(SHOTS.wide);
+    if (this.mode === 'mr') {
+      // Start from wherever the headset is, expressed in the studio's frame.
+      const d = emulatedDevice()!;
+      this.toLocal(this.eye.set(d.position.x, d.position.y, d.position.z), this.toPos);
+      this.headLocal.copy(this.toPos);
+      this.toTarget.set(this.toPos.x, 1.05, this.toPos.z - 1.5);
+      this.curTarget.copy(this.toTarget);
+      this.moveT = MOVE;
+    }
   }
 
   stop(): void {
@@ -111,9 +184,11 @@ export class ShowcaseSystem extends createSystem({}) {
     this.playing = false;
     this.hemT = -1;
     this.setTourHeld(false);
-    const cam = this.world.camera;
-    cam.position.copy(this.savedPos);
-    cam.quaternion.copy(this.savedQuat);
+    if (this.mode === 'flat') {
+      const cam = this.world.camera;
+      cam.position.copy(this.savedPos);
+      cam.quaternion.copy(this.savedQuat);
+    }
     document.body.classList.remove('atelier-showcase');
     if (this.overlay) this.overlay.style.display = 'none';
     (globalThis as unknown as { showcaseDone?: boolean }).showcaseDone = true;
@@ -126,6 +201,27 @@ export class ShowcaseSystem extends createSystem({}) {
 
   /** The tour. Times are seconds from the start. */
   private script(): Step[] {
+    const steps = this.baseScript();
+    if (this.mode === 'flat') return steps;
+    const mrShot = (shot?: Shot) => {
+      const key = Object.keys(SHOTS).find((k) => SHOTS[k] === shot);
+      return key ? MR_SHOTS[key] : shot;
+    };
+    const shifted = steps.map((st) => ({ ...st, at: st.at + MR_REVEAL, shot: mrShot(st.shot) }));
+    // The opening: the studio settles into the room, then the first caption.
+    shifted[0] = {
+      ...shifted[0],
+      title: 'Your room becomes a studio',
+      sub: 'Atelier stands on your real floor and remembers the spot.',
+      act: () => {
+        this.world.getSystem(AccessSystem)?.togglePanel(false);
+        this.world.getSystem(ClosetSystem)?.backToBrowse();
+      },
+    };
+    return [{ at: 0 }, ...shifted];
+  }
+
+  private baseScript(): Step[] {
     const a = () => this.atelier;
     const closet = () => this.world.getSystem(ClosetSystem)!;
     const stylist = () => this.world.getSystem(StylistSystem)!;
@@ -218,6 +314,13 @@ export class ShowcaseSystem extends createSystem({}) {
   }
 
   update(delta: number): void {
+    if (this.pendingMR) {
+      if (this.world.getSystem(RoomPlacementSystem)?.isPlaced) {
+        this.pendingMR = false;
+        this.begin();
+      }
+      return;
+    }
     if (!this.playing) return;
     this.t += Math.min(delta, 0.1);
     while (this.next < this.steps.length && this.steps[this.next].at <= this.t) {
@@ -243,6 +346,11 @@ export class ShowcaseSystem extends createSystem({}) {
       }
       if (this.hemT >= 2.4) this.hemT = -1;
     }
+    if (this.mode === 'mr') {
+      this.updateHead(delta);
+      if (this.t > TOTAL + MR_REVEAL) this.stop();
+      return;
+    }
     // Camera: eased move to the shot, then a slow drift.
     const cam = this.world.camera;
     if (this.moveT < MOVE) {
@@ -259,7 +367,63 @@ export class ShowcaseSystem extends createSystem({}) {
     if (this.t > TOTAL) this.stop();
   }
 
+  /** Mixed-reality cut: ease the emulated headset between head poses. */
+  private updateHead(delta: number): void {
+    const d = emulatedDevice();
+    if (!d) return;
+    if (this.moveT < MOVE) {
+      this.moveT = Math.min(MOVE, this.moveT + delta);
+      const k = this.moveT / MOVE;
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      this.headLocal.lerpVectors(this.fromPos, this.toPos, e);
+      this.curTarget.lerpVectors(this.fromTarget, this.toTarget, e);
+    } else {
+      this.headLocal.copy(this.toPos);
+    }
+    // A person's head is never perfectly still.
+    this.eye.copy(this.headLocal);
+    this.eye.x += Math.sin(this.t * 0.9) * 0.006;
+    this.eye.y += Math.sin(this.t * 1.7) * 0.004;
+    this.toWorld(this.eye, this.eye);
+    this.toWorld(this.curTarget, this.look);
+    d.position.set(this.eye.x, this.eye.y, this.eye.z);
+    this.m4.lookAt(this.eye, this.look, this.up);
+    this.q.setFromRotationMatrix(this.m4);
+    d.quaternion.set(this.q.x, this.q.y, this.q.z, this.q.w);
+    // Keep the emulated controllers out of the shot (below and behind the head).
+    d.controllers?.left?.position?.set(this.eye.x - 0.25, this.eye.y - 0.8, this.eye.z + 0.25);
+    d.controllers?.right?.position?.set(this.eye.x + 0.25, this.eye.y - 0.8, this.eye.z + 0.25);
+  }
+
+  /** Studio frame -> room (world) coordinates. */
+  private toWorld(local: Vector3, out: Vector3): Vector3 {
+    const f = this.world.getSystem(RoomPlacementSystem)!.studioFrame;
+    const c = Math.cos(f.yaw);
+    const s = Math.sin(f.yaw);
+    const x = local.x;
+    const z = local.z;
+    return out.set(x * c + z * s + f.x, local.y + f.y, -x * s + z * c + f.z);
+  }
+
+  /** Room (world) -> studio frame coordinates. */
+  private toLocal(world: Vector3, out: Vector3): Vector3 {
+    const f = this.world.getSystem(RoomPlacementSystem)!.studioFrame;
+    const c = Math.cos(f.yaw);
+    const s = Math.sin(f.yaw);
+    const dx = world.x - f.x;
+    const dz = world.z - f.z;
+    return out.set(c * dx - s * dz, world.y - f.y, s * dx + c * dz);
+  }
+
   private moveTo(shot: Shot): void {
+    if (this.mode === 'mr') {
+      this.fromPos.copy(this.headLocal);
+      this.fromTarget.copy(this.curTarget);
+      this.toPos.set(...shot.pos);
+      this.toTarget.set(...shot.target);
+      this.moveT = 0;
+      return;
+    }
     this.fromPos.copy(this.world.camera.position);
     this.fromTarget.copy(this.curTarget);
     this.toPos.set(...shot.pos);
@@ -298,7 +462,7 @@ export class ShowcaseSystem extends createSystem({}) {
     const style = document.createElement('style');
     style.textContent = `
       body.atelier-showcase #make-it-you, body.atelier-showcase #studio-options { display: none !important; }
-      .atelier-sc { position: fixed; inset: 0; z-index: 20; pointer-events: none; display: none;
+      .atelier-sc { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; display: none;
         font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
       .atelier-sc [data-cap] { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
         width: min(860px, 88vw); text-align: center; transition: opacity 0.35s ease; opacity: 0;

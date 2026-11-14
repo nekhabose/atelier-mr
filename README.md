@@ -83,7 +83,9 @@ journey with captions.
   and every measurement is clamped to the garment's range.
 - **Guided showcase:** a captioned tour that drives the real systems on the
   flat page, for judges without a headset and for recording the demo video
-  (`?showcase`; `?showcase=record` for unattended capture).
+  (`?showcase`; `?showcase=record` for unattended capture). Under the IWSDK
+  emulator, `?showcase=mr` plays it inside XR in the simulated room, moving the
+  emulated headset (used for the mixed-reality demo video).
 - **Sound design:** taps, a ratchet while you pull a pin, a cloth swish, a
   settle when the studio lands and a sparkle when the stylist acts, all
   synthesised with Web Audio (no audio files).
@@ -107,7 +109,9 @@ npx @iwsdk/cli browser run scripts/check-layout.mjs        # FoV-aware layout de
 npx @iwsdk/cli browser run scripts/check-showcase.mjs      # flat page, not in XR: every tour beat
 ```
 
-Record the showcase as an MP4 (needs ffmpeg; output is git-ignored):
+The narrated mixed-reality demo video (emulator room, captions, music,
+narration) is rebuilt with the steps in `docs/SUBMISSION.md` (Demo video).
+Record the flat showcase as an MP4 (needs ffmpeg; output is git-ignored):
 
 ```sh
 npm run build && npx vite preview --port 4173 &

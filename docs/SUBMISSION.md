@@ -6,7 +6,7 @@ Deadline: **Nov 18, 2026, 12:00 PM PT**. Track: **Productivity**. Division: **Ne
 
 - Play: https://atelier-mr.vercel.app (mirror: https://nekhabose.github.io/atelier-mr/)
 - Code: https://github.com/nekhabose/atelier-mr
-- Video: _YouTube or Vimeo link, public, under 3:00_ (a 50-second captioned draft is at `docs/video/atelier-showcase.mp4` locally; regenerate with `node scripts/record-showcase.mjs`)
+- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (55 s, 1080p, narrated, music; kept out of git). How it is made: see Demo video below.
 - No headset? Open the link on a desktop and press **Watch the 50-second tour**: it plays the real journey with captions.
 
 ## Name and tagline
@@ -135,22 +135,47 @@ whether Quest Browser provides speech synthesis and recognition is not yet
 verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.
 
-## Demo video storyboard (2:40)
+## Demo video (55 s, ready to upload)
 
-Capture on Quest (Meta Quest Developer Hub casting or on-device recording) or
-the IWSDK emulator. Show only real footage; no AI-generated video.
+`docs/video/atelier-demo.mp4` is a mixed-reality cut recorded from the real
+app in the Immersive Web Emulator's simulated living room: the studio is
+placed on the room's floor by scene understanding, the opening reveal plays,
+and the emulated headset moves through the studio like a person's head while
+the tour drives the real systems. Captions are burned in; the soundtrack is an
+original synthesised music bed, the app's kinds of UI sounds, and narration
+from macOS text-to-speech (Samantha). Describe it on Devpost as emulator
+footage with a synthetic voice. Recording your own voice over the same lines
+sounds better: save them as `docs/video/vo/l0.aiff` ... `l10.aiff` (any
+format ffmpeg reads, renamed) and run the mix again.
 
-| Time | Shot | Voice-over / caption |
+Rebuild it:
+
+```sh
+npx @iwsdk/cli dev restart --ai-mode agent --allow-browser-automation   # hides emulator controls
+npx @iwsdk/cli browser run scripts/record-mr-frames.mjs --timeout 110000
+node scripts/frames-to-mp4.mjs docs/video/frames-mr docs/video/atelier-mr.mp4 --crop-toolbar
+bash scripts/mix-video.sh docs/video/atelier-mr.mp4 docs/video/atelier-demo.mp4
+npx @iwsdk/cli dev restart --ai-mode collaborate --allow-browser-automation
+```
+
+| Time | On screen | Narration |
 |---|---|---|
-| 0:00-0:12 | Enter Atelier in passthrough; studio pieces settle into the real room one by one, ATELIER title card | "Your room is now a fashion studio." |
-| 0:12-0:30 | Pinch Velvet Hour; outfit drops on; pull the hem pin, the dress shortens live | "Dress it, then tailor it, with your hands." |
-| 0:30-0:45 | Drag a satin swatch onto only the jacket; tap Turn to see the back | "Fabric per garment. Turn without standing up." |
-| 0:45-1:00 | Undo, Redo, Reset look | "Experiment freely; every change is undoable." |
-| 1:00-1:25 | Closet: New piece, Dress, green, satin, pull pins to match, Save | "Recreate the clothes you actually own." |
-| 1:25-2:05 | Ask stylist: Interview, Cold, Classic, Style me; preview badge; Next idea; tap Warmer, the hem drops and a jacket appears; Keep | "It plans from your closet, edits on request, and waits for your call." |
-| 2:05-2:20 | BOUTIQUE tab: pieces slide onto the rail with "+4 OUTFITS" tags; try the silk blouse, verdict BUY, Add to closet | "Shop against what you own." |
-| 2:20-2:30 | Wear today, streak badge turns gold | "Come back tomorrow." |
-| 2:30-2:40 | Wide shot of the studio; title card with URL | "Atelier. Open it in your Quest browser." |
+| 0:00 | Studio settles into the living room, ATELIER title card | This is Atelier. A fashion studio, in your own room. |
+| 0:05 | Wide view of the placed studio | It stands on your real floor, and remembers where you left it. |
+| 0:09 | Head turns to the rail; Riviera Sundress drops onto the form | Tap a look on the rail. The form wears it, life size. |
+| 0:14 | Close on the hem as the pin pulls it up | Pinch a pin and pull. The hem is real geometry, recut as you move. |
+| 0:18 | Fabric library; velvet, then satin, on the dress | Drop a swatch to change the fabric: satin, velvet, denim, wool. |
+| 0:24 | Stylist panel; preview badge over the form | Ask the stylist. It plans from your own closet, and puts its idea on the form. |
+| 0:29 | Dressier refinement lands on the form | Say warmer, or dressier, and it edits the outfit for you. |
+| 0:34 | Boutique rail; silk blouse tried on with a BUY verdict | The boutique shows what each piece adds to your closet, with an honest verdict. |
+| 0:40 | Access panel open: large text, contrast, motion, voice, tap tailoring | Large text, high contrast, calm motion, voice, and tailoring by tap. |
+| 0:46 | Head steps back; the form turns | Share a look with a link. Come back tomorrow; your studio is waiting. |
+| 0:50 | End card with the URL | Atelier. Open it in your Quest browser. |
+
+A flat-page version without sound (`docs/video/atelier-showcase.mp4`) comes
+from `node scripts/record-showcase.mjs`. If you get time on a real Quest, a
+10-second on-device clip of hands pinching a pin would be the strongest
+addition (Meta Quest Developer Hub can record or cast).
 
 ## Screenshots
 

@@ -4,18 +4,23 @@
 // ffmpeg turns them into a 30 fps H.264 file. No audio: add music or a
 // voice-over in an editor.
 //
-// Usage:
+// Usage (flat cut, from a production build):
 //   npm run build && npx vite preview --port 4173 &
-//   node scripts/record-showcase.mjs http://localhost:4173/ docs/video/atelier-showcase.mp4
-// The URL can be any deployment (the page must allow ?showcase=record).
+//   node scripts/record-showcase.mjs https://localhost:4173/ docs/video/atelier-showcase.mp4
+// Mixed-reality cut (the emulator's simulated room; needs the dev server in
+// agent mode so the emulator's control panels are hidden):
+//   npx @iwsdk/cli dev restart --ai-mode agent
+//   node scripts/record-showcase.mjs https://localhost:8090/ docs/video/atelier-mr.mp4 --mr
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
-const base = process.argv[2] ?? 'http://localhost:4173/';
-const out = resolve(process.argv[3] ?? 'docs/video/atelier-showcase.mp4');
+const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const mr = process.argv.includes('--mr');
+const base = args[0] ?? 'https://localhost:4173/';
+const out = resolve(args[1] ?? (mr ? 'docs/video/atelier-mr.mp4' : 'docs/video/atelier-showcase.mp4'));
 const W = 1920;
 const H = 1080;
 const frames = mkdtempSync(join(tmpdir(), 'atelier-showcase-'));
@@ -35,10 +40,10 @@ await page.addInitScript(() => {
   }
 });
 const url = new URL(base);
-url.searchParams.set('showcase', 'record');
+url.searchParams.set('showcase', mr ? 'mr-record' : 'record');
 await page.goto(url.toString(), { waitUntil: 'load' });
 // Start capturing when the tour starts (skips the loading screen).
-await page.waitForFunction(() => globalThis.showcase?.playing === true, null, { timeout: 60_000, polling: 50 });
+await page.waitForFunction(() => globalThis.showcase?.playing === true, null, { timeout: 90_000, polling: 50 });
 
 const cdp = await context.newCDPSession(page);
 const shots = [];

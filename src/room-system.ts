@@ -568,6 +568,16 @@ export class RoomPlacementSystem extends createSystem({
 
   // ---------------------------------------------------------------- reveal
 
+  /** Whether the studio has been placed in the room this session. */
+  get isPlaced(): boolean {
+    return this.placed;
+  }
+
+  /** Where the studio stands: authored origin moved to (x, y, z), turned by yaw. */
+  get studioFrame(): Readonly<{ x: number; y: number; z: number; yaw: number }> {
+    return this.frame;
+  }
+
   /** True while the opening reveal is still playing (or not yet placed). */
   get revealing(): boolean {
     return (this.inXR && !this.placed) || this.revealT !== Infinity;
