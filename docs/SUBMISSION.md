@@ -72,6 +72,20 @@ deterministic offline planner gives the same preview, keep and undo flow when th
 network or the key is unavailable, so the studio never depends on a third-party
 service.
 
+Built for headset budgets: shadows are redrawn only when something moves
+(0 shadow redraws a second when the studio is still, instead of 60), garments
+and props are merged into few draw calls, and a `?perf` meter shows frame
+rate, draw calls and triangles inside the headset. On Quest 3, the depth API
+lets your real hands and furniture hide the form and garments behind them
+(optional, so other headsets simply skip it). Pins can be pulled with a ray
+from a seat or pinched directly with your fingers, with a light controller
+tap on every step. Atelier installs as an app (web manifest and an offline
+service worker: after one visit it opens without a network, with the on-device
+stylist). 25 unit tests (stylist planner, refinements, boutique maths,
+tailoring maths, share links, API input validation, streaks) run in CI on
+every push next to a 42-step emulator journey; the tests caught two real
+tailoring bugs, now fixed.
+
 **What's next.** A photo-to-garment flow to recreate clothes faster; voice
 for choosing occasions; shared lookbooks; and on-device tuning for the Meta
 VR Glasses' narrower view (the compact layout is emulator-tested).
@@ -108,6 +122,9 @@ browser supports speech recognition.
    Shorter / Waist in buttons. Tap **Share**, exit, and the start page shows
    the look's link and QR code.
 
+Optional: open **https://atelier-mr.vercel.app/?perf** to see frame rate,
+draw calls and triangles above the studio panel.
+
 No headset at hand: open the link on a desktop and press **Watch the 50-second
 tour** (top right) for a captioned walk through the same journey.
 
@@ -119,7 +136,9 @@ server key configured it shows "LIVE AI".
 | Works today (verified in the IWSDK emulator and production URL) | Future |
 |---|---|
 | Room-aware placement on floor/wall planes, manual re-place, persistent anchor restore (emulator-verified) | Multi-anchor layouts (panels on separate surfaces) |
-| 8 looks, live tailoring of 4 regions, undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
+| 8 looks, live tailoring of 4 regions (ray or direct pinch), undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
+| Depth occlusion of form, garments and pins (Quest 3 depth API; emulator-verified that depth is granted and occlusion is live) | Occlusion quality tuning on device |
+| Installable app (manifest, icons, offline service worker), shadows on demand, `?perf` meter, unit tests in CI | Horizon Store packaging (bubblewrap APK) |
 | 12 fabrics applied per garment | Photo-to-garment closet entry |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints, calendar and weather context |
@@ -129,8 +148,8 @@ server key configured it shows "LIVE AI".
 | Face photo (device-only) and 6 skin tones on the form | Body measurements to size the form to you |
 | Claude stylist live on the production URL (server-side key), offline fallback | Tuning for Meta VR Glasses on device |
 
-Not yet verified: frame rate and hand tracking on a physical Quest, and
-placement in real rooms. Read aloud and voice commands are feature-detected;
+Not yet verified: frame rate, hand tracking, depth occlusion and haptics on a
+physical Quest, and placement in real rooms. Read aloud and voice commands are feature-detected;
 whether Quest Browser provides speech synthesis and recognition is not yet
 verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.

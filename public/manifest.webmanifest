@@ -1,0 +1,18 @@
+{
+  "name": "Atelier: Hands-First Fashion Studio",
+  "short_name": "Atelier",
+  "description": "A mixed-reality fashion studio: dress, tailor and style your own clothes with your hands, in your room.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ece5d8",
+  "theme_color": "#1c1814",
+  "categories": ["lifestyle", "productivity", "shopping"],
+  "icons": [
+    { "src": "icons/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

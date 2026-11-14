@@ -86,6 +86,18 @@ journey with captions.
   (`?showcase`; `?showcase=record` for unattended capture). Under the IWSDK
   emulator, `?showcase=mr` plays it inside XR in the simulated room, moving the
   emulated headset (used for the mixed-reality demo video).
+- **Built for a headset budget:** shadows are redrawn only when a caster
+  moves or changes (0 redraws a second while the studio is still, instead of
+  60); `?perf` shows frame rate, draw calls, triangles and shadow redraws on the
+  page and above the studio panel. Fixed foveation is at the maximum (1.0).
+- **Depth occlusion (Quest 3):** real hands and furniture hide the form,
+  garments and pins behind them. Depth sensing is optional, so other devices
+  skip it.
+- **Pins by ray or by fingers:** pull a pin with a ray from a seat, or pinch it
+  directly (a near-grab handle on each pin), with a light controller tap on
+  every tailoring step.
+- **Installable and offline:** web manifest, icons and a service worker; after
+  one visit the studio opens without a network (the on-device stylist answers).
 - **Sound design:** taps, a ratchet while you pull a pin, a cloth swish, a
   settle when the studio lands and a sparkle when the stylist acts, all
   synthesised with Web Audio (no audio files).
@@ -97,6 +109,7 @@ npm install
 npm run dev        # https://localhost:8090 with the managed emulator browser
 npm run typecheck  # app + serverless function
 npm run build      # static output in dist/
+npm test           # unit tests (vitest; also run in CI on every push)
 ```
 
 Regression checks against the emulator (dev server running, XR session entered):
@@ -107,6 +120,10 @@ npx @iwsdk/cli browser run scripts/check-face-upload.mjs   # needs dev up --allo
 npx @iwsdk/cli browser run scripts/check-pause-resume.mjs  # system menu blur / resume
 npx @iwsdk/cli browser run scripts/check-layout.mjs        # FoV-aware layout decision
 npx @iwsdk/cli browser run scripts/check-showcase.mjs      # flat page, not in XR: every tour beat
+npx @iwsdk/cli browser run scripts/check-perf.mjs          # shadows on demand vs every frame
+npx @iwsdk/cli browser run scripts/check-occlusion.mjs     # depth granted, occlusion live on the form
+npx @iwsdk/cli browser run scripts/check-share.mjs         # share links and voice phrases
+node scripts/check-pwa.mjs http://localhost:4174/          # installable + offline (serve dist on 4174)
 ```
 
 The narrated mixed-reality demo video (emulator room, captions, music,
@@ -154,6 +171,8 @@ src/room-system.ts        floor / wall placement + persistent anchor
 src/onboarding-system.ts  ghost-hand tour
 src/access-system.ts      accessibility panel, voice, read aloud, share links
 src/showcase-system.ts    captioned guided tour (flat page, video capture)
+src/perf-system.ts        shadows on demand, ?perf meter
+tests/                    unit tests (vitest)
 public/scenes/            scene composition (JSON)
 public/ui/                spatial panels (UIKitML)
 docs/                     submission kit and screenshots

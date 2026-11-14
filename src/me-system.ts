@@ -22,6 +22,7 @@ import {
   SRGBColorSpace,
   VisibilityState,
 } from '@iwsdk/core';
+import { AtelierSystem } from './atelier-system.js';
 
 const FACE_KEY = 'atelier.face.v1';
 const TONE_KEY = 'atelier.tone.v1';
@@ -146,6 +147,7 @@ export class MeSystem extends createSystem({}) {
       this.faceMat!.needsUpdate = true;
       this.faceMesh!.visible = true;
       this.hasFace = true;
+      this.world.getSystem(AtelierSystem)?.refreshOcclusion();
       this.paintCard();
     };
     img.src = dataUrl;

@@ -490,3 +490,6 @@ export async function POST(request: Request): Promise<Response> {
     return failure(error, headers);
   }
 }
+
+// Exported for unit tests (tests/api-validation.test.ts); not HTTP handlers.
+export { parseBoutique, parseRefine, parseRequest };

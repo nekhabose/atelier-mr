@@ -2,7 +2,7 @@
  * The eight original designer looks hanging on the rack. All names and
  * designs are original to Atelier (no real-world brands).
  */
-import type { GarmentPiece, PieceKind } from './garments.js';
+import { RANGES, type GarmentPiece, type PieceKind } from './garments.js';
 
 export interface Look {
   id: string;
@@ -21,7 +21,15 @@ export function piece(init: PieceInit): GarmentPiece {
     skirt: { hem: 0.5, neck: 0, sleeve: 0, fit: 0.5, flare: 0.1 },
     trousers: { hem: 0.06, neck: 0, sleeve: 0, fit: 0.5, flare: 0 },
   };
-  return { ...defaults[init.kind], ...init };
+  const p: GarmentPiece = { ...defaults[init.kind], ...init };
+  // Keep authored values inside the tailoring range, so the first touch of a
+  // pin never makes the garment jump.
+  const ranges = RANGES[p.kind];
+  for (const key of ['hem', 'neck', 'sleeve', 'fit', 'flare'] as const) {
+    const r = ranges[key];
+    if (r) p[key] = Math.min(r.max, Math.max(r.min, p[key]));
+  }
+  return p;
 }
 
 export const LOOKS: Look[] = [

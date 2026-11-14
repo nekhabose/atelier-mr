@@ -379,7 +379,8 @@ export function pinPosition(piece: GarmentPiece, param: TailorParam): [number, n
       }
       if (piece.kind === 'top' || piece.kind === 'jacket') {
         const r = bodiceRadius(piece.fit, ease)(piece.hem);
-        return [0, piece.hem, r.rz + 0.035];
+        // +0.01 matches paramFromPin, so touching the pin does not move the hem.
+        return [0, piece.hem + 0.01, r.rz + 0.035];
       }
       const top = piece.kind === 'dress' ? BODY.waistY : SKIRT_TOP;
       const r = skirtRadius(top, piece.hem, piece.fit, piece.flare, ease)(piece.hem);

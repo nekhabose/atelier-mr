@@ -16,14 +16,18 @@ import {
   Grabbed,
   Group,
   Hovered,
+  Material,
   Mesh,
   Object3D,
   MeshStandardMaterial,
   MovementMode,
+  OneHandGrabbable,
   Pressed,
   RayInteractable,
   SphereGeometry,
   CylinderGeometry,
+  DepthOccludable,
+  OcclusionShadersMode,
   UIKit,
   UIKitMLAsset,
   Vector3,
@@ -89,6 +93,8 @@ const DRAG_INTERVAL = 0.05;
 
 interface PinState {
   entity: Entity;
+  /** Invisible handle on the pin for a direct (near) pinch with a real hand. */
+  touch: Entity;
   param: TailorParam;
   head: Mesh;
   material: MeshStandardMaterial;
@@ -127,6 +133,7 @@ export class AtelierSystem extends createSystem({
   private pinChanged = false;
   private dragClock = 0;
   private tooltip?: Mesh;
+  private occluderGeo = new BoxGeometry(0.001, 0.001, 0.001);
   private tooltipText = '';
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];
@@ -235,6 +242,50 @@ export class AtelierSystem extends createSystem({
     );
 
     this.restoreState();
+    // Depth occlusion for the form, its garments and pins (not the panels).
+    this.formEntity.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
+    this.markOccluded();
+  }
+
+  /**
+   * IWSDK patches materials for occlusion when the component is added, and
+   * keeps updating the shaders it patched. Garment materials are cached per
+   * fabric, so each needs patching once: a fabric seen for the first time gets
+   * a tiny hidden holder entity with its own DepthOccludable (a one-off shader
+   * compile, never during a drag). Re-adding the form's component instead
+   * would switch occlusion off for shaders three.js has already compiled.
+   */
+  /** Patch anything newly added to the form (e.g. the face photo). */
+  refreshOcclusion(): void {
+    this.ensureOcclusion();
+  }
+
+  private ensureOcclusion(): void {
+    if (!this.formEntity.hasComponent(DepthOccludable)) return;
+    const fresh = new Set<Material>();
+    this.formEntity.object3D!.traverse((o) => {
+      const mesh = o as Mesh;
+      if (!mesh.isMesh) return;
+      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        if (m && m.visible && !m.userData.atelierOccluded) fresh.add(m);
+      }
+    });
+    for (const m of fresh) {
+      m.userData.atelierOccluded = true;
+      const holder = new Mesh(this.occluderGeo, m);
+      holder.name = `occluder-${m.name || m.uuid.slice(0, 8)}`;
+      holder.visible = false;
+      holder.raycast = () => {};
+      const e = this.world.createTransformEntity(holder, { parent: this.formEntity });
+      e.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
+    }
+  }
+
+  private markOccluded(): void {
+    this.formEntity.object3D!.traverse((o) => {
+      const mat = (o as Mesh).material as { userData?: Record<string, unknown> } | undefined;
+      if ((o as Mesh).isMesh && mat?.userData) mat.userData.atelierOccluded = true;
+    });
   }
 
   // ---------------------------------------------------------------- building
@@ -366,7 +417,17 @@ export class AtelierSystem extends createSystem({
         returnToOrigin: false,
       });
       pin.visible = false;
-      this.pins.push({ entity, param, head, material, label });
+      // Near grab: pinch the pin itself with your fingers. Grab components are
+      // one per entity, so this is a sibling handle the pin follows; near
+      // handles ignore rays, so the ray grab above still works from a seat.
+      const touchObj = new Group();
+      touchObj.name = `pin-${param}-touch`;
+      touchObj.add(new Mesh(new SphereGeometry(0.04, 10, 8), new MeshStandardMaterial({ visible: false })));
+      const touch = this.world.createTransformEntity(touchObj, { parent: this.formEntity });
+      touch.addComponent(TailorPin, { param: TailorParams[param] });
+      touch.addComponent(OneHandGrabbable, { rotate: false, translate: true });
+      touchObj.visible = false;
+      this.pins.push({ entity, touch, param, head, material, label });
     }
   }
 
@@ -526,6 +587,7 @@ export class AtelierSystem extends createSystem({
       return g;
     });
     this.layoutPins();
+    this.ensureOcclusion();
   }
 
   private rebuildPiece(index: number, detail: Detail = HERO_DETAIL): void {
@@ -535,6 +597,8 @@ export class AtelierSystem extends createSystem({
     const g = buildPieceGroup(p, fabricMaterial(p.fabric), detail);
     this.outfit.add(g);
     this.pieceGroups[index] = g;
+    // A new fabric (the only thing that brings a new material) needs patching.
+    if (detail === HERO_DETAIL) this.ensureOcclusion();
   }
 
   /** Place every pin on its garment edge (skips pins being dragged). */
@@ -544,12 +608,16 @@ export class AtelierSystem extends createSystem({
       const piece = pieceForParam(this.pieces, pin.param);
       const hidden = !piece || (pin.param === 'neck' && piece.strapless) ||
         (pin.param === 'sleeve' && piece.strapless);
+      const touchObj = pin.touch.object3D!;
       obj.visible = !hidden;
+      touchObj.visible = !hidden;
       if (hidden || !piece) continue;
-      if (pin.entity.hasComponent(Grabbed)) continue;
+      if (pin.entity.hasComponent(Grabbed) || pin.touch.hasComponent(Grabbed)) continue;
       const [x, y, z] = pinPosition(piece, pin.param);
       obj.position.set(x, y, z);
       obj.rotation.set(0, 0, 0);
+      touchObj.position.set(x, y, z);
+      touchObj.rotation.set(0, 0, 0);
     }
   }
 
@@ -926,7 +994,12 @@ export class AtelierSystem extends createSystem({
         piece[param] = value;
         this.rebuildPiece(this.pieces.indexOf(piece), DRAG_DETAIL);
         sfx.tick();
+        this.pulse(0.25, 12);
       }
+    }
+    // A pin pinched directly (near handle): the visible pin follows the fingers.
+    for (const pin of this.pins) {
+      if (pin.touch.hasComponent(Grabbed)) pin.entity.object3D!.position.copy(pin.touch.object3D!.position);
     }
 
     // Hover feedback.
@@ -935,7 +1008,8 @@ export class AtelierSystem extends createSystem({
       entity.object3D!.scale.setScalar(s);
     }
     for (const pin of this.pins) {
-      const hot = pin.entity.hasComponent(Hovered) || pin.entity.hasComponent(Grabbed);
+      const hot =
+        pin.entity.hasComponent(Hovered) || pin.entity.hasComponent(Grabbed) || pin.touch.hasComponent(Grabbed);
       pin.material.emissiveIntensity = hot ? 0.9 : 0.25;
       pin.head.scale.setScalar(hot ? 1.35 : 1);
     }
@@ -947,6 +1021,24 @@ export class AtelierSystem extends createSystem({
     }
     void this.hoverColor;
     void this.baseEmissive;
+  }
+
+  /**
+   * A short vibration on every controller that is pressing (the one doing the
+   * tailoring). Hands and controllers without haptics are skipped.
+   */
+  private pulse(intensity: number, ms: number): void {
+    const session = this.world.renderer.xr.getSession();
+    if (!session) return;
+    for (const src of session.inputSources) {
+      const pad = src.gamepad as (Gamepad & { hapticActuators?: { pulse(v: number, d: number): Promise<boolean> }[] }) | undefined;
+      if (!pad || !(pad.buttons[0]?.pressed || pad.buttons[1]?.pressed)) continue;
+      const act = pad.hapticActuators?.[0];
+      if (act) void act.pulse(intensity, ms).catch(() => {});
+      else void (pad.vibrationActuator as unknown as { playEffect?(t: string, p: object): Promise<unknown> } | null)
+        ?.playEffect?.('dual-rumble', { duration: ms, strongMagnitude: intensity, weakMagnitude: intensity })
+        .catch(() => {});
+    }
   }
 
   /** Programmatic access for debugging / scripted tests. */
