@@ -22,6 +22,8 @@ import { BoutiqueSystem } from './boutique-system.js';
 import { AccessSystem } from './access-system.js';
 import { OnboardingSystem } from './onboarding-system.js';
 import { RoomPlacementSystem } from './room-system.js';
+import { PlannerSystem } from './planner-system.js';
+import { WardrobeSystem } from './wardrobe-system.js';
 
 interface Shot {
   pos: [number, number, number];
@@ -48,7 +50,7 @@ const SHOTS: Record<string, Shot> = {
   access: { pos: [0.2, 1.18, -0.12], target: [0.52, 0.8, -0.8] },
   end: { pos: [0, 1.6, 1.0], target: [0, 1.0, -1.5] },
 };
-const TOTAL = 49;
+const TOTAL = 60.5;
 
 /**
  * Head poses for the mixed-reality cut, in the studio's own frame (the
@@ -227,6 +229,8 @@ export class ShowcaseSystem extends createSystem({}) {
     const stylist = () => this.world.getSystem(StylistSystem)!;
     const boutique = () => this.world.getSystem(BoutiqueSystem)!;
     const accessSys = () => this.world.getSystem(AccessSystem)!;
+    const planner = () => this.world.getSystem(PlannerSystem)!;
+    const wardrobe = () => this.world.getSystem(WardrobeSystem)!;
     return [
       {
         at: 0,
@@ -253,6 +257,12 @@ export class ShowcaseSystem extends createSystem({}) {
       { at: 16.4, act: () => a().applyFabric('navy-satin') },
       {
         at: 18.5,
+        title: 'Or just say it',
+        sub: '"Make it midi, with long sleeves." The tailor recuts the dress.',
+      },
+      { at: 19.6, act: () => void wardrobe().tailor('make it midi with long sleeves') },
+      {
+        at: 23.5,
         shot: SHOTS.stylist,
         title: 'Ask the AI stylist',
         sub: 'It plans from your closet and dresses the form. Keep it, see the next idea, or undo.',
@@ -263,25 +273,35 @@ export class ShowcaseSystem extends createSystem({}) {
         },
       },
       {
-        at: 24,
+        at: 29,
         title: 'Refine in plain words',
         sub: 'Warmer. Dressier. More colour. Every change lands on the form.',
       },
-      { at: 24.8, act: () => void stylist().refine('dressier') },
+      { at: 29.8, act: () => void stylist().refine('dressier') },
       {
-        at: 29,
+        at: 34,
+        title: 'Plan your week',
+        sub: 'Seven outfits from your closet in one tap. Or pack a trip in the fewest pieces.',
+        act: () => {
+          stylist().keep();
+          planner().open(true);
+        },
+      },
+      { at: 35.6, act: () => planner().wearDay(0) },
+      { at: 37.3, act: () => planner().wearDay(4) },
+      {
+        at: 39.5,
         shot: SHOTS.boutique,
         title: 'Shop against your closet',
         sub: 'New outfits it unlocks, cost per outfit, and an honest buy-or-skip verdict.',
         act: () => {
-          stylist().keep();
           closet().openBoutique();
           boutique().open(1);
         },
       },
-      { at: 31.2, act: () => boutique().tryOn(1) },
+      { at: 41.7, act: () => boutique().tryOn(1) },
       {
-        at: 35.5,
+        at: 46,
         shot: SHOTS.access,
         title: 'Accessible by design',
         sub: 'Large text, high contrast, calm motion, read aloud, voice, and tailoring by tap.',
@@ -291,7 +311,7 @@ export class ShowcaseSystem extends createSystem({}) {
         },
       },
       {
-        at: 40.5,
+        at: 51.5,
         shot: SHOTS.end,
         title: 'Share it. Come back tomorrow.',
         sub: 'Looks travel by link. Your studio stays anchored in your room.',
@@ -300,8 +320,8 @@ export class ShowcaseSystem extends createSystem({}) {
           a().turnForm(1);
         },
       },
-      { at: 42.5, act: () => a().turnForm(1) },
-      { at: 44.5, act: () => this.showEnd() },
+      { at: 53.5, act: () => a().turnForm(1) },
+      { at: 56, act: () => this.showEnd() },
     ];
   }
 

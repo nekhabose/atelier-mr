@@ -131,18 +131,23 @@ def sfx(total):
         s = np.arange(n) / SR
         add(at, np.sin(2 * np.pi * (150 - 60 * s) * s) * np.exp(-s / 0.12) * 0.22, 0.5)
 
+    # Cues for the mixed-reality cut (tour times + the 5 s opening reveal).
     sparkle(1.25)                 # title card
     swish(10.25)                  # wear a look
     for j in range(16):           # pulling the hem pin
         tick(14.65 + j * 0.15)
     settle(19.45)                 # velvet
     settle(21.45)                 # satin
-    sparkle(23.55)                # stylist acts
-    sparkle(29.95)                # refined
-    swish(36.25)                  # boutique try-on
-    settle(45.6)                  # turn
-    settle(47.6)                  # turn
-    sparkle(49.6)                 # end card
+    swish(24.65)                  # the tailor recuts the dress
+    sparkle(28.55)                # stylist acts
+    sparkle(34.85)                # refined
+    sparkle(39.05)                # week planned
+    swish(40.65)                  # Monday on the form
+    swish(42.35)                  # Friday on the form
+    swish(46.75)                  # boutique try-on
+    settle(56.55)                 # turn
+    settle(58.55)                 # turn
+    sparkle(61.05)                # end card
     return out
 
 

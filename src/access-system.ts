@@ -304,11 +304,12 @@ export class AccessSystem extends createSystem({}) {
     const btn =
       'display:block;width:100%;margin-top:8px;cursor:pointer;border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px';
     card.innerHTML = `
-      <button type="button" data-showcase style="${btn};background:#e2c27d;color:#2b2118;border:none;margin-top:0">&#9654; Watch the 50-second tour</button>
-      <button type="button" data-share style="${btn};background:transparent;color:#f6efe2;border:1px solid #8a7656">Share this look</button>
+      <button type="button" data-share style="${btn};background:transparent;color:#f6efe2;border:1px solid #8a7656;margin-top:0">Share this look</button>
       <div data-sharebox style="display:none;margin-top:10px"></div>
-      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d;margin-top:12px">ACCESSIBILITY</div>
-      <div data-boxes style="margin-top:4px"></div>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d">ACCESSIBILITY</summary>
+        <div data-boxes style="margin-top:4px"></div>
+      </details>
       <div data-live aria-live="polite" style="font-size:12px;color:#d8cfbf;margin-top:6px">Also in the studio: Access on the panel.</div>`;
     const boxes = card.querySelector('[data-boxes]')!;
     for (const k of KEYS) {
@@ -325,10 +326,6 @@ export class AccessSystem extends createSystem({}) {
       boxes.appendChild(label);
     }
     card.querySelector('[data-share]')!.addEventListener('click', () => this.share());
-    card.querySelector('[data-showcase]')!.addEventListener('click', () => {
-      const showcase = (globalThis as unknown as { showcase?: { start(): void } }).showcase;
-      showcase?.start();
-    });
     this.shareBox = card.querySelector<HTMLDivElement>('[data-sharebox]')!;
     document.body.appendChild(card);
     this.card = card;

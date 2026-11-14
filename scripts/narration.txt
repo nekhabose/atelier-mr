@@ -1,0 +1,14 @@
+# start seconds | line   (the mixed-reality cut; read by voice-over.sh and mix-video.sh)
+0.7|This is Atelier. A fashion studio, in your own room.
+5.4|It stands on your real floor, and remembers where you left it.
+9.4|Tap a look on the rail. The form wears it, life size.
+13.9|Pinch a pin and pull. The hem is real geometry, recut as you move.
+18.7|Drop a swatch to change the fabric: satin, velvet, denim, wool.
+23.7|Or just say it: make it midi, with long sleeves.
+28.8|Ask the stylist. It plans from your own closet, and puts its idea on the form.
+34.2|Say warmer, or dressier, and it edits the outfit for you.
+39.1|Plan your whole week in one tap, or pack a trip in the fewest pieces.
+44.6|The boutique shows what each piece adds to your closet, with an honest verdict.
+51.1|Large text, high contrast, calm motion, voice, and tailoring by tap.
+56.7|Share a look with a link. Come back tomorrow; your studio is waiting.
+61.2|Atelier. Open it in your Quest browser.

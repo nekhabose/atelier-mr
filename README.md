@@ -16,7 +16,7 @@ New Experience) with Meta's [Immersive Web SDK](https://iwsdk.dev) (WebXR).
 
 Open it in the Meta Quest Browser and tap **Enter Atelier** (or accept the
 immersive prompt). On a desktop browser the studio opens as a flat 3D preview
-you can click, and **Watch the 50-second tour** (top right) plays the whole
+you can click, and **Watch the 1-minute tour** (top right) plays the whole
 journey with captions.
 
 ## What it does
@@ -71,8 +71,10 @@ journey with captions.
   and the ATELIER title card appears before the tour starts.
 - **Lookbook and Outfit of the Day:** save whole outfits (with tailoring) and
   put them back on any day; **Wear today** logs a daily streak.
-- **Ghost-hand tour:** five steps - pinch a look, pull a pin, drop a fabric,
-  ask the stylist, visit the boutique - each demonstrated by a translucent hand.
+- **Ghost-hand tour:** three steps - pinch a look, pull a pin, ask the stylist -
+  each demonstrated by a translucent hand; fabric and the boutique are offered
+  at the end. On a first visit the form is already dressed when the studio
+  appears.
 - **FoV-aware layout:** the studio reads the headset's real field of view (and
   whether gaze tracking was granted) when the session starts. On narrow-view
   devices such as Meta VR Glasses it switches to a compact layout that keeps

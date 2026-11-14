@@ -14,6 +14,7 @@ import { ShowcaseSystem } from './showcase-system.js';
 import { PerfSystem } from './perf-system.js';
 import { PlannerSystem } from './planner-system.js';
 import { WardrobeSystem } from './wardrobe-system.js';
+import { StartSystem } from './start-system.js';
 
 // Offline after one visit (production only; the dev server injects the emulator).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -37,6 +38,7 @@ World.create(
   world.registerSystem(AccessSystem);
   world.registerSystem(WardrobeSystem);
   world.registerSystem(PlannerSystem);
+  world.registerSystem(StartSystem);
   world.registerSystem(ShowcaseSystem);
   world.registerSystem(PerfSystem);
   // Real hands and furniture hide the form and garments behind them (Quest 3

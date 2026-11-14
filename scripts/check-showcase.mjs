@@ -26,8 +26,9 @@ export default async function run({ frame, page }) {
         caption: document.querySelector('.atelier-sc [data-title]')?.textContent,
       });
     for (const [at, label] of [
-      [3, 'opening'], [8, 'wore a look'], [12.6, 'hem pulled'], [17.5, 'fabrics'], [23, 'stylist'],
-      [28.5, 'refined'], [34.5, 'boutique try-on'], [39.5, 'access panel'], [47, 'end card'],
+      [3, 'opening'], [8, 'wore a look'], [12.6, 'hem pulled'], [17.5, 'fabrics'], [22.5, 'told the tailor'],
+      [28, 'stylist'], [33.5, 'refined'], [38.8, 'week planned'], [45, 'boutique try-on'], [50, 'access panel'],
+      [58, 'end card'],
     ]) {
       while (s.t < at && s.playing) await wait(100);
       sample(label);

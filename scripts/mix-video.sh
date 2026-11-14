@@ -10,7 +10,8 @@ IN=${1:-docs/video/atelier-mr.mp4}
 OUT=${2:-docs/video/atelier-demo.mp4}
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$IN")
 python3 scripts/soundtrack.py docs/video/music.wav docs/video/sfx.wav "$DUR" >/dev/null
-TIMES=(0.7 5.4 9.4 13.9 18.7 23.9 29.4 34.4 40.6 46.1 50.3)
+# Start times come from scripts/narration.txt (one per line, in order).
+TIMES=($(grep -v '^#' scripts/narration.txt | cut -d'|' -f1))
 inputs=(-i "$IN" -i docs/video/music.wav -i docs/video/sfx.wav)
 chain=""
 labels=""

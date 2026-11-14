@@ -184,7 +184,8 @@ export class WardrobeSystem extends createSystem({}) {
     if (!card) return;
     const box = document.createElement('div');
     box.innerHTML = `
-      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d;margin-top:12px">YOUR REAL CLOTHES</div>
+      <details open style="margin-top:12px">
+      <summary style="cursor:pointer;font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d">YOUR REAL CLOTHES</summary>
       <label style="display:block;margin-top:6px;cursor:pointer;text-align:center;border-radius:999px;padding:7px 12px;border:1px solid #8a7656;font-weight:700">
         Add a garment from a photo
         <input type="file" accept="image/*" capture="environment" style="display:none">
@@ -196,7 +197,8 @@ export class WardrobeSystem extends createSystem({}) {
           style="flex:1;min-width:0;border-radius:8px;border:1px solid #6b5a44;background:#1c1814;color:#f6efe2;padding:6px 8px;font:13px inherit">
         <button type="submit" style="cursor:pointer;border:none;border-radius:8px;background:#e2c27d;color:#2b2118;font-weight:700;padding:6px 10px">Go</button>
       </form>
-      <div data-wardrobe-status aria-live="polite" style="font-size:12px;color:#d8cfbf;margin-top:6px"></div>`;
+      <div data-wardrobe-status aria-live="polite" style="font-size:12px;color:#d8cfbf;margin-top:6px"></div>
+      </details>`;
     card.appendChild(box);
     this.status = box.querySelector<HTMLElement>('[data-wardrobe-status]')!;
     const file = box.querySelector<HTMLInputElement>('input[type=file]')!;

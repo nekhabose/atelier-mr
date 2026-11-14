@@ -35,31 +35,22 @@ const DEMO_SWATCH = 1;
 const LOOP = 3.8;
 
 type StepKey = 'wear' | 'tailor' | 'fabric' | 'style' | 'boutique';
+// Three steps to the first payoff; fabric and the boutique are offered at the end.
 const STEPS: { key: StepKey; chip: string; hint: string }[] = [
   {
     key: 'wear',
-    chip: 'STEP 1 OF 5  ·  PINCH A LOOK',
-    hint: 'Step 1 of 5: pinch any outfit on the brass rail to dress the form.',
+    chip: 'STEP 1 OF 3  ·  PINCH A LOOK',
+    hint: 'Step 1 of 3: pinch any outfit on the brass rail to dress the form.',
   },
   {
     key: 'tailor',
-    chip: 'STEP 2 OF 5  ·  PULL A PIN',
-    hint: 'Step 2 of 5: pinch a coloured pin and pull it to tailor the cut.',
-  },
-  {
-    key: 'fabric',
-    chip: 'STEP 3 OF 5  ·  DROP A FABRIC',
-    hint: 'Step 3 of 5: pinch a fabric swatch and drop it on the outfit.',
+    chip: 'STEP 2 OF 3  ·  PULL A PIN',
+    hint: 'Step 2 of 3: pinch a coloured pin and pull it to tailor the cut.',
   },
   {
     key: 'style',
-    chip: 'STEP 4 OF 5  ·  ASK THE STYLIST',
-    hint: 'Step 4 of 5: tap Ask stylist, pick a moment, then Style me.',
-  },
-  {
-    key: 'boutique',
-    chip: 'STEP 5 OF 5  ·  VISIT THE BOUTIQUE',
-    hint: 'Step 5 of 5: tap BOUTIQUE above the rail to shop against your closet.',
+    chip: 'STEP 3 OF 3  ·  ASK THE STYLIST',
+    hint: 'Step 3 of 3: tap Ask stylist, pick a moment, then Style me.',
   },
 ];
 
@@ -172,7 +163,7 @@ export class OnboardingSystem extends createSystem({
     this.atelier?.setHint(
       skipped
         ? 'Tour skipped. Tap Tour any time to see the gestures again.'
-        : 'Tour complete - the studio is yours. Save looks you love and log today\'s outfit.',
+        : 'Tour complete - the studio is yours. Next: drop a fabric swatch on the form, or tap BOUTIQUE above the rail.',
     );
   }
 

@@ -23,6 +23,7 @@ import {
   MovementMode,
   OneHandGrabbable,
   Pressed,
+  Quaternion,
   RayInteractable,
   SphereGeometry,
   CylinderGeometry,
@@ -134,6 +135,14 @@ export class AtelierSystem extends createSystem({
   private dragClock = 0;
   private tooltip?: Mesh;
   private occluderGeo = new BoxGeometry(0.001, 0.001, 0.001);
+  private occlusionOn = false;
+  /** Cloth sway: the skirt lags the turntable and settles (a damped spring). */
+  private prevYaw = 0;
+  private sway = 0;
+  private swayVel = 0;
+  private audioClock = 0;
+  private fwd = new Vector3();
+  private upV = new Vector3();
   private tooltipText = '';
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];
@@ -152,6 +161,7 @@ export class AtelierSystem extends createSystem({
   private swatchGrabStart = new Map<Entity, Vector3>();
   private tmpVec = new Vector3();
   private tmpVec2 = new Vector3();
+  private tmpQuat = new Quaternion();
   private tmpEuler = new Euler(0, 0, 0, 'YXZ');
   private hoverColor = new Color('#fff4d6');
   private baseEmissive = new Color('#000000');
@@ -244,6 +254,7 @@ export class AtelierSystem extends createSystem({
     this.restoreState();
     // Depth occlusion for the form, its garments and pins (not the panels).
     this.formEntity.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
+    this.occlusionOn = true;
     this.markOccluded();
   }
 
@@ -261,7 +272,9 @@ export class AtelierSystem extends createSystem({
   }
 
   private ensureOcclusion(): void {
-    if (!this.formEntity.hasComponent(DepthOccludable)) return;
+    // Not hasComponent(): before the depth system registers the component that
+    // throws, which would abort whatever rebuild called this.
+    if (!this.occlusionOn) return;
     const fresh = new Set<Material>();
     this.formEntity.object3D!.traverse((o) => {
       const mesh = o as Mesh;
@@ -908,10 +921,26 @@ export class AtelierSystem extends createSystem({
     }
   }
 
+  /**
+   * First visit: the form is already dressed when the studio appears, so the
+   * very first thing you see is a finished look (no empty mannequin).
+   */
+  private dressForFirstVisit(): void {
+    this.lookIndex = 0;
+    this.pieces = cloneLook(LOOKS[0]);
+    this.selectedPiece = this.outermostPiece();
+    this.rebuildAll();
+    this.setPanel(LOOKS[0].name, 'Your studio is dressed and ready. Pinch any look on the rail to change it.');
+    this.origin = this.snapshot();
+  }
+
   private restoreState(): void {
     try {
       const raw = localStorage.getItem('atelier.state.v1');
-      if (!raw) return;
+      if (!raw) {
+        this.dressForFirstVisit();
+        return;
+      }
       const data = JSON.parse(raw) as { lookIndex: number; pieces: GarmentPiece[]; name?: string };
       if (!Array.isArray(data.pieces) || data.pieces.length === 0) return;
       this.lookIndex = data.lookIndex;
@@ -920,8 +949,9 @@ export class AtelierSystem extends createSystem({
       this.rebuildAll();
       const name = LOOKS[this.lookIndex]?.name ?? data.name ?? 'Your mix';
       this.setPanel(name, 'Welcome back - your last look is still on the form.');
-    } catch {
-      /* ignore corrupt state */
+    } catch (err) {
+      // Corrupt saved state: start fresh (and say why in the console).
+      console.warn('[atelier] could not restore the last look', err);
     }
   }
 
@@ -963,6 +993,38 @@ export class AtelierSystem extends createSystem({
       );
       this.world.camera.getWorldPosition(this.tmpVec);
       this.badge.lookAt(this.tmpVec);
+    }
+
+    // Cloth sway: when the form turns, skirts and dresses lag behind and
+    // settle with a small overshoot; tops and jackets move less.
+    {
+      const yaw = this.tmpEuler.y;
+      let dYaw = yaw - this.prevYaw;
+      dYaw = Math.atan2(Math.sin(dYaw), Math.cos(dYaw));
+      this.prevYaw = yaw;
+      const dt = Math.max(delta, 1e-3);
+      const target = access.calmMotion ? 0 : Math.max(-0.22, Math.min(0.22, -(dYaw / dt) * 0.05));
+      this.swayVel += (70 * (target - this.sway) - 7 * this.swayVel) * Math.min(dt, 0.05);
+      this.sway += this.swayVel * Math.min(dt, 0.05);
+      if (Math.abs(this.sway) < 1e-4 && Math.abs(this.swayVel) < 1e-3) this.sway = this.swayVel = 0;
+      for (let i = 0; i < this.pieceGroups.length; i++) {
+        const kind = this.pieces[i]?.kind;
+        const k = kind === 'dress' || kind === 'skirt' ? 1 : kind === 'jacket' ? 0.45 : 0.3;
+        this.pieceGroups[i].rotation.y = this.sway * k;
+      }
+    }
+
+    // Sound from the form: keep the spatial bus and the listener up to date (~15 Hz).
+    this.audioClock += delta;
+    if (this.audioClock > 0.066) {
+      this.audioClock = 0;
+      form.getWorldPosition(this.tmpVec);
+      sfx.setSource(this.tmpVec.x, this.tmpVec.y + 1.1, this.tmpVec.z);
+      const cam = this.world.camera;
+      cam.getWorldPosition(this.tmpVec);
+      cam.getWorldDirection(this.fwd);
+      this.upV.set(0, 1, 0).applyQuaternion(cam.getWorldQuaternion(this.tmpQuat));
+      sfx.setListener(this.tmpVec.x, this.tmpVec.y, this.tmpVec.z, this.fwd.x, this.fwd.y, this.fwd.z, this.upV.x, this.upV.y, this.upV.z);
     }
 
     // Wear animation: the outfit drops onto the form with a soft settle.
