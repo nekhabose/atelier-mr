@@ -32,6 +32,8 @@ import { miniMaterial } from './atelier/fabrics.js';
 import { buildPieceGroup, GarmentPiece, MINI_DETAIL } from './atelier/garments.js';
 import { makeLabel } from './atelier/labels.js';
 import { sfx } from './atelier/sfx.js';
+import { access } from './atelier/access.js';
+import { say } from './atelier/voice.js';
 import { postStylist } from './atelier/stylist-client.js';
 import { BoutiqueReply, isWearable, VERDICTS } from './atelier/stylist-contract.js';
 import { describeItem } from './atelier/stylist-engine.js';
@@ -320,6 +322,7 @@ export class BoutiqueSystem extends createSystem({
           : `Your closet makes ${a.closetOutfits} outfits today.`,
     });
     this.ui['verdict-reason']?.setProperties({ text: a.reason });
+    say(`${bp.name}, ${bp.price} dollars. Verdict: ${v.word}. ${a.newOutfits > 0 ? `${a.newOutfits} new outfits with your closet.` : ''} ${a.reason}`);
     const owned = this.owns(bp);
     this.ui['add-closet-label']?.setProperties({ text: owned ? 'In your closet' : 'Add to closet' });
     this.atelier.setHint(
@@ -419,7 +422,8 @@ export class BoutiqueSystem extends createSystem({
 
   update(delta: number): void {
     if (this.slideT >= SLIDE_TIME + 0.5) return;
-    this.slideT += delta;
+    // Calm motion: pieces are simply there.
+    this.slideT += access.calmMotion ? SLIDE_TIME + 1 : delta;
     for (const h of this.hangers) {
       const t = Math.min(1, Math.max(0, (this.slideT - h.delay) / SLIDE_TIME));
       const ease = 1 - Math.pow(1 - t, 3);

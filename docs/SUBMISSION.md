@@ -6,7 +6,8 @@ Deadline: **Nov 18, 2026, 12:00 PM PT**. Track: **Productivity**. Division: **Ne
 
 - Play: https://atelier-mr.vercel.app (mirror: https://nekhabose.github.io/atelier-mr/)
 - Code: https://github.com/nekhabose/atelier-mr
-- Video: _YouTube or Vimeo link, public, under 3:00_
+- Video: _YouTube or Vimeo link, public, under 3:00_ (a 50-second captioned draft is at `docs/video/atelier-showcase.mp4` locally; regenerate with `node scripts/record-showcase.mjs`)
+- No headset? Open the link on a desktop and press **Watch the 50-second tour**: it plays the real journey with captions.
 
 ## Name and tagline
 
@@ -51,7 +52,15 @@ says buy, maybe or skip, with the cost per new outfit. Add your photo and skin
 tone on the start page (kept on your device) and the form becomes you.
 Save the looks you love to a lookbook
 and log an Outfit of the Day to keep a streak, a reason to come back each
-morning.
+morning. Share any look as a link or QR code: the outfit travels inside the
+link, so nothing is uploaded, and opening it dresses your friend's form.
+
+**Accessible by design.** An Access panel in the studio offers large text,
+high contrast, calm motion (no bouncing, sliding or spinning), read aloud
+(the panel speaks each change), voice commands ("style me", "undo",
+"shorter", "turn", "share"), and tailoring without dragging: one-tap buttons
+for hem, waist and sleeves, so every edit works with one hand and no grip.
+Calm motion and high contrast follow the system's preferences by default.
 
 **How we built it.** Atelier is built from scratch with Meta's Immersive Web SDK
 (WebXR, Three.js, ECS) during the competition window. Garments, the mannequin
@@ -64,8 +73,8 @@ network or the key is unavailable, so the studio never depends on a third-party
 service.
 
 **What's next.** A photo-to-garment flow to recreate clothes faster; voice
-for choosing occasions; sharing lookbooks with friends; and tuning on the Meta
-VR Glasses' narrower view.
+for choosing occasions; shared lookbooks; and on-device tuning for the Meta
+VR Glasses' narrower view (the compact layout is emulator-tested).
 
 ## Hand interactions (optional field)
 
@@ -75,7 +84,10 @@ rebuilds live); pinch a swatch and drop it on a garment; pinch the form and
 twist to turn it; and tap the spatial panels. Everything is reachable from a
 seat: the form, rack and board work at a distance with hand rays, and Turn,
 Undo and Redo replace any need to stand up and walk around. A ghost hand
-demonstrates the three core gestures on first launch instead of a wall of text.
+demonstrates the core gestures on first launch instead of a wall of text.
+For people who cannot pinch-and-drag, the Access panel's tap buttons tailor
+hem, waist and sleeves, and voice commands cover the main actions where the
+browser supports speech recognition.
 
 ## Judge instructions
 
@@ -92,6 +104,12 @@ demonstrates the three core gestures on first launch instead of a wall of text.
 5. Leave and come back: the studio returns to the same spot in your room.
 6. **Save look** and **Wear today**; reload the page and your look, lookbook and
    streak are still there.
+7. Tap **Access** on the right panel: try Large text, High contrast, and the
+   Shorter / Waist in buttons. Tap **Share**, exit, and the start page shows
+   the look's link and QR code.
+
+No headset at hand: open the link on a desktop and press **Watch the 50-second
+tour** (top right) for a captioned walk through the same journey.
 
 Works without any API key (the stylist header shows "ON-DEVICE"). With the
 server key configured it shows "LIVE AI".
@@ -105,13 +123,16 @@ server key configured it shows "LIVE AI".
 | 12 fabrics applied per garment | Photo-to-garment closet entry |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints, calendar and weather context |
-| Lookbook (6) and Outfit of the Day streak | Sharing, social lookbooks |
+| Lookbook (6) and Outfit of the Day streak; share a look by link or QR code | Shared lookbooks, friends' rails |
+| Access panel: large text, high contrast, calm motion, read aloud, voice commands, tap-to-tailor | On-device check of speech features on Quest Browser |
 | Boutique: 3 original labels, 15 pieces, try-on with your closet, buy / maybe / skip with new-outfit count and cost per outfit, add to closet | Official retailer feeds through partner programs |
 | Face photo (device-only) and 6 skin tones on the form | Body measurements to size the form to you |
-| Claude stylist endpoint deployed, guarded, awaiting key | Tuning for Meta VR Glasses field of view |
+| Claude stylist live on the production URL (server-side key), offline fallback | Tuning for Meta VR Glasses on device |
 
 Not yet verified: frame rate and hand tracking on a physical Quest, and
-placement in real rooms. All testing so far used the Immersive Web Emulator
+placement in real rooms. Read aloud and voice commands are feature-detected;
+whether Quest Browser provides speech synthesis and recognition is not yet
+verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.
 
 ## Demo video storyboard (2:40)
@@ -137,18 +158,13 @@ the IWSDK emulator. Show only real footage; no AI-generated video.
 01-studio (opening reveal), 02-stylist-preview (after "Warmer"), 03-turned,
 04-closet-builder, 05-start-page (make the form you), 06-boutique-verdict,
 07-glasses-compact-layout (Meta VR Glasses profile, area outside the glasses'
-view masked black). Replace with on-device captures when a Quest is available.
+view masked black), 08-accessibility-panel (Large text and High contrast on). Replace with on-device captures when a Quest is available.
 Use only your own face if you show the photo feature.
 
-## Readiness scorecard (self-assessment)
+## Special awards
 
-| Criterion (25% each) | Strengths | Gaps to close |
-|---|---|---|
-| Innovation & Creativity | Life-size tailoring with real generated geometry; room-aware studio that persists via anchors; stylist that edits a 3D garment | Anchor accuracy unverified on device |
-| Experience Design | Seated, ray and pinch at distance; five-step ghost-hand tour; undo everywhere; daily loop; FoV-aware compact layout for narrow-view devices; clean pause/resume | Needs a real-device comfort pass; in the compact layout panels sit below a standing user's view |
-| Technical Implementation | ECS systems, procedural assets, scene understanding, validated serverless AI with offline fallback, typecheck + regression script | 60 fps on Quest unmeasured (emulator: p50 16.7 ms display-capped, p95 33.9 ms on desktop) |
-| Polish & Presentation | Cohesive brass and walnut studio, synthesised sound design, wear animation, editorial panel copy | Video and on-device screenshots still to capture |
-
-Special awards worth claiming: **Best Agentic Interaction** (plan, act on the
-form, confirm or undo, re-plan), **Best Reason to Come Back** (closet, lookbook,
-streak), **Best First Five Minutes** (ghost-hand tour, instant payoff).
+Worth claiming: **Best Agentic Interaction** (plan, act on the form, confirm or
+undo, re-plan), **Best Reason to Come Back** (closet, lookbook, streak,
+anchored studio), **Best First Five Minutes** (ghost-hand tour, instant
+payoff), **Best Accessibility Forward Experience** (Access panel, tap-to-tailor,
+voice, read aloud).

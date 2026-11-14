@@ -16,7 +16,8 @@ New Experience) with Meta's [Immersive Web SDK](https://iwsdk.dev) (WebXR).
 
 Open it in the Meta Quest Browser and tap **Enter Atelier** (or accept the
 immersive prompt). On a desktop browser the studio opens as a flat 3D preview
-you can click.
+you can click, and **Watch the 50-second tour** (top right) plays the whole
+journey with captions.
 
 ## What it does
 
@@ -68,6 +69,21 @@ you can click.
 - **Pause and resume:** opening the system menu (session blurred) silences
   sound and saves state; resuming, or leaving and re-entering, brings back the
   outfit and the studio exactly where it was.
+- **Accessibility:** **Access** on the studio panel (and checkboxes on the
+  start page): Large text (bigger, closer panels), High contrast, Calm motion
+  (no bounces, slides or spins), Read aloud (the panel speaks each change),
+  Voice commands ("style me", "undo", "shorter", "turn", "share", "look
+  two"...), and **Tailor without dragging**: one-tap Shorter / Longer, Waist
+  in / out and Sleeves buttons. Calm motion and high contrast follow the
+  system's reduce-motion and more-contrast preferences. Speech features are
+  feature-detected and say so when the browser lacks them.
+- **Share a look:** **Share** packs the outfit into the link itself
+  (`#look=...`; nothing is uploaded). The start page shows the link and a QR
+  code; opening it dresses the form in that look. Shared links are validated
+  and every measurement is clamped to the garment's range.
+- **Guided showcase:** a captioned tour that drives the real systems on the
+  flat page, for judges without a headset and for recording the demo video
+  (`?showcase`; `?showcase=record` for unattended capture).
 - **Sound design:** taps, a ratchet while you pull a pin, a cloth swish, a
   settle when the studio lands and a sparkle when the stylist acts, all
   synthesised with Web Audio (no audio files).
@@ -84,10 +100,18 @@ npm run build      # static output in dist/
 Regression checks against the emulator (dev server running, XR session entered):
 
 ```sh
-bash scripts/e2e-emulator.sh                         # 30-step hands-free journey
+bash scripts/e2e-emulator.sh                         # 42-step hands-free journey
 npx @iwsdk/cli browser run scripts/check-face-upload.mjs   # needs dev up --allow-browser-automation
 npx @iwsdk/cli browser run scripts/check-pause-resume.mjs  # system menu blur / resume
 npx @iwsdk/cli browser run scripts/check-layout.mjs        # FoV-aware layout decision
+npx @iwsdk/cli browser run scripts/check-showcase.mjs      # flat page, not in XR: every tour beat
+```
+
+Record the showcase as an MP4 (needs ffmpeg; output is git-ignored):
+
+```sh
+npm run build && npx vite preview --port 4173 &
+node scripts/record-showcase.mjs https://localhost:4173/ docs/video/atelier-showcase.mp4
 ```
 
 Pushes to `main` deploy to Vercel (Git integration) and to GitHub Pages
@@ -124,6 +148,8 @@ src/boutique-system.ts    boutique rail, try-on and buy / maybe / skip verdicts
 src/me-system.ts          face photo + skin tone for the form (device-only)
 src/room-system.ts        floor / wall placement + persistent anchor
 src/onboarding-system.ts  ghost-hand tour
+src/access-system.ts      accessibility panel, voice, read aloud, share links
+src/showcase-system.ts    captioned guided tour (flat page, video capture)
 public/scenes/            scene composition (JSON)
 public/ui/                spatial panels (UIKitML)
 docs/                     submission kit and screenshots

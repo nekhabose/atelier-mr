@@ -78,6 +78,61 @@
   .button-label {
     transform-translate-y: 1px;
   }
+  .access {
+    flex-direction: column;
+    gap: 8px;
+    margin-left: 24px;
+    margin-right: 24px;
+    margin-bottom: 14px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+    border-radius: 14px;
+    background-color: #f3ead8;
+  }
+
+  .access:dark {
+    background-color: #24221e;
+  }
+
+  .toggle-row {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .toggle {
+    flex-grow: 1;
+    flex-basis: 0;
+    align-items: center;
+    justify-content: center;
+    padding-top: 9px;
+    padding-bottom: 9px;
+    border-radius: 10px;
+    border-width: 2px;
+    border-color: #d9d3c7;
+    background-color: #fbf8f2;
+    color: #2b2118;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .toggle:dark {
+    border-color: #4a4d55;
+    background-color: #2c2e33;
+    color: #f1ede4;
+  }
+
+  .small {
+    color: #5a4520;
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  .small:dark {
+    color: #d8cfbf;
+  }
 </style>
 <Panel class="panel-root">
   <div class="panel-content">
@@ -125,6 +180,12 @@
       </ButtonIcon>
       <ButtonLabel class="button-label">Turn</ButtonLabel>
     </Button>
+    <Button id="share-button" variant="secondary">
+      <ButtonIcon>
+        <Share2></Share2>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Share</ButtonLabel>
+    </Button>
   </div>
   <div class="actions">
     <Button id="place-button" variant="secondary">
@@ -139,5 +200,35 @@
       </ButtonIcon>
       <ButtonLabel id="tour-label" class="button-label">Tour</ButtonLabel>
     </Button>
+    <Button id="access-button" variant="secondary">
+      <ButtonIcon>
+        <Accessibility></Accessibility>
+      </ButtonIcon>
+      <ButtonLabel id="access-label" class="button-label">Access</ButtonLabel>
+    </Button>
+  </div>
+  <div id="access-section" class="access" style="display: none">
+    <div class="eyebrow">ACCESSIBILITY</div>
+    <div class="toggle-row">
+      <div id="acc-largeText" class="toggle">Large text</div>
+      <div id="acc-highContrast" class="toggle">High contrast</div>
+      <div id="acc-calmMotion" class="toggle">Calm motion</div>
+    </div>
+    <div class="toggle-row">
+      <div id="acc-readAloud" class="toggle">Read aloud</div>
+      <div id="acc-voice" class="toggle">Voice commands</div>
+    </div>
+    <div class="eyebrow">TAILOR WITHOUT DRAGGING</div>
+    <div class="toggle-row">
+      <div id="tl-hem-up" class="toggle">Shorter</div>
+      <div id="tl-hem-down" class="toggle">Longer</div>
+      <div id="tl-fit-up" class="toggle">Waist in</div>
+      <div id="tl-fit-down" class="toggle">Waist out</div>
+    </div>
+    <div class="toggle-row">
+      <div id="tl-sleeve-down" class="toggle">Sleeves shorter</div>
+      <div id="tl-sleeve-up" class="toggle">Sleeves longer</div>
+    </div>
+    <div id="access-status" class="small">Settings stay on this device.</div>
   </div>
 </Panel>

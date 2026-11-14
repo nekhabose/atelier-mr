@@ -37,6 +37,7 @@ import {
 } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
 import { sfx } from './atelier/sfx.js';
+import { access } from './atelier/access.js';
 import { makeLabel } from './atelier/labels.js';
 
 /** Scene nodes that make up the studio and move together. */
@@ -111,6 +112,9 @@ const REVEAL: Record<string, number> = {
   'closet-panel': 0.95,
 };
 const REVEAL_DUR = 0.7;
+/** Large text: the two panels are drawn this much larger. */
+const LARGE_TEXT_SCALE = 1.3;
+const PANEL_IDS = new Set(['atelier-panel', 'closet-panel']);
 const TITLE_IN = 1.2;
 const TITLE_OUT = 4.2;
 
@@ -279,6 +283,9 @@ export class RoomPlacementSystem extends createSystem({
     }
 
     this.cleanupFuncs.push(
+      access.subscribe((_s, changed) => {
+        if (changed === null || changed === 'largeText') this.relayout();
+      }),
       this.world.visibilityState.subscribe((state) => {
         const inXR = state !== VisibilityState.NonImmersive;
         if (inXR === this.inXR) return;
@@ -537,9 +544,26 @@ export class RoomPlacementSystem extends createSystem({
         if (node.id !== 'dress-form') node.obj.quaternion.copy(node.authoredQuat);
         node.baseScale.copy(node.authoredScale);
       }
+      if (PANEL_IDS.has(node.id) && access.settings.largeText) {
+        node.baseScale.multiplyScalar(LARGE_TEXT_SCALE);
+        // A little closer to the user and lower, so the bigger panel stays in view.
+        node.basePos.z += 0.06;
+        node.basePos.y -= 0.03;
+      }
       node.obj.position.copy(node.basePos);
       node.obj.scale.copy(node.baseScale);
     }
+  }
+
+  /** Re-apply the base layout in place (e.g. after Large text changes). */
+  relayout(): void {
+    const { x, y, z, yaw } = this.frame;
+    const hidden = this.nodes.map((n) => n.obj.visible);
+    this.applyFrame(0, 0, 0, 0);
+    this.useLayout(this.compact);
+    this.applyFrame(x, y, z, yaw);
+    this.nodes.forEach((n, i) => (n.obj.visible = hidden[i]));
+    if (this.revealT !== Infinity) this.stepReveal(this.revealT);
   }
 
   // ---------------------------------------------------------------- reveal
@@ -562,7 +586,7 @@ export class RoomPlacementSystem extends createSystem({
     for (const node of this.nodes) {
       const delay = REVEAL[node.id] ?? 0;
       const p = Math.min(1, Math.max(0, (t - delay) / REVEAL_DUR));
-      const s = p <= 0 ? 0.001 : Math.max(0.001, easeOutBack(p));
+      const s = access.calmMotion ? 1 : p <= 0 ? 0.001 : Math.max(0.001, easeOutBack(p));
       node.obj.scale.copy(node.baseScale).multiplyScalar(s);
       node.obj.visible = p > 0;
     }
@@ -571,7 +595,7 @@ export class RoomPlacementSystem extends createSystem({
     const fadeOut = Math.min(1, Math.max(0, (TITLE_OUT - t) / 0.8));
     const a = Math.min(fadeIn, fadeOut);
     for (const m of this.titleMats) m.opacity = a;
-    this.title.position.y = 2.02 + 0.06 * fadeIn;
+    this.title.position.y = 2.02 + (access.calmMotion ? 0.06 : 0.06 * fadeIn);
     this.world.camera.getWorldPosition(this.head);
     this.title.lookAt(this.head);
   }
@@ -634,7 +658,7 @@ export class RoomPlacementSystem extends createSystem({
       this.saveToAnchor();
     }
     if (this.ringT < RING_TIME) {
-      this.ringT += delta;
+      this.ringT += access.calmMotion ? RING_TIME : delta;
       const t = Math.min(1, this.ringT / RING_TIME);
       const s = 1 + t * 1.2;
       this.ring.scale.set(s, s, 1);

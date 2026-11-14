@@ -47,12 +47,15 @@ import {
   pieceForParam,
   pieceSpan,
   pinPosition,
+  RANGES,
   TailorParam,
   DRAG_DETAIL,
   Detail,
 } from './atelier/garments.js';
 import { makeLabel, makeTextSheet } from './atelier/labels.js';
 import { sfx } from './atelier/sfx.js';
+import { access } from './atelier/access.js';
+import { say } from './atelier/voice.js';
 import { cloneLook, LOOKS } from './atelier/looks.js';
 import { createHanger, RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
 
@@ -743,6 +746,49 @@ export class AtelierSystem extends createSystem({
     this.formEntity.object3D!.parent?.add(this.badge);
   }
 
+  /**
+   * Tailor without dragging (accessibility, voice): step one measurement by an
+   * eighth of its range. Hem: +1 = shorter. Sleeve / neckline: +1 = longer /
+   * deeper. Waist: +1 = more fitted. Returns false when nothing changed.
+   */
+  nudge(param: TailorParam, dir: 1 | -1): boolean {
+    const name = param === 'fit' ? 'waist' : param === 'neck' ? 'neckline' : param;
+    if (this.pieces.length === 0) {
+      this.setHint('Dress the form first - tap a look on the rail.');
+      return false;
+    }
+    const piece = pieceForParam(this.pieces, param);
+    const range = piece ? RANGES[piece.kind][param] : undefined;
+    if (!piece || !range || ((param === 'sleeve' || param === 'neck') && piece.strapless)) {
+      this.setHint(`This look has no ${name} to tailor.`);
+      return false;
+    }
+    const step = (range.max - range.min) / 8;
+    const next = Math.min(range.max, Math.max(range.min, piece[param] + dir * step));
+    if (Math.abs(next - piece[param]) < 1e-4) {
+      this.setHint(`The ${name} is as far as it goes that way.`);
+      return false;
+    }
+    this.checkpoint();
+    piece[param] = next;
+    const index = this.pieces.indexOf(piece);
+    this.selectedPiece = index;
+    this.rebuildPiece(index);
+    this.layoutPins();
+    this.tailorCount++;
+    this.saveState();
+    this.emitOutfit();
+    sfx.tick();
+    const words: Record<TailorParam, [string, string]> = {
+      hem: ['Hem shorter', 'Hem longer'],
+      sleeve: ['Sleeves longer', 'Sleeves shorter'],
+      neck: ['Neckline deeper', 'Neckline higher'],
+      fit: ['Waist more fitted', 'Waist more relaxed'],
+    };
+    this.setHint(`${words[param][dir === 1 ? 0 : 1]}. Undo to go back.`);
+    return true;
+  }
+
   /** Rebuild every worn piece after an external edit (e.g. template change). */
   refreshAll(): void {
     this.selectedPiece = this.outermostPiece();
@@ -754,6 +800,7 @@ export class AtelierSystem extends createSystem({
   refreshPiece(index: number): void {
     if (!this.pieces[index]) return;
     this.rebuildPiece(index);
+    this.layoutPins();
     this.saveState();
   }
 
@@ -772,10 +819,12 @@ export class AtelierSystem extends createSystem({
     this.outfitName = name;
     this.panelText.name?.setProperties({ text: name });
     this.panelText.note?.setProperties({ text: note });
+    say(`${name}. ${note}`);
   }
 
   setHint(text: string): void {
     this.panelText.hint?.setProperties({ text });
+    say(text);
   }
 
   // ---------------------------------------------------------------- persistence
@@ -817,6 +866,11 @@ export class AtelierSystem extends createSystem({
     if (this.tmpEuler.x !== 0 || this.tmpEuler.z !== 0) {
       form.rotation.set(0, this.tmpEuler.y, 0, 'YXZ');
     }
+    if (this.turnTarget !== null && access.calmMotion && !this.formEntity.hasComponent(Grabbed)) {
+      // Calm motion: no spin, the form simply faces the new way.
+      form.rotation.set(0, this.turnTarget, 0, 'YXZ');
+      this.turnTarget = null;
+    }
     if (this.turnTarget !== null) {
       if (this.formEntity.hasComponent(Grabbed)) {
         this.turnTarget = null;
@@ -836,7 +890,7 @@ export class AtelierSystem extends createSystem({
       // Float above the form's head and face the viewer.
       this.badge.position.set(
         form.position.x,
-        form.position.y + BADGE_HEIGHT * form.scale.y + Math.sin(this.badgeT += delta * 1.6) * 0.008,
+        form.position.y + BADGE_HEIGHT * form.scale.y + (access.calmMotion ? 0 : Math.sin(this.badgeT += delta * 1.6) * 0.008),
         form.position.z,
       );
       this.world.camera.getWorldPosition(this.tmpVec);
@@ -845,7 +899,7 @@ export class AtelierSystem extends createSystem({
 
     // Wear animation: the outfit drops onto the form with a soft settle.
     if (this.wearT < 1) {
-      this.wearT = Math.min(1, this.wearT + delta / WEAR_DURATION);
+      this.wearT = access.calmMotion ? 1 : Math.min(1, this.wearT + delta / WEAR_DURATION);
       const t = this.wearT;
       const ease = 1 - Math.pow(1 - t, 3);
       this.outfit.position.y = (1 - ease) * 0.35;

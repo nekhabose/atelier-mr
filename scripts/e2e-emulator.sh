@@ -62,4 +62,18 @@ click boutique-sn-blouse; sleep 2;  check $AP look-name "Ivory Silk Blouse" "try
                                     check $CP verdict-stat "outfits" "verdict counts new outfits"
                                     check $CP verdict-sub "per outfit" "verdict shows cost per outfit"
 click boutique-back; sleep 1;       check $CP closet-eyebrow "MY CLOSET" "leave the boutique"
+# Accessibility, tailoring by tap, sharing
+click rack-tab-designer; click rack-look-boardroom
+click access-button;                check $AP access-label "Close" "open the accessibility section"
+click acc-largeText;                check $AP access-status "Large text on" "large text on"
+click acc-largeText;                check $AP access-status "Large text off" "large text off"
+click acc-highContrast;             check $AP access-status "High contrast on" "high contrast on"
+click acc-highContrast;             check $AP access-status "High contrast off" "high contrast off"
+click acc-calmMotion;               check $AP access-status "Calm motion on" "calm motion on"
+click acc-calmMotion
+click tl-hem-up;                    check $AP hint "Hem shorter" "shorten the hem with one tap"
+click tl-fit-up;                    check $AP hint "Waist more fitted" "fit the waist with one tap"
+click undo-button;                  check $AP hint "Undo" "undo a tap edit"
+click share-button;                 check $AP hint "ready to share" "share the look from the studio"
+click access-button;                check $AP access-label "Access" "close the accessibility section"
 echo "RESULT pass=$pass fail=$fail"

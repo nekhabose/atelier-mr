@@ -47,3 +47,6 @@ pids/
 # Vercel project link
 .vercel/
 .vercel
+
+# Recorded showcase video (large; upload it to YouTube/Vimeo instead)
+docs/video/

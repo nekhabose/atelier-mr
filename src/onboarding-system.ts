@@ -147,6 +147,9 @@ export class OnboardingSystem extends createSystem({
     else this.begin();
   }
 
+  /** Set while something else owns the screen (the guided showcase). */
+  held = false;
+
   get active(): boolean {
     return this.step >= 0 && this.step < STEPS.length;
   }
@@ -281,7 +284,7 @@ export class OnboardingSystem extends createSystem({
   update(delta: number): void {
     if (!this.active) return;
     // Let the opening reveal play before the ghost hand appears.
-    if (this.world.getSystem(RoomPlacementSystem)?.revealing) {
+    if (this.held || this.world.getSystem(RoomPlacementSystem)?.revealing) {
       this.hand.setOpacity(0);
       this.pulseMat.opacity = 0;
       this.chips[this.step].visible = false;
