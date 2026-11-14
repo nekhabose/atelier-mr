@@ -133,3 +133,39 @@ export interface BoutiqueReply {
   /** Best pairing: item ids including "new". */
   itemIds: string[];
 }
+
+// ------------------------------------------------------------------ photo to closet
+
+/** Photo -> one closet garment (or 'none' when no single garment is clear). */
+export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+/** Base64 characters allowed for a garment photo (the client sends ~768 px JPEGs). */
+export const MAX_IMAGE_CHARS = 700_000;
+
+export interface GarmentRequest {
+  mode: 'garment';
+  mediaType: (typeof IMAGE_TYPES)[number];
+  /** Base64 image data, no data: prefix. */
+  image: string;
+}
+
+export interface GarmentReply {
+  kind: (typeof ITEM_KINDS)[number] | 'none';
+  color: (typeof COLOR_KEYS)[number];
+  material: (typeof MATERIAL_KEYS)[number];
+  length: (typeof LENGTHS)[number];
+  sleeves: (typeof SLEEVES)[number];
+  /** Two to four words, letters and spaces (NAME_PATTERN). */
+  name: string;
+}
+
+// ------------------------------------------------------------------ free-form tailoring
+
+/** Longest tailoring instruction accepted ("make it midi with long sleeves"). */
+export const MAX_INSTRUCTION = 160;
+
+export interface TailorRequest {
+  mode: 'tailor';
+  instruction: string;
+  /** What is on the form now, ids p0..pN. */
+  outfit: StylistItem[];
+}

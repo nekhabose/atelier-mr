@@ -45,7 +45,12 @@ idea on the form as a preview, and waits for you to Keep it, see the Next idea,
 or Undo. Change the weather and it re-plans. Ask it to make the look warmer,
 dressier or more colourful and it edits the garments on the form - lets a hem
 down, adds sleeves, switches to knit or satin, layers your jacket - and tells
-you what it changed. It also tells you which piece your closet is missing. The boutique turns shopping around: three original labels hang their pieces
+you what it changed. It also tells you which piece your closet is missing.
+Photograph a real garment and it joins your closet, cut to match: Claude
+reads its type, colour, fabric, length and sleeves. Tell the tailor in your
+own words, "make the dress midi with long sleeves", by voice or text, and the
+form changes. Plan week lays out seven varied outfits from your closet, and
+Pack finds the fewest pieces for a 3, 5 or 7-day trip. The boutique turns shopping around: three original labels hang their pieces
 on your rail, each tagged with how many new outfits it unlocks with what you
 already own. Try one on and the boutique stylist tries it with your clothes and
 says buy, maybe or skip, with the cost per new outfit. Add your photo and skin
@@ -86,8 +91,9 @@ tailoring maths, share links, API input validation, streaks) run in CI on
 every push next to a 42-step emulator journey; the tests caught two real
 tailoring bugs, now fixed.
 
-**What's next.** A photo-to-garment flow to recreate clothes faster; voice
-for choosing occasions; shared lookbooks; and on-device tuning for the Meta
+**What's next.** Photographing garments straight from the headset's
+passthrough camera; calendar and weather context for the week plan; shared
+lookbooks; and on-device tuning for the Meta
 VR Glasses' narrower view (the compact layout is emulator-tested).
 
 ## Hand interactions (optional field)
@@ -118,7 +124,11 @@ browser supports speech recognition.
 5. Leave and come back: the studio returns to the same spot in your room.
 6. **Save look** and **Wear today**; reload the page and your look, lookbook and
    streak are still there.
-7. Tap **Access** on the right panel: try Large text, High contrast, and the
+7. Left panel, **Ask stylist**, then **Plan week**: tap Mon to wear it, then
+   **5 days** under Pack for a trip.
+8. On the start page (desktop or Quest browser): **Add a garment from a
+   photo**, and type "midi, long sleeves" in Tell the tailor.
+9. Tap **Access** on the right panel: try Large text, High contrast, and the
    Shorter / Waist in buttons. Tap **Share**, exit, and the start page shows
    the look's link and QR code.
 
@@ -142,6 +152,7 @@ server key configured it shows "LIVE AI".
 | 12 fabrics applied per garment | Photo-to-garment closet entry |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints, calendar and weather context |
+| Photo to closet (Claude vision; colour-only fallback on device), tailoring in plain words (on-device parser, live AI for the rest), week planner and packing list | Photo capture from the headset's passthrough camera |
 | Lookbook (6) and Outfit of the Day streak; share a look by link or QR code | Shared lookbooks, friends' rails |
 | Access panel: large text, high contrast, calm motion, read aloud, voice commands, tap-to-tailor | On-device check of speech features on Quest Browser |
 | Boutique: 3 original labels, 15 pieces, try-on with your closet, buy / maybe / skip with new-outfit count and cost per outfit, add to closet | Official retailer feeds through partner programs |

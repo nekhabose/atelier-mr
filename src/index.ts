@@ -12,6 +12,8 @@ import { RoomPlacementSystem } from './room-system.js';
 import { AccessSystem } from './access-system.js';
 import { ShowcaseSystem } from './showcase-system.js';
 import { PerfSystem } from './perf-system.js';
+import { PlannerSystem } from './planner-system.js';
+import { WardrobeSystem } from './wardrobe-system.js';
 
 // Offline after one visit (production only; the dev server injects the emulator).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -33,6 +35,8 @@ World.create(
   world.registerSystem(RoomPlacementSystem);
   world.registerSystem(OnboardingSystem);
   world.registerSystem(AccessSystem);
+  world.registerSystem(WardrobeSystem);
+  world.registerSystem(PlannerSystem);
   world.registerSystem(ShowcaseSystem);
   world.registerSystem(PerfSystem);
   // Real hands and furniture hide the form and garments behind them (Quest 3
@@ -54,6 +58,8 @@ World.create(
   g.access = world.getSystem(AccessSystem);
   g.showcase = world.getSystem(ShowcaseSystem);
   g.perf = world.getSystem(PerfSystem);
+  g.wardrobe = world.getSystem(WardrobeSystem);
+  g.planner = world.getSystem(PlannerSystem);
 
   // Installed on Quest (Trusted Web Activity): there is no 2D page to tap, so
   // the app-icon tap enters the studio. Browser tabs keep the Enter button.

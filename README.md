@@ -46,6 +46,19 @@ journey with captions.
   closet is missing for that kind of day.
   Claude plans when the server has a key; a deterministic offline planner
   answers otherwise, so the stylist always works.
+- **Photo to closet:** on the start page, photograph one of your garments;
+  the live AI stylist reads its type, colour, fabric, length and sleeves, and
+  it joins your closet rail, cut to match, and goes on the form (the photo is
+  sent to be read and not stored; without the AI, the colour is read on the
+  device).
+- **Tell the tailor:** say or type what you want ("make the dress midi with
+  long sleeves", "red satin skirt"). Clear requests are read on the device and
+  applied instantly; anything else goes to the live AI tailor. One undo step.
+- **Plan your week, pack for a trip:** in the stylist view, **Plan week** lays
+  out seven outfits from your closet (work days, a Friday date, the weekend),
+  varied so no outfit repeats two days running; tap a day to wear it, today is
+  outlined, and the plan is kept for the week. **Pack** 3, 5 or 7 days from the
+  fewest pieces.
 - **Boutique - shop against your closet:** three original labels (Maison
   Lune, Studio Nord, Sol & Sable) hang their pieces on the rail, each tagged
   with how many new outfits it unlocks with *your* closet. Tap one: it is tried

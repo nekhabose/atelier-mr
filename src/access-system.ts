@@ -21,6 +21,7 @@ import { canListen, canSpeak, say, stopSpeaking, VoiceControl } from './atelier/
 import { clearLookFromLocation, lookFromLocation, qrSvg, shareUrl } from './atelier/share.js';
 import { TailorParam } from './atelier/garments.js';
 import { sfx } from './atelier/sfx.js';
+import { WardrobeSystem } from './wardrobe-system.js';
 
 const ON = { bg: '#e2c27d', border: '#e2c27d', text: '#2b2118' };
 const OFF = { bg: '#2c2e33', border: '#4a4d55', text: '#f1ede4' };
@@ -69,7 +70,11 @@ export class AccessSystem extends createSystem({}) {
   init(): void {
     this.atelier = this.world.getSystem(AtelierSystem)!;
     this.voice = new VoiceControl(this.commands(), (phrase, matched) => {
-      if (!matched) this.atelier.setHint(`Heard "${phrase}". Try "style me", "undo", "shorter" or "turn".`);
+      if (matched) return;
+      // Not a command: maybe a tailoring request ("make it midi with long sleeves").
+      const wardrobe = this.world.getSystem(WardrobeSystem);
+      if (wardrobe && phrase.split(' ').length >= 2) void wardrobe.tailor(phrase);
+      else this.atelier.setHint(`Heard "${phrase}". Try "style me", "undo", "shorter" or "turn".`);
     });
     this.wirePanel();
     this.buildCard();
@@ -294,6 +299,7 @@ export class AccessSystem extends createSystem({}) {
       'position:fixed', 'right:16px', 'top:16px', 'z-index:10', 'width:250px', 'max-width:calc(100vw - 32px)',
       'padding:14px 16px', 'border-radius:16px', 'background:rgba(28,24,20,0.9)', 'color:#f6efe2',
       'font:14px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif', 'box-shadow:0 8px 30px rgba(0,0,0,0.25)',
+      'max-height:calc(100vh - 32px)', 'overflow-y:auto', 'box-sizing:border-box',
     ].join(';');
     const btn =
       'display:block;width:100%;margin-top:8px;cursor:pointer;border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px';

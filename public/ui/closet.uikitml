@@ -299,6 +299,26 @@
         </div>
       </div>
     </div>
+    <div id="week-section" class="section" style="display: none">
+      <div class="row-label">YOUR WEEK  |  TAP A DAY TO WEAR IT</div>
+      <div class="row">
+        <div id="wk-0" class="chip">Mon</div>
+        <div id="wk-1" class="chip">Tue</div>
+        <div id="wk-2" class="chip">Wed</div>
+        <div id="wk-3" class="chip">Thu</div>
+        <div id="wk-4" class="chip">Fri</div>
+        <div id="wk-5" class="chip">Sat</div>
+        <div id="wk-6" class="chip">Sun</div>
+      </div>
+      <div id="week-summary" class="streak-sub">Seven outfits from your closet.</div>
+      <div class="row-label">PACK FOR A TRIP</div>
+      <div class="row">
+        <div id="pack-3" class="chip">3 days</div>
+        <div id="pack-5" class="chip">5 days</div>
+        <div id="pack-7" class="chip">7 days</div>
+      </div>
+      <div id="pack-list" class="tip" style="display: none">Pack</div>
+    </div>
     <div id="boutique-section" class="section" style="display: none">
       <div class="row-label">BOUTIQUES</div>
       <div class="row">
@@ -406,7 +426,27 @@
       </ButtonIcon>
       <ButtonLabel id="style-label" class="button-label">Style me</ButtonLabel>
     </Button>
+    <Button id="week-button" variant="secondary">
+      <ButtonIcon>
+        <CalendarDays></CalendarDays>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Plan week</ButtonLabel>
+    </Button>
     <Button id="stylist-back" variant="secondary">
+      <ButtonIcon>
+        <ArrowLeft></ArrowLeft>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Back</ButtonLabel>
+    </Button>
+  </div>
+  <div id="week-actions" class="actions" style="display: none">
+    <Button id="week-replan">
+      <ButtonIcon>
+        <RefreshCw></RefreshCw>
+      </ButtonIcon>
+      <ButtonLabel class="button-label">Replan</ButtonLabel>
+    </Button>
+    <Button id="week-back" variant="secondary">
       <ButtonIcon>
         <ArrowLeft></ArrowLeft>
       </ButtonIcon>

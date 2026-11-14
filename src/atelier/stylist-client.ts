@@ -6,9 +6,9 @@
 export const STYLIST_ENDPOINT: string = import.meta.env.VITE_STYLIST_URL || 'api/stylist';
 export const STYLIST_TIMEOUT_MS = 8_000;
 
-export async function postStylist<T>(body: object): Promise<T | null> {
+export async function postStylist<T>(body: object, timeoutMs = STYLIST_TIMEOUT_MS): Promise<T | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), STYLIST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(STYLIST_ENDPOINT, {
       method: 'POST',

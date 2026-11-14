@@ -76,4 +76,11 @@ click tl-fit-up;                    check $AP hint "Waist more fitted" "fit the 
 click undo-button;                  check $AP hint "Undo" "undo a tap edit"
 click share-button;                 check $AP hint "ready to share" "share the look from the studio"
 click access-button;                check $AP access-label "Access" "close the accessibility section"
+# Plan ahead: week planner and packing list
+click stylist-button; click week-button; sleep 1
+                                    check $CP closet-title "Your week" "plan the week from the closet"
+click wk-0; sleep 1;                check $AP look-name "Mon" "wear Monday's planned outfit"
+click pack-3; sleep 1;              check $CP pack-list "pack" "packing list for a 3-day trip"
+click week-back; sleep 1;           check $CP closet-title "Where are you headed" "back to the stylist"
+click stylist-back
 echo "RESULT pass=$pass fail=$fail"

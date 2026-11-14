@@ -412,6 +412,8 @@ export class ClosetSystem extends createSystem({
       lookbook: el('lookbook-section'),
       boutique: el('boutique-section'),
       boutiqueActions: el('boutique-actions'),
+      week: el('week-section'),
+      weekActions: el('week-actions'),
     };
     const on = (id: string, fn: () => void) => {
       const node = panel.getElementById(id);
@@ -459,7 +461,7 @@ export class ClosetSystem extends createSystem({
   }
 
   /** Show exactly one of the panel's three states. */
-  panelSections(state: 'browse' | 'design' | 'stylist' | 'boutique'): void {
+  panelSections(state: 'browse' | 'design' | 'stylist' | 'boutique' | 'week'): void {
     const show = (el: El, on: boolean) => el?.setProperties({ display: on ? 'flex' : 'none' });
     show(this.ui.browse, state === 'browse');
     show(this.ui.browse2, state === 'browse');
@@ -473,6 +475,8 @@ export class ClosetSystem extends createSystem({
     show(this.ui.designActions, state === 'design');
     show(this.ui.stylist, state === 'stylist');
     show(this.ui.stylistActions, state === 'stylist');
+    show(this.ui.week, state === 'week');
+    show(this.ui.weekActions, state === 'week');
   }
 
   /** Switch the panel to the stylist (StylistSystem owns its content). */
