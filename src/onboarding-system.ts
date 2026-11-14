@@ -39,17 +39,17 @@ type StepKey = 'wear' | 'tailor' | 'fabric' | 'style' | 'boutique';
 const STEPS: { key: StepKey; chip: string; hint: string }[] = [
   {
     key: 'wear',
-    chip: 'STEP 1 OF 3  ·  PINCH A LOOK',
+    chip: 'Step 1 of 3: pinch a look',
     hint: 'Step 1 of 3: pinch any outfit on the brass rail to dress the form.',
   },
   {
     key: 'tailor',
-    chip: 'STEP 2 OF 3  ·  PULL A PIN',
+    chip: 'Step 2 of 3: pull a pin',
     hint: 'Step 2 of 3: pinch a coloured pin and pull it to tailor the cut.',
   },
   {
     key: 'style',
-    chip: 'STEP 3 OF 3  ·  ASK THE STYLIST',
+    chip: 'Step 3 of 3: ask the stylist',
     hint: 'Step 3 of 3: tap Ask stylist, pick a moment, then Style me.',
   },
 ];
@@ -96,10 +96,10 @@ export class OnboardingSystem extends createSystem({
       const chip = makeLabel(s.chip, {
         width: 0.5,
         fontSize: 34,
-        color: '#2b2118',
-        background: 'rgba(226,194,125,0.95)',
-        pill: true,
-        letterSpacing: 2,
+        weight: 500,
+        color: '#2a231c',
+        background: '#f4ede1',
+        shape: 'card',
       });
       chip.visible = false;
       chip.raycast = () => {};

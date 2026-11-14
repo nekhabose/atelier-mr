@@ -18,6 +18,19 @@
   "resources": {},
   "nodes": [
     {
+      "id": "studio-set",
+      "name": "Studio Set",
+      "content": {
+        "type": "asset",
+        "asset": "studio-set",
+        "castShadow": false,
+        "receiveShadow": false
+      },
+      "transform": {
+        "position": [0, 0, -1.55]
+      }
+    },
+    {
       "id": "shadow-catcher",
       "name": "Shadow Catcher",
       "framingRole": "support",

@@ -34,6 +34,7 @@ import {
 import { AtelierSystem } from './atelier-system.js';
 import { BODY } from './atelier/body.js';
 import { HairLength } from './atelier/body-scan.js';
+import { sideSection } from './atelier/side-panel.js';
 import type { BodyProfile } from './atelier/pose.js';
 
 const PROFILE_KEY = 'atelier.me.v2';
@@ -160,7 +161,6 @@ export class MeSystem extends createSystem({}) {
     }
     this.cleanupFuncs.push(
       this.world.visibilityState.subscribe((state) => {
-        if (this.card) this.card.style.display = state === VisibilityState.NonImmersive ? 'block' : 'none';
         if (state !== VisibilityState.NonImmersive) this.closeCamera();
       }),
       () => this.card?.remove(),
@@ -503,7 +503,7 @@ export class MeSystem extends createSystem({}) {
   private say(text: string, error = false): void {
     if (!this.status) return;
     this.status.textContent = text;
-    this.status.style.color = error ? '#ffb4a2' : '#d8cfbf';
+    this.status.classList.toggle('as-error', error);
   }
 
   private fail(text: string): void {
@@ -515,7 +515,7 @@ export class MeSystem extends createSystem({}) {
     const photoTone = !!this.profile && !this.profile.tone;
     for (const b of this.card.querySelectorAll<HTMLButtonElement>('[data-tone]')) {
       const on = b.dataset.tone === 'photo' ? photoTone : !photoTone && b.dataset.tone === this.tone;
-      b.style.outline = on ? '3px solid #e2c27d' : 'none';
+      b.style.outline = on ? '3px solid #2a231c' : 'none';
       if (b.dataset.tone === 'photo') {
         b.style.display = this.profile ? 'inline-block' : 'none';
         if (this.profile) b.style.background = this.profile.skin;
@@ -524,9 +524,7 @@ export class MeSystem extends createSystem({}) {
     if (this.removeBtn) this.removeBtn.style.display = this.hasFace ? 'inline-block' : 'none';
     if (this.youRow) this.youRow.style.display = this.profile ? 'flex' : 'none';
     for (const b of this.card.querySelectorAll<HTMLButtonElement>('[data-hair]')) {
-      const on = this.profile?.hairLength === b.dataset.hair;
-      b.style.background = on ? '#e2c27d' : 'transparent';
-      b.style.color = on ? '#2b2118' : '#f6efe2';
+      b.setAttribute('aria-pressed', String(this.profile?.hairLength === b.dataset.hair));
     }
     if (this.heightInput && document.activeElement !== this.heightInput) {
       this.heightInput.value = this.profile?.heightCm ? String(this.profile.heightCm) : '';
@@ -535,55 +533,46 @@ export class MeSystem extends createSystem({}) {
       this.say(
         this.hasFace
           ? 'The form is you, from your full-length photo. It stays on this device only.'
-          : 'Take or upload a full-length photo (head to feet, facing the camera) to see clothes on you. It stays on this device.',
+          : 'Use a full-length photo, head to feet, to see clothes on you. It stays on this device.',
       );
     }
   }
 
   private buildCard(): void {
-    const card = document.createElement('div');
-    card.id = 'make-it-you';
-    card.setAttribute('role', 'region');
+    const card = sideSection('make-it-you', 1, 'Make the form you', true, 'See clothes on your own body.') as HTMLDivElement;
     card.setAttribute('aria-label', 'Make the form you');
-    card.style.cssText = [
-      'position:fixed', 'left:16px', 'bottom:16px', 'z-index:10', 'width:300px', 'max-width:calc(100vw - 32px)',
-      'padding:14px 16px', 'border-radius:16px', 'background:rgba(28,24,20,0.9)', 'color:#f6efe2',
-      'font:14px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif', 'box-shadow:0 8px 30px rgba(0,0,0,0.25)',
-    ].join(';');
-    const chip =
-      'cursor:pointer;border:1px solid #6b5a44;border-radius:999px;padding:3px 9px;font:12px inherit;background:transparent;color:#f6efe2';
-    card.innerHTML = `
-      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d">MAKE THE FORM YOU</div>
-      <div style="margin:8px 0 4px;display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" data-camera style="cursor:pointer;border:none;background:#e2c27d;color:#2b2118;font-weight:700;padding:7px 12px;border-radius:999px">Take a photo</button>
-        <label style="cursor:pointer;border:1px solid #8a7656;font-weight:700;padding:6px 12px;border-radius:999px">
+    const body = document.createElement('div');
+    body.innerHTML = `
+      <div class="as-row">
+        <button type="button" data-camera class="as-btn as-btn-main">Take a photo</button>
+        <label class="as-btn">
           Upload
           <input type="file" accept="image/*" style="display:none">
         </label>
-        <button type="button" data-remove style="cursor:pointer;background:transparent;color:#f6efe2;border:1px solid #6b5a44;padding:6px 12px;border-radius:999px">Back to the form</button>
+        <button type="button" data-remove class="as-link">Back to the form</button>
       </div>
-      <div style="font-size:11px;color:#bfb4a0">Full length: head to feet, facing the camera, just you.</div>
-      <div data-you style="display:none;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px">
-        <label style="font-size:11px;letter-spacing:1px;font-weight:700;color:#bfb4a0">HEIGHT
-          <input type="number" data-height min="${HEIGHT_RANGE[0]}" max="${HEIGHT_RANGE[1]}" step="1" placeholder="cm" aria-label="Your height in centimetres"
-            style="width:58px;margin-left:4px;border-radius:8px;border:1px solid #6b5a44;background:#1c1814;color:#f6efe2;padding:3px 6px;font:13px inherit">
+      <div class="as-note">Full length: head to feet, facing the camera, just you.</div>
+      <div data-you class="as-row" style="display:none">
+        <label class="as-label" style="margin:0;display:flex;align-items:center;gap:6px">Height
+          <input type="number" data-height min="${HEIGHT_RANGE[0]}" max="${HEIGHT_RANGE[1]}" step="1" placeholder="cm" aria-label="Your height in centimetres" style="width:74px">
         </label>
-        <span style="font-size:11px;letter-spacing:1px;font-weight:700;color:#bfb4a0;margin-left:4px">HAIR</span>
-        <button type="button" data-hair="short" style="${chip}">short</button>
-        <button type="button" data-hair="shoulder" style="${chip}">shoulder</button>
-        <button type="button" data-hair="long" style="${chip}">long</button>
+        <span class="as-label" style="margin:0 0 0 6px">Hair</span>
+        <button type="button" data-hair="short" class="as-chip">short</button>
+        <button type="button" data-hair="shoulder" class="as-chip">shoulder</button>
+        <button type="button" data-hair="long" class="as-chip">long</button>
       </div>
-      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#bfb4a0;margin-top:8px">SKIN TONE</div>
-      <div data-tones style="display:flex;gap:7px;margin:6px 0 8px;flex-wrap:wrap"></div>
-      <div data-status aria-live="polite" style="font-size:12px;color:#d8cfbf"></div>`;
+      <div class="as-label">Skin tone</div>
+      <div data-tones style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"></div>
+      <div data-status aria-live="polite" class="as-status"></div>`;
+    card.appendChild(body);
     const tones = card.querySelector('[data-tones]')!;
+    const dot = 'width:28px;height:28px;border-radius:50%;cursor:pointer;outline-offset:2px';
     const photoTone = document.createElement('button');
     photoTone.type = 'button';
     photoTone.dataset.tone = 'photo';
     photoTone.title = 'From your photo';
     photoTone.setAttribute('aria-label', 'Skin tone from your photo');
-    photoTone.style.cssText =
-      'width:28px;height:28px;border-radius:50%;border:2px dashed #e2c27d;cursor:pointer;outline-offset:2px;display:none';
+    photoTone.style.cssText = `${dot};border:2px dashed #2a231c;display:none`;
     photoTone.addEventListener('click', () => this.usePhotoTone());
     tones.appendChild(photoTone);
     for (const t of SKIN_TONES) {
@@ -592,7 +581,7 @@ export class MeSystem extends createSystem({}) {
       b.dataset.tone = t.key;
       b.title = t.name;
       b.setAttribute('aria-label', `${t.name} skin tone`);
-      b.style.cssText = `width:28px;height:28px;border-radius:50%;border:2px solid #2b2118;cursor:pointer;background:${t.hex};outline-offset:2px`;
+      b.style.cssText = `${dot};border:1.5px solid rgba(42,35,28,0.35);background:${t.hex}`;
       b.addEventListener('click', () => this.setTone(t.key));
       tones.appendChild(b);
     }
@@ -615,7 +604,6 @@ export class MeSystem extends createSystem({}) {
       b.addEventListener('click', () => this.setHairLength(b.dataset.hair as HairLength));
     }
     this.status = card.querySelector<HTMLDivElement>('[data-status]')!;
-    document.body.appendChild(card);
     this.card = card;
     this.paintCard();
   }

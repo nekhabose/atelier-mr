@@ -407,6 +407,44 @@ export function pinPosition(piece: GarmentPiece, param: TailorParam): [number, n
  * Convert a dragged pin position (mannequin space) back into a parameter
  * value, clamped to the piece's legal range.
  */
+/**
+ * What a tailor would read off the tape for a measurement, in centimetres,
+ * on a form scaled to your proportions (width, height): hem height from the
+ * floor, neckline depth, sleeve length from the shoulder, waist round.
+ */
+export function measureCm(piece: GarmentPiece, param: TailorParam, bodyW = 1, bodyH = 1): number {
+  switch (param) {
+    case 'hem':
+      return Math.round((piece.hem * bodyH - 0.025) * 100);
+    case 'neck':
+      return Math.round(piece.neck * bodyH * 100);
+    case 'sleeve':
+      return Math.round(piece.sleeve * bodyH * 100);
+    case 'fit': {
+      const r = bodiceRadius(piece.fit, EASE[piece.kind])(BODY.waistY);
+      const a = r.rx * bodyW;
+      const b = r.rz * bodyW;
+      // Ramanujan's ellipse perimeter.
+      return Math.round(Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b))) * 100);
+    }
+  }
+}
+
+/** The tape readout, in plain words. */
+export function measureText(piece: GarmentPiece, param: TailorParam, bodyW = 1, bodyH = 1): string {
+  const cm = measureCm(piece, param, bodyW, bodyH);
+  switch (param) {
+    case 'hem':
+      return `Hem ${cm} cm from the floor`;
+    case 'neck':
+      return `Neckline ${cm} cm deep`;
+    case 'sleeve':
+      return cm < 3 ? 'Sleeveless' : `Sleeve ${cm} cm`;
+    case 'fit':
+      return `Waist ${cm} cm round`;
+  }
+}
+
 export function paramFromPin(
   piece: GarmentPiece,
   param: TailorParam,

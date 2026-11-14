@@ -34,6 +34,7 @@ import {
   Vector3,
   VisibilityState,
 } from '@iwsdk/core';
+import { CREAM_TEXT, INK, PAPER, PAPER_LIGHT, SERIF } from './atelier/palette.js';
 import {
   DressForm,
   FabricSwatch,
@@ -58,6 +59,7 @@ import {
   Detail,
 } from './atelier/garments.js';
 import { makeLabel, makeTextSheet } from './atelier/labels.js';
+import { TailorTools } from './atelier/tailor-tools.js';
 import { sfx } from './atelier/sfx.js';
 import { access } from './atelier/access.js';
 import { say } from './atelier/voice.js';
@@ -65,16 +67,16 @@ import { cloneLook, LOOKS } from './atelier/looks.js';
 import { createHanger, RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
 
 const PIN_COLORS: Record<TailorParam, string> = {
-  hem: '#d9a441',
-  neck: '#e07a5f',
-  sleeve: '#7fb7be',
-  fit: '#b388eb',
+  hem: '#c8963e',
+  neck: '#c0664a',
+  sleeve: '#5f8f96',
+  fit: '#8a6aa8',
 };
 const PIN_LABELS: Record<TailorParam, string> = {
-  hem: 'HEM ↕',
-  neck: 'NECKLINE ↕',
-  sleeve: 'SLEEVE ↕',
-  fit: 'WAIST ↔',
+  hem: 'Hem ↕',
+  neck: 'Neckline ↕',
+  sleeve: 'Sleeve ↕',
+  fit: 'Waist ↔',
 };
 const PARAMS: TailorParam[] = ['hem', 'neck', 'sleeve', 'fit'];
 const WEAR_DURATION = 0.45;
@@ -154,6 +156,7 @@ export class AtelierSystem extends createSystem({
   private outfit!: Group;
   private pieces: GarmentPiece[] = [];
   private pieceGroups: Group[] = [];
+  private tools = new TailorTools();
   /** Body proportions from your photo: width (x/z) and height scale. */
   private bodyW = 1;
   private bodyH = 1;
@@ -180,6 +183,8 @@ export class AtelierSystem extends createSystem({
     this.outfit = new Group();
     this.outfit.name = 'outfit';
     formObject.add(this.outfit);
+    // Tape measure, chalk mark and readout while a pin is pulled.
+    formObject.add(this.tools.root);
 
     // A warm studio backdrop for the flat page (judges' first look in the
     // browser); cleared in XR so passthrough shows the real room.
@@ -329,11 +334,13 @@ export class AtelierSystem extends createSystem({
       hit.position.y = -0.2;
       item.add(hit);
       const label = makeLabel(look.name, {
-        width: 0.15,
+        width: 0.17,
         fontSize: 40,
-        color: '#2b2118',
-        background: 'rgba(250,246,238,0.92)',
-        pill: true,
+        weight: 500,
+        color: INK,
+        background: PAPER_LIGHT,
+        shape: 'tag',
+        font: SERIF,
       });
       label.position.set(0, -0.46, 0.02);
       item.add(label);
@@ -350,13 +357,14 @@ export class AtelierSystem extends createSystem({
     const { width, height, centerY, cols, rows } = SWATCH_BOARD;
     const cellW = width / cols;
     const cellH = height / rows;
-    const title = makeLabel('FABRIC LIBRARY', {
-      width: 0.34,
-      fontSize: 40,
-      color: '#f6efe2',
-      background: 'rgba(58,40,28,0.9)',
-      pill: true,
-      letterSpacing: 4,
+    const title = makeLabel('Fabric library', {
+      width: 0.36,
+      fontSize: 46,
+      weight: 500,
+      color: INK,
+      background: PAPER,
+      shape: 'card',
+      font: SERIF,
     });
     title.position.set(0, centerY + height / 2 + 0.07, 0.02);
     board.add(title);
@@ -383,7 +391,7 @@ export class AtelierSystem extends createSystem({
       captions.push({ text: fabricById(fabricId).name, x, y: y - centerY - 0.08 });
     });
     // All fabric names on one sheet: one draw call, and larger than before.
-    const sheet = makeTextSheet(width + 0.04, height + 0.08, captions, { textHeight: 0.019, color: '#3a2a1c' });
+    const sheet = makeTextSheet(width + 0.04, height + 0.08, captions, { textHeight: 0.019, color: INK, weight: 500 });
     sheet.position.set(0, centerY, 0.012);
     board.add(sheet);
   }
@@ -793,11 +801,13 @@ export class AtelierSystem extends createSystem({
     if (!this.tooltip || this.tooltipText !== text) {
       this.disposeTooltip();
       this.tooltip = makeLabel(text, {
-        width: 0.34,
+        width: 0.36,
         fontSize: 52,
-        color: '#2b2118',
-        background: 'rgba(250,246,238,0.96)',
-        pill: true,
+        weight: 500,
+        color: INK,
+        background: PAPER_LIGHT,
+        shape: 'card',
+        font: SERIF,
       });
       this.tooltip.raycast = () => {};
       this.tooltip.renderOrder = 20;
@@ -837,8 +847,9 @@ export class AtelierSystem extends createSystem({
     this.badge = makeLabel(text, {
       width: 0.42,
       fontSize: 44,
-      color: '#2b2118',
-      background: '#e2c27d',
+      weight: 500,
+      color: CREAM_TEXT,
+      background: INK,
       pill: true,
     });
     this.formEntity.object3D!.parent?.add(this.badge);
@@ -1057,12 +1068,14 @@ export class AtelierSystem extends createSystem({
     // Rebuilds use the light drag mesh, at most ~20 times a second; the full
     // garment is rebuilt once on release.
     this.dragClock += delta;
+    let held = false;
     for (const entity of this.queries.pinsGrabbed.entities) {
       const param = entity.getValue(TailorPin, 'param') as TailorParam;
       const piece = pieceForParam(this.pieces, param);
       if (!piece) continue;
       const obj = entity.object3D!;
       const value = paramFromPin(piece, param, obj.position.x / this.bodyW, obj.position.y / this.bodyH);
+      held = true;
       if (Math.abs(value - piece[param]) > 0.002 && this.dragClock >= DRAG_INTERVAL) {
         if (this.pinPending) {
           this.checkpoint();
@@ -1075,7 +1088,9 @@ export class AtelierSystem extends createSystem({
         sfx.tick();
         this.pulse(0.25, 12);
       }
+      this.tools.show(param, piece, obj.position, this.bodyW, this.bodyH);
     }
+    if (!held) this.tools.hide();
     // A pin pinched directly (near handle): the visible pin follows the fingers.
     for (const pin of this.pins) {
       if (pin.touch.hasComponent(Grabbed)) pin.entity.object3D!.position.copy(pin.touch.object3D!.position);

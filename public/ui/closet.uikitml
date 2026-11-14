@@ -1,77 +1,65 @@
 <!--
-  Digital Closet panel with three states, toggled by ClosetSystem:
+  Closet panel: a sheet of pattern paper with states toggled by ClosetSystem:
   browse (streak, lookbook, closet + stylist actions), design (garment
-  builder chips) and stylist (occasion / weather / mood chips, then a
-  previewed proposal with Keep / Next idea / Undo).
+  builder chips), stylist (occasion / weather / mood, then a previewed
+  proposal), week (planner, packing) and boutique (verdict). Buttons are plain
+  styled divs (click handlers by id) in the same paper-and-ink style as the
+  studio panel.
 -->
 <style>
-  .panel-root {
+  .sheet {
     flex-direction: column;
-    width: 440px;
+    width: 460px;
+    border-radius: 18px;
+    border-width: 2px;
+    border-color: #d8ccb6;
+    background-color: #f4ede1;
   }
 
-  .panel-content {
+  .content {
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
     padding-top: 20px;
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 26px;
+    padding-right: 26px;
     padding-bottom: 10px;
   }
 
-  .eyebrow {
-    color: #8a6a2f;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 2px;
-  }
-
-  .eyebrow:dark {
-    color: #e2c27d;
+  .label {
+    color: #8a7a66;
+    font-size: 17px;
+    font-weight: 500;
   }
 
   .heading {
-    color: #1c1d20;
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 34px;
-  }
-
-  .heading:dark {
-    color: #fafaf7;
+    color: #2a231c;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.15;
   }
 
   .note {
-    color: #3a3b40;
-    font-size: 17px;
-    line-height: 23px;
-  }
-
-  .note:dark {
-    color: #d8d9dd;
+    color: #4a4036;
+    font-size: 19px;
+    line-height: 1.35;
   }
 
   .section {
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
     margin-top: 4px;
   }
 
   .row-label {
-    color: #6b6f78;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
+    color: #8a7a66;
+    font-size: 16px;
+    font-weight: 500;
     margin-top: 6px;
-  }
-
-  .row-label:dark {
-    color: #a9acb4;
   }
 
   .row {
     flex-direction: row;
-    gap: 6px;
+    gap: 7px;
   }
 
   .chip {
@@ -79,41 +67,35 @@
     flex-basis: 0;
     align-items: center;
     justify-content: center;
-    padding-top: 7px;
-    padding-bottom: 7px;
+    padding-top: 9px;
+    padding-bottom: 9px;
     border-radius: 10px;
     border-width: 2px;
-    border-color: #d9d3c7;
-    background-color: #f3efe7;
-    color: #2b2118;
-    font-size: 14px;
-    font-weight: 600;
+    border-color: #cbbda5;
+    background-color: #fbf7f0;
+    color: #2a231c;
+    font-size: 16px;
+    font-weight: 500;
     cursor: pointer;
   }
 
-  .chip:dark {
-    border-color: #4a4d55;
-    background-color: #2c2e33;
-    color: #f1ede4;
+  .chip:hover {
+    border-color: #2a231c;
   }
 
   .dot {
-    width: 33px;
-    height: 33px;
+    width: 34px;
+    height: 34px;
     border-radius: 17px;
     border-width: 3px;
-    border-color: #d9d3c7;
+    border-color: #cbbda5;
     cursor: pointer;
-  }
-
-  .dot:dark {
-    border-color: #4a4d55;
   }
 
   .streak {
     flex-direction: row;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin-top: 8px;
   }
 
@@ -121,36 +103,25 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 86px;
-    height: 70px;
-    border-radius: 16px;
-    background-color: #e6e1d8;
-  }
-
-  .badge:dark {
-    background-color: #34363c;
+    width: 88px;
+    height: 72px;
+    border-radius: 14px;
+    border-width: 2px;
+    border-color: #d8ccb6;
+    background-color: #fbf7f0;
   }
 
   .badge-count {
-    color: #2b2118;
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 32px;
-  }
-
-  .badge-count:dark {
-    color: #f1ede4;
+    color: #2a231c;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1;
   }
 
   .badge-label {
-    color: #6b5a44;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
-
-  .badge-label:dark {
-    color: #c9c3b6;
+    color: #8a7a66;
+    font-size: 13px;
+    font-weight: 500;
   }
 
   .streak-text {
@@ -160,47 +131,34 @@
   }
 
   .streak-title {
-    color: #1c1d20;
-    font-size: 17px;
-    font-weight: 700;
-  }
-
-  .streak-title:dark {
-    color: #fafaf7;
+    color: #2a231c;
+    font-size: 19px;
+    font-weight: 600;
   }
 
   .streak-sub {
-    color: #5b5f68;
-    font-size: 14px;
-    line-height: 19px;
-  }
-
-  .streak-sub:dark {
-    color: #b9bcc4;
+    color: #5c5146;
+    font-size: 16px;
+    line-height: 1.3;
   }
 
   .tip {
     margin-top: 8px;
-    padding-top: 9px;
-    padding-bottom: 9px;
-    padding-left: 12px;
-    padding-right: 12px;
-    border-radius: 12px;
-    background-color: #f3ead8;
-    color: #5a4520;
-    font-size: 15px;
-    line-height: 20px;
-  }
-
-  .tip:dark {
-    background-color: #3a3122;
-    color: #f1dfb6;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 13px;
+    padding-right: 13px;
+    border-radius: 8px;
+    background-color: #ebe2d2;
+    color: #3d3329;
+    font-size: 17px;
+    line-height: 1.35;
   }
 
   .verdict {
     flex-direction: row;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin-top: 6px;
   }
 
@@ -208,41 +166,116 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 96px;
-    height: 70px;
-    border-radius: 16px;
-    background-color: #34363c;
+    width: 98px;
+    height: 72px;
+    border-radius: 14px;
+    background-color: #2a231c;
   }
 
   .verdict-word {
-    color: #f1ede4;
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: 2px;
+    color: #f7f1e6;
+    font-size: 26px;
+    font-weight: 600;
+  }
+
+  .verdict-label {
+    color: #e8dcc8;
+    font-size: 13px;
   }
 
   .actions {
     flex-direction: row;
     gap: 10px;
     padding-top: 8px;
-    padding-left: 24px;
-    padding-right: 24px;
-    padding-bottom: 20px;
+    padding-left: 26px;
+    padding-right: 26px;
+    padding-bottom: 18px;
   }
 
-  .button-label {
-    transform-translate-y: 1px;
+  .btn {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-basis: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 52px;
+    border-radius: 26px;
+    border-width: 2px;
+    border-color: #cbbda5;
+    background-color: #fbf7f0;
+    color: #2a231c;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .btn:hover {
+    border-color: #2a231c;
+    background-color: #ffffff;
+  }
+
+  .btn:active {
+    background-color: #e8dcc8;
+  }
+
+  .btn-main {
+    border-color: #2a231c;
+    background-color: #2a231c;
+    color: #f7f1e6;
+  }
+
+  .btn-main:hover {
+    border-color: #43382d;
+    background-color: #43382d;
+  }
+
+  .icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .links {
+    flex-direction: row;
+    gap: 4px;
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-bottom: 14px;
+  }
+
+  .link {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    color: #5c5146;
+    font-size: 17px;
+    cursor: pointer;
+  }
+
+  .link:hover {
+    background-color: #e8dcc8;
+    color: #2a231c;
+  }
+
+  .small-icon {
+    width: 18px;
+    height: 18px;
   }
 </style>
-<Panel class="panel-root">
-  <div class="panel-content">
-    <div id="closet-eyebrow" class="eyebrow">MY CLOSET</div>
+<div class="sheet">
+  <div class="content">
+    <div id="closet-eyebrow" class="label">My closet</div>
     <div id="closet-title" class="heading">Your closet</div>
     <div id="closet-note" class="note">Recreate clothes you own, then mix them on the form.</div>
     <div id="streak-row" class="streak">
       <div id="streak-badge" class="badge">
         <div id="streak-count" class="badge-count">0</div>
-        <div class="badge-label">DAY STREAK</div>
+        <div class="badge-label">day streak</div>
       </div>
       <div class="streak-text">
         <div id="streak-title" class="streak-title">Outfit of the Day</div>
@@ -250,7 +283,7 @@
       </div>
     </div>
     <div id="lookbook-section" class="section">
-      <div class="row-label">LOOKBOOK</div>
+      <div class="row-label">Lookbook</div>
       <div id="lookbook-empty" class="streak-sub">Save a look you love and it waits for you here.</div>
       <div class="row">
         <div id="lb-0" class="chip" style="display: none">Look</div>
@@ -264,7 +297,7 @@
       </div>
     </div>
     <div id="stylist-section" class="section" style="display: none">
-      <div class="row-label">OCCASION</div>
+      <div class="row-label">Occasion</div>
       <div class="row">
         <div id="occ-work" class="chip">Work</div>
         <div id="occ-interview" class="chip">Interview</div>
@@ -275,14 +308,14 @@
         <div id="occ-party" class="chip">Party</div>
         <div id="occ-travel" class="chip">Travel</div>
       </div>
-      <div class="row-label">WEATHER</div>
+      <div class="row-label">Weather</div>
       <div class="row">
         <div id="wx-warm" class="chip">Warm</div>
         <div id="wx-mild" class="chip">Mild</div>
         <div id="wx-cold" class="chip">Cold</div>
         <div id="wx-rainy" class="chip">Rainy</div>
       </div>
-      <div class="row-label">MOOD</div>
+      <div class="row-label">Mood</div>
       <div class="row">
         <div id="mood-classic" class="chip">Classic</div>
         <div id="mood-bold" class="chip">Bold</div>
@@ -291,7 +324,7 @@
       <div id="stylist-tip" class="tip" style="display: none">Tip</div>
       <div id="stylist-meta" class="streak-sub" style="display: none">Meta</div>
       <div id="refine-section" class="section" style="display: none">
-        <div class="row-label">REFINE THIS LOOK</div>
+        <div class="row-label">Refine this look</div>
         <div class="row">
           <div id="refine-warmer" class="chip">Warmer</div>
           <div id="refine-dressier" class="chip">Dressier</div>
@@ -300,7 +333,7 @@
       </div>
     </div>
     <div id="week-section" class="section" style="display: none">
-      <div class="row-label">YOUR WEEK  |  TAP A DAY TO WEAR IT</div>
+      <div class="row-label">Your week: tap a day to wear it</div>
       <div class="row">
         <div id="wk-0" class="chip">Mon</div>
         <div id="wk-1" class="chip">Tue</div>
@@ -311,7 +344,7 @@
         <div id="wk-6" class="chip">Sun</div>
       </div>
       <div id="week-summary" class="streak-sub">Seven outfits from your closet.</div>
-      <div class="row-label">PACK FOR A TRIP</div>
+      <div class="row-label">Pack for a trip</div>
       <div class="row">
         <div id="pack-3" class="chip">3 days</div>
         <div id="pack-5" class="chip">5 days</div>
@@ -320,7 +353,7 @@
       <div id="pack-list" class="tip" style="display: none">Pack</div>
     </div>
     <div id="boutique-section" class="section" style="display: none">
-      <div class="row-label">BOUTIQUES</div>
+      <div class="row-label">Boutiques</div>
       <div class="row">
         <div id="shop-0" class="chip">Maison Lune</div>
         <div id="shop-1" class="chip">Studio Nord</div>
@@ -329,8 +362,8 @@
       <div id="verdict-card" class="section" style="display: none">
         <div class="verdict">
           <div id="verdict-badge" class="verdict-badge">
-            <div id="verdict-word" class="verdict-word">BUY</div>
-            <div class="badge-label">VERDICT</div>
+            <div id="verdict-word" class="verdict-word">Buy</div>
+            <div class="verdict-label">verdict</div>
           </div>
           <div class="streak-text">
             <div id="verdict-stat" class="streak-title">+6 new outfits</div>
@@ -341,7 +374,7 @@
       </div>
     </div>
     <div id="design-section" class="section" style="display: none">
-      <div class="row-label">GARMENT</div>
+      <div class="row-label">Garment</div>
       <div class="row">
         <div id="tpl-top" class="chip">Top</div>
         <div id="tpl-trousers" class="chip">Trousers</div>
@@ -349,7 +382,7 @@
         <div id="tpl-dress" class="chip">Dress</div>
         <div id="tpl-jacket" class="chip">Jacket</div>
       </div>
-      <div class="row-label">COLOUR</div>
+      <div class="row-label">Colour</div>
       <div class="row">
         <div id="col-white" class="dot" style="background-color: #f4f2ec"></div>
         <div id="col-cream" class="dot" style="background-color: #e9dcc0"></div>
@@ -362,7 +395,7 @@
         <div id="col-grey" class="dot" style="background-color: #8b8d93"></div>
         <div id="col-black" class="dot" style="background-color: #1a1a1d"></div>
       </div>
-      <div class="row-label">FABRIC</div>
+      <div class="row-label">Fabric</div>
       <div class="row">
         <div id="mat-cotton" class="chip">Cotton</div>
         <div id="mat-satin" class="chip">Satin</div>
@@ -379,132 +412,94 @@
       </div>
     </div>
   </div>
-  <div id="browse-actions" class="actions" style="padding-bottom: 0px">
-    <Button id="new-button">
-      <ButtonIcon>
-        <Plus></Plus>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">New piece</ButtonLabel>
-    </Button>
-    <Button id="edit-button" variant="secondary">
-      <ButtonIcon>
-        <Pencil></Pencil>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Edit</ButtonLabel>
-    </Button>
-    <Button id="remove-button" variant="secondary">
-      <ButtonIcon>
-        <Trash2></Trash2>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Remove</ButtonLabel>
-    </Button>
+  <div id="browse-actions-2" class="actions" style="padding-bottom: 6px">
+    <div id="stylist-button" class="btn btn-main">
+      <Sparkles class="icon"></Sparkles>
+      <div>Ask stylist</div>
+    </div>
+    <div id="today-button" class="btn">
+      <CalendarCheck class="icon"></CalendarCheck>
+      <div>Wear today</div>
+    </div>
+    <div id="save-look-button" class="btn">
+      <Bookmark class="icon"></Bookmark>
+      <div>Save look</div>
+    </div>
   </div>
-  <div id="browse-actions-2" class="actions">
-    <Button id="stylist-button">
-      <ButtonIcon>
-        <Sparkles></Sparkles>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Ask stylist</ButtonLabel>
-    </Button>
-    <Button id="today-button" variant="secondary">
-      <ButtonIcon>
-        <CalendarCheck></CalendarCheck>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Wear today</ButtonLabel>
-    </Button>
-    <Button id="save-look-button" variant="secondary">
-      <ButtonIcon>
-        <Bookmark></Bookmark>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Save look</ButtonLabel>
-    </Button>
+  <div id="browse-actions" class="links">
+    <div id="new-button" class="link">
+      <Plus class="small-icon"></Plus>
+      <div>New piece</div>
+    </div>
+    <div id="edit-button" class="link">
+      <Pencil class="small-icon"></Pencil>
+      <div>Edit</div>
+    </div>
+    <div id="remove-button" class="link">
+      <Trash2 class="small-icon"></Trash2>
+      <div>Remove</div>
+    </div>
   </div>
   <div id="stylist-actions" class="actions" style="display: none">
-    <Button id="style-button">
-      <ButtonIcon>
-        <Sparkles></Sparkles>
-      </ButtonIcon>
-      <ButtonLabel id="style-label" class="button-label">Style me</ButtonLabel>
-    </Button>
-    <Button id="week-button" variant="secondary">
-      <ButtonIcon>
-        <CalendarDays></CalendarDays>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Plan week</ButtonLabel>
-    </Button>
-    <Button id="stylist-back" variant="secondary">
-      <ButtonIcon>
-        <ArrowLeft></ArrowLeft>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Back</ButtonLabel>
-    </Button>
+    <div id="style-button" class="btn btn-main">
+      <Sparkles class="icon"></Sparkles>
+      <div id="style-label">Style me</div>
+    </div>
+    <div id="week-button" class="btn">
+      <CalendarDays class="icon"></CalendarDays>
+      <div>Plan week</div>
+    </div>
+    <div id="stylist-back" class="btn">
+      <ArrowLeft class="icon"></ArrowLeft>
+      <div>Back</div>
+    </div>
   </div>
   <div id="week-actions" class="actions" style="display: none">
-    <Button id="week-replan">
-      <ButtonIcon>
-        <RefreshCw></RefreshCw>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Replan</ButtonLabel>
-    </Button>
-    <Button id="week-back" variant="secondary">
-      <ButtonIcon>
-        <ArrowLeft></ArrowLeft>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Back</ButtonLabel>
-    </Button>
+    <div id="week-replan" class="btn btn-main">
+      <RefreshCw class="icon"></RefreshCw>
+      <div>Replan</div>
+    </div>
+    <div id="week-back" class="btn">
+      <ArrowLeft class="icon"></ArrowLeft>
+      <div>Back</div>
+    </div>
   </div>
   <div id="proposal-actions" class="actions" style="display: none">
-    <Button id="keep-button">
-      <ButtonIcon>
-        <Check></Check>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Keep</ButtonLabel>
-    </Button>
-    <Button id="next-button" variant="secondary">
-      <ButtonIcon>
-        <Shuffle></Shuffle>
-      </ButtonIcon>
-      <ButtonLabel id="next-label" class="button-label">Next idea</ButtonLabel>
-    </Button>
-    <Button id="revert-button" variant="secondary">
-      <ButtonIcon>
-        <Undo2></Undo2>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Undo</ButtonLabel>
-    </Button>
+    <div id="keep-button" class="btn btn-main">
+      <Check class="icon"></Check>
+      <div>Keep</div>
+    </div>
+    <div id="next-button" class="btn">
+      <Shuffle class="icon"></Shuffle>
+      <div id="next-label">Next idea</div>
+    </div>
+    <div id="revert-button" class="btn">
+      <Undo2 class="icon"></Undo2>
+      <div>Undo</div>
+    </div>
   </div>
   <div id="boutique-actions" class="actions" style="display: none">
-    <Button id="add-closet-button">
-      <ButtonIcon>
-        <ShoppingBag></ShoppingBag>
-      </ButtonIcon>
-      <ButtonLabel id="add-closet-label" class="button-label">Add to closet</ButtonLabel>
-    </Button>
-    <Button id="pairing-button" variant="secondary">
-      <ButtonIcon>
-        <Shuffle></Shuffle>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Next pairing</ButtonLabel>
-    </Button>
-    <Button id="boutique-back" variant="secondary">
-      <ButtonIcon>
-        <ArrowLeft></ArrowLeft>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Back</ButtonLabel>
-    </Button>
+    <div id="add-closet-button" class="btn btn-main">
+      <ShoppingBag class="icon"></ShoppingBag>
+      <div id="add-closet-label">Add to closet</div>
+    </div>
+    <div id="pairing-button" class="btn">
+      <Shuffle class="icon"></Shuffle>
+      <div>Next pairing</div>
+    </div>
+    <div id="boutique-back" class="btn">
+      <ArrowLeft class="icon"></ArrowLeft>
+      <div>Back</div>
+    </div>
   </div>
   <div id="design-actions" class="actions" style="display: none">
-    <Button id="save-button">
-      <ButtonIcon>
-        <Check></Check>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Save to closet</ButtonLabel>
-    </Button>
-    <Button id="cancel-button" variant="secondary">
-      <ButtonIcon>
-        <X></X>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Cancel</ButtonLabel>
-    </Button>
+    <div id="save-button" class="btn btn-main">
+      <Check class="icon"></Check>
+      <div>Save to closet</div>
+    </div>
+    <div id="cancel-button" class="btn">
+      <X class="icon"></X>
+      <div>Cancel</div>
+    </div>
   </div>
-</Panel>
+</div>

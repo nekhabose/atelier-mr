@@ -13,6 +13,8 @@
  * form in that look. Nothing is uploaded.
  */
 import { createSystem, UIKit, UIKitMLAsset, VisibilityState } from '@iwsdk/core';
+import { CHIP } from './atelier/palette.js';
+import { sideSection } from './atelier/side-panel.js';
 import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { StylistSystem } from './stylist-system.js';
@@ -23,8 +25,8 @@ import { TailorParam } from './atelier/garments.js';
 import { sfx } from './atelier/sfx.js';
 import { WardrobeSystem } from './wardrobe-system.js';
 
-const ON = { bg: '#e2c27d', border: '#e2c27d', text: '#2b2118' };
-const OFF = { bg: '#2c2e33', border: '#4a4d55', text: '#f1ede4' };
+const ON = CHIP.on;
+const OFF = CHIP.off;
 const OFF_HC = { bg: '#000000', border: '#ffffff', text: '#ffffff' };
 const KEYS: AccessKey[] = ['largeText', 'highContrast', 'calmMotion', 'readAloud', 'voice'];
 const SHARE_KEY = 'atelier.share.v1';
@@ -105,7 +107,6 @@ export class AccessSystem extends createSystem({}) {
         }
       }),
       this.world.visibilityState.subscribe((state) => {
-        if (this.card) this.card.style.display = state === VisibilityState.NonImmersive ? 'block' : 'none';
         if (state === VisibilityState.VisibleBlurred) stopSpeaking();
       }),
       () => {
@@ -291,34 +292,23 @@ export class AccessSystem extends createSystem({}) {
   // ---------------------------------------------------------------- start page card
 
   private buildCard(): void {
-    const card = document.createElement('div');
-    card.id = 'studio-options';
-    card.setAttribute('role', 'region');
-    card.setAttribute('aria-label', 'Accessibility, sharing and showcase');
-    card.style.cssText = [
-      'position:fixed', 'right:16px', 'top:16px', 'z-index:10', 'width:250px', 'max-width:calc(100vw - 32px)',
-      'padding:14px 16px', 'border-radius:16px', 'background:rgba(28,24,20,0.9)', 'color:#f6efe2',
-      'font:14px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif', 'box-shadow:0 8px 30px rgba(0,0,0,0.25)',
-      'max-height:calc(100vh - 32px)', 'overflow-y:auto', 'box-sizing:border-box',
-    ].join(';');
-    const btn =
-      'display:block;width:100%;margin-top:8px;cursor:pointer;border-radius:999px;padding:8px 12px;font-weight:700;font-size:14px';
-    card.innerHTML = `
-      <button type="button" data-share style="${btn};background:transparent;color:#f6efe2;border:1px solid #8a7656;margin-top:0">Share this look</button>
+    const card = sideSection('studio-options', 3, 'Share and accessibility', false, 'Send this look, or change how Atelier looks and sounds.') as HTMLDivElement;
+    card.setAttribute('aria-label', 'Sharing and accessibility');
+    const body = document.createElement('div');
+    body.innerHTML = `
+      <button type="button" data-share class="as-btn as-wide" style="margin-top:12px">Share this look</button>
       <div data-sharebox style="display:none;margin-top:10px"></div>
-      <details style="margin-top:12px">
-        <summary style="cursor:pointer;font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d">ACCESSIBILITY</summary>
-        <div data-boxes style="margin-top:4px"></div>
-      </details>
-      <div data-live aria-live="polite" style="font-size:12px;color:#d8cfbf;margin-top:6px">Also in the studio: Access on the panel.</div>`;
+      <div class="as-label">Accessibility</div>
+      <div data-boxes style="margin-top:4px"></div>
+      <div data-live aria-live="polite" class="as-note">Also in the studio: Access on the panel.</div>`;
+    card.appendChild(body);
     const boxes = card.querySelector('[data-boxes]')!;
     for (const k of KEYS) {
       const label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer';
+      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer';
       const box = document.createElement('input');
       box.type = 'checkbox';
       box.dataset.key = k;
-      box.style.cssText = 'width:18px;height:18px;accent-color:#e2c27d';
       box.addEventListener('change', () => {
         if (!this.toggle(k)) box.checked = false;
       });
@@ -327,7 +317,6 @@ export class AccessSystem extends createSystem({}) {
     }
     card.querySelector('[data-share]')!.addEventListener('click', () => this.share());
     this.shareBox = card.querySelector<HTMLDivElement>('[data-sharebox]')!;
-    document.body.appendChild(card);
     this.card = card;
     this.paint();
     if (this.lastShareUrl) {
@@ -341,12 +330,13 @@ export class AccessSystem extends createSystem({}) {
     const box = this.shareBox;
     if (!box) return;
     box.style.display = 'block';
+    (this.card as HTMLDetailsElement | undefined)?.setAttribute('open', '');
     box.innerHTML = `
-      <div style="background:#fff;border-radius:10px;padding:6px;width:150px;margin:0 auto" aria-label="QR code for ${name.replace(/[<>"&]/g, '')}">${qrSvg(url)}</div>
-      <div style="font-size:12px;color:#d8cfbf;margin:6px 0">Scan with a phone, or send the link. The look travels inside the link; nothing is uploaded.</div>
+      <div style="background:#fffdf8;border:1px solid #d8ccb6;border-radius:10px;padding:6px;width:150px;margin:0 auto" aria-label="QR code for ${name.replace(/[<>"&]/g, '')}">${qrSvg(url)}</div>
+      <div class="as-note" style="margin:6px 0">Scan with a phone, or send the link. The look travels inside the link; nothing is uploaded.</div>
       <div style="display:flex;gap:6px">
-        <button type="button" data-copy style="flex:1;cursor:pointer;border-radius:999px;padding:6px;border:1px solid #8a7656;background:transparent;color:#f6efe2">Copy link</button>
-        <button type="button" data-send style="flex:1;cursor:pointer;border-radius:999px;padding:6px;border:none;background:#e2c27d;color:#2b2118;font-weight:700">Send...</button>
+        <button type="button" data-copy class="as-btn" style="flex:1">Copy link</button>
+        <button type="button" data-send class="as-btn as-btn-main" style="flex:1">Send...</button>
       </div>`;
     const live = this.card?.querySelector<HTMLElement>('[data-live]');
     box.querySelector('[data-copy]')!.addEventListener('click', async () => {

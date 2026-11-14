@@ -24,6 +24,7 @@ import {
   UIKit,
   UIKitMLAsset,
 } from '@iwsdk/core';
+import { CHIP, CREAM_TEXT, INK, PAPER, PAPER_LIGHT, SERIF } from './atelier/palette.js';
 import { AtelierSystem } from './atelier-system.js';
 import { BoutiqueSlot, BoutiqueTab } from './atelier-components.js';
 import { ClosetSystem } from './closet-system.js';
@@ -42,9 +43,9 @@ import { createHanger, RACK } from './scene-assets/atelier.scene-asset.js';
 const MINI_SCALE = 0.19;
 const SLIDE_TIME = 0.55;
 const VERDICT_STYLE: Record<string, { bg: string; fg: string; word: string }> = {
-  buy: { bg: '#5f8a4f', fg: '#ffffff', word: 'BUY' },
-  maybe: { bg: '#e2c27d', fg: '#2b2118', word: 'MAYBE' },
-  skip: { bg: '#8c3b3b', fg: '#ffffff', word: 'SKIP' },
+  buy: { bg: '#5f8a4f', fg: '#ffffff', word: 'Buy' },
+  maybe: { bg: '#c8963e', fg: '#2a231c', word: 'Maybe' },
+  skip: { bg: '#8c3b3b', fg: '#ffffff', word: 'Skip' },
 };
 
 type El = UIKit.Text | undefined;
@@ -112,9 +113,9 @@ export class BoutiqueSystem extends createSystem({
     const rack = this.world.requireSceneEntity('clothing-rack');
     const group = new Group();
     group.name = 'rack-tab-boutique';
-    const style = { width: 0.28, fontSize: 36, pill: true, letterSpacing: 3 };
-    this.tabOn = makeLabel('BOUTIQUE', { ...style, color: '#2b2118', background: '#e2c27d' });
-    this.tabOff = makeLabel('BOUTIQUE', { ...style, color: '#6b5a44', background: 'rgba(250,246,238,0.85)' });
+    const style = { width: 0.28, fontSize: 40, weight: 500, shape: 'card' as const, font: SERIF };
+    this.tabOn = makeLabel('Boutique', { ...style, color: CREAM_TEXT, background: INK });
+    this.tabOff = makeLabel('Boutique', { ...style, color: INK, background: PAPER });
     const hit = new Mesh(new BoxGeometry(0.28, 0.07, 0.03), this.hitMaterial);
     group.add(this.tabOn, this.tabOff, hit);
     group.position.set(0.31, RACK.barY + 0.2, 0.02);
@@ -195,22 +196,24 @@ export class BoutiqueSystem extends createSystem({
       group.add(hit);
       const selected = this.selected?.id === bp.id;
       const name = makeLabel(bp.name, {
-        width: 0.16,
-        fontSize: 28,
-        color: selected ? '#2b2118' : '#3a2a1c',
-        background: selected ? '#e2c27d' : 'rgba(250,246,238,0.92)',
-        pill: true,
+        width: 0.17,
+        fontSize: 34,
+        weight: 500,
+        color: selected ? CREAM_TEXT : INK,
+        background: selected ? INK : PAPER_LIGHT,
+        shape: 'tag',
+        font: SERIF,
       });
       name.position.set(0, -0.46, 0.02);
       group.add(name);
-      const tagText = owned ? 'IN YOUR CLOSET' : a.newOutfits > 0 ? `+${a.newOutfits} OUTFITS  $${bp.price}` : `$${bp.price}`;
+      const tagText = owned ? 'In your closet' : a.newOutfits > 0 ? `+${a.newOutfits} outfits, $${bp.price}` : `$${bp.price}`;
       const tag = makeLabel(tagText, {
         width: 0.15,
         fontSize: 26,
-        color: a.verdict === 'buy' && !owned ? '#ffffff' : '#2b2118',
-        background: owned ? 'rgba(220,214,204,0.95)' : a.verdict === 'buy' ? '#5f8a4f' : 'rgba(226,194,125,0.95)',
+        weight: 600,
+        color: a.verdict === 'buy' && !owned ? '#ffffff' : INK,
+        background: owned ? '#ddd3c2' : a.verdict === 'buy' ? '#5f8a4f' : '#e3c98f',
         pill: true,
-        letterSpacing: 1,
       });
       tag.position.set(0, -0.505, 0.022);
       group.add(tag);
@@ -246,13 +249,13 @@ export class BoutiqueSystem extends createSystem({
     BOUTIQUES.forEach((_, i) => {
       const on = i === index;
       this.ui[`shop-${i}`]?.setProperties({
-        backgroundColor: on ? '#e2c27d' : '#2c2e33',
-        borderColor: on ? '#e2c27d' : '#4a4d55',
-        color: on ? '#2b2118' : '#f1ede4',
+        backgroundColor: on ? CHIP.on.bg : CHIP.off.bg,
+        borderColor: on ? CHIP.on.border : CHIP.off.border,
+        color: on ? CHIP.on.text : CHIP.off.text,
       });
     });
     const best = bestPick(b, this.closet.items);
-    this.ui['closet-eyebrow']?.setProperties({ text: `BOUTIQUE  |  ${b.name.toUpperCase()}` });
+    this.ui['closet-eyebrow']?.setProperties({ text: `Boutique, ${b.name}` });
     this.ui['closet-title']?.setProperties({ text: b.tagline });
     this.ui['closet-note']?.setProperties({
       display: 'flex',
@@ -295,7 +298,7 @@ export class BoutiqueSystem extends createSystem({
     this.applying = true;
     this.atelier.dress(pieces, bp.name, `${BOUTIQUES[this.shop].name}  |  ${bp.blurb}`, { quiet });
     this.applying = false;
-    this.atelier.setBadge('BOUTIQUE TRY-ON');
+    this.atelier.setBadge('Boutique try-on');
   }
 
   private renderVerdict(): void {
@@ -305,7 +308,7 @@ export class BoutiqueSystem extends createSystem({
     const v = VERDICT_STYLE[a.verdict];
     const b = BOUTIQUES[this.shop];
     this.ui['closet-eyebrow']?.setProperties({
-      text: `${b.name.toUpperCase()}  |  ${this.source === 'claude' ? 'LIVE AI' : 'ON-DEVICE'} STYLIST`,
+      text: `${b.name}, ${this.source === 'claude' ? 'live AI' : 'on-device'} stylist`,
     });
     this.ui['closet-title']?.setProperties({ text: `${bp.name}  $${bp.price}` });
     this.ui['closet-note']?.setProperties({ display: 'none' });
@@ -390,7 +393,7 @@ export class BoutiqueSystem extends createSystem({
     const item = this.closet.addItem(bp.piece, bp.name);
     if (!item) {
       this.ui['verdict-reason']?.setProperties({
-        text: 'Your closet rail is full. Remove a piece in MY CLOSET to make room.',
+        text: 'Your closet rail is full. Remove a piece in My closet to make room.',
       });
       return;
     }

@@ -21,6 +21,7 @@ import {
   UIKit,
   UIKitMLAsset,
 } from '@iwsdk/core';
+import { CHIP, CREAM_TEXT, INK, PAPER, PAPER_LIGHT, SERIF } from './atelier/palette.js';
 import { AtelierSystem } from './atelier-system.js';
 import { sfx } from './atelier/sfx.js';
 import { ClosetSlot, RackLook, RackTab } from './atelier-components.js';
@@ -49,7 +50,6 @@ import { makeLabel } from './atelier/labels.js';
 import { createHanger, RACK } from './scene-assets/atelier.scene-asset.js';
 
 const MINI_SCALE = 0.19;
-const CHIP_ON = { light: '#e2c27d', dark: '#8a6a2f' };
 
 interface Design {
   draft: GarmentPiece;
@@ -113,20 +113,22 @@ export class ClosetSystem extends createSystem({
       group.name = `rack-tab-${closet ? 'closet' : 'designer'}`;
       const on = makeLabel(text, {
         width: 0.28,
-        fontSize: 36,
-        color: '#2b2118',
-        background: '#e2c27d',
-        pill: true,
-        letterSpacing: 3,
+        fontSize: 40,
+        weight: 500,
+        color: CREAM_TEXT,
+        background: INK,
+        shape: 'card',
+        font: SERIF,
       });
       on.name = 'on';
       const off = makeLabel(text, {
         width: 0.28,
-        fontSize: 36,
-        color: '#6b5a44',
-        background: 'rgba(250,246,238,0.85)',
-        pill: true,
-        letterSpacing: 3,
+        fontSize: 40,
+        weight: 500,
+        color: INK,
+        background: PAPER,
+        shape: 'card',
+        font: SERIF,
       });
       off.name = 'off';
       const hit = new Mesh(new BoxGeometry(0.28, 0.07, 0.03), this.hitMaterial);
@@ -136,8 +138,8 @@ export class ClosetSystem extends createSystem({
       entity.addComponent(RackTab, { closet });
       entity.addComponent(RayInteractable);
     };
-    make('DESIGNER LOOKS', false, -0.31);
-    make('MY CLOSET', true, 0);
+    make('Designer looks', false, -0.31);
+    make('My closet', true, 0);
     this.paintTabs();
   }
 
@@ -202,11 +204,13 @@ export class ClosetSystem extends createSystem({
       hit.position.y = -0.2;
       group.add(hit);
       const label = makeLabel(item.name, {
-        width: 0.16,
-        fontSize: 30,
-        color: selected ? '#2b2118' : '#3a2a1c',
-        background: selected ? '#e2c27d' : 'rgba(250,246,238,0.92)',
-        pill: true,
+        width: 0.17,
+        fontSize: 36,
+        weight: 500,
+        color: selected ? CREAM_TEXT : INK,
+        background: selected ? INK : PAPER_LIGHT,
+        shape: 'tag',
+        font: SERIF,
       });
       label.position.set(0, -0.46, 0.02);
       group.add(label);
@@ -223,19 +227,21 @@ export class ClosetSystem extends createSystem({
       const plus = makeLabel('+', {
         width: 0.12,
         fontSize: 80,
-        color: '#2b2118',
-        background: 'rgba(226,194,125,0.95)',
+        weight: 400,
+        color: INK,
+        background: PAPER_LIGHT,
         pill: true,
       });
       plus.position.y = -0.2;
       group.add(plus);
-      const label = makeLabel('NEW PIECE', {
-        width: 0.16,
-        fontSize: 32,
-        color: '#2b2118',
-        background: 'rgba(250,246,238,0.92)',
-        pill: true,
-        letterSpacing: 2,
+      const label = makeLabel('New piece', {
+        width: 0.17,
+        fontSize: 36,
+        weight: 500,
+        color: INK,
+        background: PAPER_LIGHT,
+        shape: 'tag',
+        font: SERIF,
       });
       label.position.set(0, -0.46, 0.02);
       group.add(label);
@@ -447,7 +453,7 @@ export class ClosetSystem extends createSystem({
   private showBrowse(note?: string): void {
     this.atelier.stylistOpen = false;
     const selected = this.items.find((i) => i.id === this.selectedId);
-    this.ui.eyebrow?.setProperties({ text: 'MY CLOSET' });
+    this.ui.eyebrow?.setProperties({ text: 'My closet' });
     this.ui.title?.setProperties({
       text: selected ? selected.name : `${this.items.length} pieces`,
     });
@@ -537,7 +543,7 @@ export class ClosetSystem extends createSystem({
   private showDesign(): void {
     const d = this.design;
     if (!d) return;
-    this.ui.eyebrow?.setProperties({ text: d.editingId ? 'MY CLOSET  |  EDITING' : 'MY CLOSET  |  NEW PIECE' });
+    this.ui.eyebrow?.setProperties({ text: d.editingId ? 'My closet, editing' : 'My closet, new piece' });
     this.ui.title?.setProperties({ text: pieceName(d.draft) });
     this.setNote('Garment, colour, fabric - then pull the pins to match yours.');
     this.panelSections('design');
@@ -548,25 +554,21 @@ export class ClosetSystem extends createSystem({
     const d = this.design;
     if (!d) return;
     const fabric = parseClosetFabric(d.draft.fabric);
-    const dark = true; // the studio panels use the dark Horizon scheme
     for (const t of TEMPLATES) {
-      this.chip(`tpl-${t.kind}`, d.draft.kind === t.kind, dark);
+      this.chip(`tpl-${t.kind}`, d.draft.kind === t.kind);
     }
     for (const m of CLOSET_MATERIALS) {
-      this.chip(`mat-${m.key}`, fabric?.material === m.key, dark);
+      this.chip(`mat-${m.key}`, fabric?.material === m.key);
     }
     for (const c of CLOSET_COLORS) {
       const el = this.chips[`col-${c.key}`];
       const on = fabric?.color === c.key;
-      el?.setProperties({ borderColor: on ? CHIP_ON.light : dark ? '#4a4d55' : '#d9d3c7', borderWidth: on ? 4 : 3 });
+      el?.setProperties({ borderColor: on ? CHIP.on.border : CHIP.off.border, borderWidth: on ? 4 : 3 });
     }
   }
 
-  private chip(id: string, on: boolean, dark: boolean): void {
-    this.chips[id]?.setProperties({
-      backgroundColor: on ? CHIP_ON.light : dark ? '#2c2e33' : '#f3efe7',
-      borderColor: on ? CHIP_ON.light : dark ? '#4a4d55' : '#d9d3c7',
-      color: on ? '#2b2118' : dark ? '#f1ede4' : '#2b2118',
-    });
+  private chip(id: string, on: boolean): void {
+    const c = on ? CHIP.on : CHIP.off;
+    this.chips[id]?.setProperties({ backgroundColor: c.bg, borderColor: c.border, color: c.text });
   }
 }

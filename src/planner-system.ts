@@ -9,6 +9,7 @@
  *  - Pack for a trip: 3, 5 or 7 days from the fewest pieces.
  */
 import { createSystem, UIKit, UIKitMLAsset } from '@iwsdk/core';
+import { CHIP } from './atelier/palette.js';
 import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { StylistSystem } from './stylist-system.js';
@@ -18,9 +19,9 @@ import { localDate } from './atelier/ootd.js';
 import { sfx } from './atelier/sfx.js';
 
 const KEY = 'atelier.week.v1';
-const ON = { bg: '#e2c27d', border: '#e2c27d', text: '#2b2118' };
-const TODAY = { bg: '#2c2e33', border: '#e2c27d', text: '#f1ede4' };
-const OFF = { bg: '#2c2e33', border: '#4a4d55', text: '#f1ede4' };
+const ON = CHIP.on;
+const TODAY = CHIP.today;
+const OFF = CHIP.off;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type El = UIKit.Component<any> | undefined;
@@ -96,7 +97,7 @@ export class PlannerSystem extends createSystem({}) {
       /* fine for this visit */
     }
     this.closet.panelSections('week');
-    this.ui['closet-eyebrow']?.setProperties({ text: 'PLAN AHEAD' });
+    this.ui['closet-eyebrow']?.setProperties({ text: 'Plan ahead' });
     if (this.plan.days.length === 0) {
       this.ui['closet-title']?.setProperties({ text: 'Your closet needs more' });
       this.ui['closet-note']?.setProperties({ text: 'Add a dress, or a top and a bottom, then plan again.' });

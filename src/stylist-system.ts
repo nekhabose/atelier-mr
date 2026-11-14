@@ -158,7 +158,7 @@ export class StylistSystem extends createSystem({
 
   /** The constraint picker (no proposal on the form). */
   private showAsk(note?: string): void {
-    this.ui.eyebrow?.setProperties({ text: 'AI STYLIST' });
+    this.ui.eyebrow?.setProperties({ text: 'Your stylist' });
     this.ui.title?.setProperties({ text: 'Where are you headed?' });
     this.ui.note?.setProperties({
       display: 'flex',
@@ -247,9 +247,9 @@ export class StylistSystem extends createSystem({
     const p = this.proposal;
     if (!p) return;
     const opt = p.options[p.index];
-    const source = opt.source === 'claude' ? 'LIVE AI' : 'ON-DEVICE';
-    const thinking = this.busy ? '  |  LIVE AI THINKING' : '';
-    this.ui.eyebrow?.setProperties({ text: `PREVIEW ${p.index + 1} OF ${p.options.length}  |  ${source}${thinking}` });
+    const source = opt.source === 'claude' ? 'live AI' : 'on-device';
+    const thinking = this.busy ? ', live AI thinking...' : '';
+    this.ui.eyebrow?.setProperties({ text: `Preview ${p.index + 1} of ${p.options.length}, ${source}${thinking}` });
   }
 
   private toProposal(plan: StylistPlan, options: StylistResult[]) {
@@ -266,7 +266,7 @@ export class StylistSystem extends createSystem({
     this.applying = false;
     sfx.sparkle();
     this.atelier.styleCount++;
-    this.atelier.setBadge(`STYLIST PREVIEW  ${p.index + 1}/${p.options.length}`);
+    this.atelier.setBadge(`Stylist preview ${p.index + 1} of ${p.options.length}`);
     this.paintEyebrow();
     this.ui.title?.setProperties({ text: opt.title });
     // The reason is on the studio panel (look-note); keep this panel short
@@ -297,7 +297,7 @@ export class StylistSystem extends createSystem({
     const items = this.closet.items.map(describeItem);
     const offline = planRefineOffline(kind, outfit, items, this.occasion, this.weather, this.mood);
     this.refining = true;
-    this.ui.eyebrow?.setProperties({ text: 'AI STYLIST  |  REFINING' });
+    this.ui.eyebrow?.setProperties({ text: 'Your stylist, refining...' });
     let reply: RefineReply = offline;
     let source: 'claude' | 'offline' = 'offline';
     try {
@@ -322,7 +322,7 @@ export class StylistSystem extends createSystem({
     const result = applyRefine(this.atelier.currentPieces, reply, this.closet.items);
     if (!result.changed) {
       this.ui.tip?.setProperties({ display: 'flex', text: reply.summary });
-      this.ui.eyebrow?.setProperties({ text: `PREVIEW ${p.index + 1} OF ${p.options.length}  |  NO CHANGE` });
+      this.ui.eyebrow?.setProperties({ text: `Preview ${p.index + 1} of ${p.options.length}, no change` });
       return;
     }
     const title = p.options[p.index].title;
@@ -330,9 +330,9 @@ export class StylistSystem extends createSystem({
     this.closet.wearPieces(result.pieces, title, reply.summary);
     this.applying = false;
     sfx.sparkle();
-    this.atelier.setBadge(`STYLIST PREVIEW  |  ${kind === 'colour' ? 'MORE COLOUR' : kind.toUpperCase()}`);
+    this.atelier.setBadge(`Stylist preview: ${kind === 'colour' ? 'more colour' : kind}`);
     this.lastSource = source;
-    this.ui.eyebrow?.setProperties({ text: `REFINED  |  ${source === 'claude' ? 'LIVE AI' : 'ON-DEVICE'}` });
+    this.ui.eyebrow?.setProperties({ text: `Refined, ${source === 'claude' ? 'live AI' : 'on-device'}` });
     this.ui.tip?.setProperties({ display: 'flex', text: reply.summary });
     this.atelier.setHint('Like the change? Keep it. Undo goes back to your outfit from before.');
   }

@@ -50,3 +50,6 @@ pids/
 
 # Recorded showcase video (large; upload it to YouTube/Vimeo instead)
 docs/video/
+
+# Local review captures (UI previews, contact sheets)
+artifacts/

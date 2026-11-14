@@ -65,6 +65,11 @@ journey with captions.
   on the form with the pieces you own, and the boutique stylist gives a verdict
   - BUY / MAYBE / SKIP - with new outfits, cost per outfit and near-duplicates.
   Add to closet keeps it. (Original labels only; no real brands or catalogues.)
+- **A handmade look:** paper-and-ink panels, hang tags on the rail, pinned
+  labels on the fabric board, and on the flat page a real studio set (oak
+  floor, plaster wall, window light) with one side panel. While you pull a
+  pin, a tape measure, a chalk mark and a card show the measurement in cm
+  (hem from the floor, neckline depth, sleeve length, waist round).
 - **Make the form you:** on the start page, take (camera with a head-to-feet
   guide and auto-capture) or upload a full-length photo. It is checked on the
   device with MediaPipe Pose: one person, head to feet, facing the camera, or

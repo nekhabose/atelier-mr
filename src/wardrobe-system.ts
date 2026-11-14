@@ -22,6 +22,7 @@ import { templatePiece } from './atelier/closet.js';
 import { CLOSET_COLORS, closetFabricId, ClosetColor, ClosetMaterial } from './atelier/fabrics.js';
 import { GarmentReply, KEEP, MAX_INSTRUCTION, RefineReply } from './atelier/stylist-contract.js';
 import { sfx } from './atelier/sfx.js';
+import { sideSection } from './atelier/side-panel.js';
 
 const PHOTO_PX = 768;
 const PHOTO_TIMEOUT_MS = 25_000;
@@ -180,26 +181,21 @@ export class WardrobeSystem extends createSystem({}) {
   }
 
   private buildCardSection(): void {
-    const card = document.getElementById('studio-options');
-    if (!card) return;
-    const box = document.createElement('div');
-    box.innerHTML = `
-      <details open style="margin-top:12px">
-      <summary style="cursor:pointer;font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d">YOUR REAL CLOTHES</summary>
-      <label style="display:block;margin-top:6px;cursor:pointer;text-align:center;border-radius:999px;padding:7px 12px;border:1px solid #8a7656;font-weight:700">
+    const box = sideSection('your-clothes', 2, 'Your real clothes', false, 'Photograph a garment, or tell the tailor.');
+    const body = document.createElement('div');
+    body.innerHTML = `
+      <label class="as-btn as-wide" style="margin-top:12px">
         Add a garment from a photo
         <input type="file" accept="image/*" capture="environment" style="display:none">
       </label>
-      <div style="font-size:11px;color:#bfb4a0;margin-top:4px">The photo goes to the AI stylist to be read; it is not stored.</div>
-      <div style="font-size:11px;letter-spacing:2px;font-weight:700;color:#e2c27d;margin-top:10px">TELL THE TAILOR</div>
+      <div class="as-note">The photo goes to the AI stylist to be read; it is not stored.</div>
+      <div class="as-label">Tell the tailor</div>
       <form data-tailor style="display:flex;gap:6px;margin-top:6px">
-        <input type="text" maxlength="${MAX_INSTRUCTION}" aria-label="Tailoring instruction" placeholder="midi, long sleeves, red satin"
-          style="flex:1;min-width:0;border-radius:8px;border:1px solid #6b5a44;background:#1c1814;color:#f6efe2;padding:6px 8px;font:13px inherit">
-        <button type="submit" style="cursor:pointer;border:none;border-radius:8px;background:#e2c27d;color:#2b2118;font-weight:700;padding:6px 10px">Go</button>
+        <input type="text" maxlength="${MAX_INSTRUCTION}" aria-label="Tailoring instruction" placeholder="midi, long sleeves, red satin" style="flex:1;min-width:0">
+        <button type="submit" class="as-btn as-btn-main">Go</button>
       </form>
-      <div data-wardrobe-status aria-live="polite" style="font-size:12px;color:#d8cfbf;margin-top:6px"></div>
-      </details>`;
-    card.appendChild(box);
+      <div data-wardrobe-status aria-live="polite" class="as-status"></div>`;
+    box.appendChild(body);
     this.status = box.querySelector<HTMLElement>('[data-wardrobe-status]')!;
     const file = box.querySelector<HTMLInputElement>('input[type=file]')!;
     file.addEventListener('change', () => {

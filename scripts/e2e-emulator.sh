@@ -39,12 +39,12 @@ click save-look-button;             check $CP closet-note "Saved" "save look to 
                                     check $CP lb-0 "Boardroom" "lookbook chip shows the look"
 click stylist-button;               check $CP closet-title "Where are you headed" "open stylist"
 click occ-interview; click wx-cold; click mood-classic
-click style-button; sleep 2;        check $CP closet-eyebrow "PREVIEW 1 OF" "stylist previews option 1"
-                                    check $CP closet-eyebrow "ON-DEVICE" "no key -> on-device fallback"
+click style-button; sleep 2;        check $CP closet-eyebrow "Preview 1 of" "stylist previews option 1"
+                                    check $CP closet-eyebrow "on-device" "no key -> on-device fallback"
                                     check $CP stylist-meta "Weighed" "stylist shows what it considered"
-click next-button;                  check $CP closet-eyebrow "PREVIEW 2 OF" "next idea cycles alternatives"
-click wx-warm; sleep 2;             check $CP closet-eyebrow "PREVIEW 1 OF" "changing weather re-plans"
-click refine-warmer; sleep 2;       check $CP closet-eyebrow "REFINED" "refine warmer edits the preview"
+click next-button;                  check $CP closet-eyebrow "Preview 2 of" "next idea cycles alternatives"
+click wx-warm; sleep 2;             check $CP closet-eyebrow "Preview 1 of" "changing weather re-plans"
+click refine-warmer; sleep 2;       check $CP closet-eyebrow "Refined" "refine warmer edits the preview"
                                     check $CP stylist-tip "Warmer" "refine explains what changed"
 click revert-button;                check $AP look-name "Boardroom" "undo restores pre-stylist outfit"
                                     check $CP closet-note "Undone" "undo message"
@@ -55,13 +55,13 @@ click lb-1;                         check $AP look-note "From your lookbook" "re
 click stylist-button; click style-button; sleep 2; click undo-button; sleep 1
                                     check $CP closet-note "Preview closed" "undo during a preview closes it"
 click stylist-back; sleep 1
-click rack-tab-boutique; sleep 1;   check $CP closet-eyebrow "BOUTIQUE" "open the boutique"
+click rack-tab-boutique; sleep 1;   check $CP closet-eyebrow "Boutique" "open the boutique"
                                     check $CP closet-note "start with the" "boutique stylist recommends a piece"
-click shop-1; sleep 1;              check $CP closet-eyebrow "STUDIO NORD" "switch boutique"
+click shop-1; sleep 1;              check $CP closet-eyebrow "Studio Nord" "switch boutique"
 click boutique-sn-blouse; sleep 2;  check $AP look-name "Ivory Silk Blouse" "try a boutique piece on the form"
                                     check $CP verdict-stat "outfits" "verdict counts new outfits"
                                     check $CP verdict-sub "per outfit" "verdict shows cost per outfit"
-click boutique-back; sleep 1;       check $CP closet-eyebrow "MY CLOSET" "leave the boutique"
+click boutique-back; sleep 1;       check $CP closet-eyebrow "My closet" "leave the boutique"
 # Accessibility, tailoring by tap, sharing
 click rack-tab-designer; click rack-look-boardroom
 click access-button;                check $AP access-label "Close" "open the accessibility section"

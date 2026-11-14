@@ -476,11 +476,87 @@ export function weaveNormalMap(finish: Finish): CanvasTexture | null {
   return tex;
 }
 
+/** How much natural irregularity each kind of cloth shows in its colour. */
+const YARN: Record<Finish, number> = {
+  cotton: 0.03,
+  linen: 0.07,
+  denim: 0.08,
+  wool: 0.06,
+  knit: 0.05,
+  velvet: 0.08,
+  satin: 0.025,
+  silk: 0.03,
+};
+
+/**
+ * Real cloth is never one flat colour: linen has slubs across the weft, denim
+ * fades in vertical streaks, wool is heathered, knit shows its ribs and velvet
+ * crushes into soft light and dark patches. A seeded, tileable pass over the
+ * pattern so printed fabrics look woven, not drawn.
+ */
+function addYarn(ctx: CanvasRenderingContext2D, fabric: Fabric): void {
+  const S = SIZE;
+  const img = ctx.getImageData(0, 0, S, S);
+  const d = img.data;
+  const r = rng(fabric.id.length * 131 + fabric.id.charCodeAt(fabric.id.length - 1) * 17);
+  const row = new Float32Array(S).map(() => r() - 0.5);
+  const col = new Float32Array(S).map(() => r() - 0.5);
+  // Tileable low-frequency noise from a 4x4 grid.
+  const G = 4;
+  const grid = new Float32Array(G * G).map(() => r() - 0.5);
+  const sm = (t: number) => t * t * (3 - 2 * t);
+  const low = (x: number, y: number) => {
+    const gx = (x / S) * G;
+    const gy = (y / S) * G;
+    const x0 = Math.floor(gx) % G;
+    const y0 = Math.floor(gy) % G;
+    const fx = sm(gx - Math.floor(gx));
+    const fy = sm(gy - Math.floor(gy));
+    const at = (i: number, j: number) => grid[(j % G) * G + (i % G)];
+    const a = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx;
+    const b = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx;
+    return a + (b - a) * fy;
+  };
+  const amp = YARN[fabric.finish] * 2;
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const grain = r() - 0.5;
+      let k: number;
+      switch (fabric.finish) {
+        case 'linen':
+          k = row[y] * 1.1 + grain * 0.35 + low(x, y) * 0.4;
+          break;
+        case 'denim':
+          k = col[x] * 0.9 + grain * 0.4 + low(x, y) * 0.7;
+          break;
+        case 'wool':
+          k = grain * 1.0 + low(x, y) * 0.5;
+          break;
+        case 'knit':
+          k = (Math.floor(x / 4) % 2 ? 0.25 : -0.25) + grain * 0.35 + low(x, y) * 0.3;
+          break;
+        case 'velvet':
+          k = low(x, y) * 1.5 + grain * 0.15;
+          break;
+        default:
+          k = low(x, y) * 0.7 + grain * 0.25;
+      }
+      const m = 1 + k * amp;
+      const i = (y * S + x) * 4;
+      d[i] = Math.min(255, d[i] * m);
+      d[i + 1] = Math.min(255, d[i + 1] * m);
+      d[i + 2] = Math.min(255, d[i + 2] * m);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 export function fabricTexture(fabric: Fabric): CanvasTexture {
   let tex = textureCache.get(fabric.id);
   if (!tex) {
     const { canvas, ctx } = makeCanvas();
     drawPattern(ctx, fabric);
+    addYarn(ctx, fabric);
     tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
     tex.wrapS = RepeatWrapping;

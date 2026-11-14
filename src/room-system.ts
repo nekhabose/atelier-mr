@@ -244,20 +244,20 @@ export class RoomPlacementSystem extends createSystem({
       width: 1.05,
       fontSize: 62,
       weight: 500,
-      color: '#f6e7c4',
-      background: 'rgba(28,24,20,0.62)',
+      color: '#f7f1e6',
+      background: 'rgba(42,35,28,0.78)',
       pill: true,
       letterSpacing: 20,
       font: 'Didot, "Bodoni 72", Georgia, "Times New Roman", serif',
     });
-    const sub = makeLabel('YOUR STUDIO IS READY', {
+    const sub = makeLabel('Your studio is ready', {
       width: 0.6,
-      fontSize: 34,
-      weight: 600,
-      color: '#2b2118',
-      background: 'rgba(226,194,125,0.92)',
-      pill: true,
-      letterSpacing: 6,
+      fontSize: 40,
+      weight: 500,
+      color: '#2a231c',
+      background: '#f4ede1',
+      shape: 'card',
+      font: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
     });
     sub.position.y = -0.16;
     this.title.add(word, sub);

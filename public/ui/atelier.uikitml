@@ -1,99 +1,177 @@
 <!--
-  Atelier status panel. Text nodes with ids are updated at runtime by
-  AtelierPanelSystem (look name, designer note, contextual hint).
+  Atelier studio panel: a sheet of pattern paper. Text nodes with ids are
+  updated at runtime (look name, designer note, contextual hint). Buttons are
+  plain styled divs (click handlers by id), so the panel keeps its own
+  paper-and-ink look instead of the kit's default glass.
 -->
 <style>
-  .panel-root {
+  .sheet {
     flex-direction: column;
-    width: 440px;
+    width: 460px;
+    border-radius: 18px;
+    border-width: 2px;
+    border-color: #d8ccb6;
+    background-color: #f4ede1;
   }
 
-  .panel-content {
+  .content {
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     padding-top: 22px;
-    padding-left: 24px;
-    padding-right: 24px;
-    padding-bottom: 14px;
+    padding-left: 26px;
+    padding-right: 26px;
+    padding-bottom: 12px;
   }
 
-  .eyebrow {
-    color: #8a6a2f;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 2px;
-  }
-
-  .eyebrow:dark {
-    color: #e2c27d;
+  .label {
+    color: #8a7a66;
+    font-size: 17px;
+    font-weight: 500;
   }
 
   .heading {
-    color: #1c1d20;
-    font-size: 32px;
-    font-weight: 700;
-    line-height: 38px;
-  }
-
-  .heading:dark {
-    color: #fafaf7;
+    color: #2a231c;
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1.15;
   }
 
   .note {
-    color: #3a3b40;
-    font-size: 19px;
-    line-height: 26px;
+    color: #4a4036;
+    font-size: 21px;
+    line-height: 1.35;
   }
 
-  .note:dark {
-    color: #d8d9dd;
+  .hint-row {
+    flex-direction: row;
+    margin-top: 6px;
+    border-radius: 8px;
+    background-color: #ebe2d2;
+  }
+
+  .stitch {
+    width: 5px;
+    border-radius: 3px;
+    background-color: #a8442c;
   }
 
   .hint {
-    margin-top: 8px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    padding-left: 14px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    padding-top: 11px;
+    padding-bottom: 11px;
+    padding-left: 13px;
     padding-right: 14px;
-    border-radius: 14px;
-    background-color: #f3ead8;
-    color: #5a4520;
-    font-size: 18px;
-    line-height: 24px;
+    border-radius: 8px;
+    color: #3d3329;
+    font-size: 19px;
+    line-height: 1.35;
   }
 
-  .hint:dark {
-    background-color: #3a3122;
-    color: #f1dfb6;
-  }
-
-  .actions {
+  .row {
     flex-direction: row;
     gap: 10px;
-    padding-left: 24px;
-    padding-right: 24px;
-    padding-bottom: 14px;
+    padding-left: 26px;
+    padding-right: 26px;
+    padding-bottom: 12px;
   }
 
-  .button-label {
-    transform-translate-y: 1px;
+  .btn {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-basis: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 52px;
+    border-radius: 26px;
+    border-width: 2px;
+    border-color: #cbbda5;
+    background-color: #fbf7f0;
+    color: #2a231c;
+    font-size: 19px;
+    font-weight: 500;
+    cursor: pointer;
   }
+
+  .btn:hover {
+    border-color: #2a231c;
+    background-color: #ffffff;
+  }
+
+  .btn:active {
+    background-color: #e8dcc8;
+  }
+
+  .btn-main {
+    border-color: #2a231c;
+    background-color: #2a231c;
+    color: #f7f1e6;
+  }
+
+  .btn-main:hover {
+    background-color: #43382d;
+    border-color: #43382d;
+  }
+
+  .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .links {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-bottom: 16px;
+    padding-top: 6px;
+  }
+
+  .divider {
+    height: 2px;
+    margin-left: 26px;
+    margin-right: 26px;
+    background-color: #e0d5c2;
+  }
+
+  .link {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    color: #5c5146;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .link:hover {
+    background-color: #e8dcc8;
+    color: #2a231c;
+  }
+
+  .small-icon {
+    width: 18px;
+    height: 18px;
+  }
+
   .access {
     flex-direction: column;
     gap: 8px;
-    margin-left: 24px;
-    margin-right: 24px;
-    margin-bottom: 14px;
+    margin-left: 26px;
+    margin-right: 26px;
+    margin-bottom: 18px;
     padding-top: 12px;
     padding-bottom: 12px;
     padding-left: 14px;
     padding-right: 14px;
-    border-radius: 14px;
-    background-color: #f3ead8;
-  }
-
-  .access:dark {
-    background-color: #24221e;
+    border-radius: 12px;
+    background-color: #ebe2d2;
   }
 
   .toggle-row {
@@ -106,109 +184,87 @@
     flex-basis: 0;
     align-items: center;
     justify-content: center;
-    padding-top: 9px;
-    padding-bottom: 9px;
+    padding-top: 10px;
+    padding-bottom: 10px;
     border-radius: 10px;
     border-width: 2px;
-    border-color: #d9d3c7;
-    background-color: #fbf8f2;
-    color: #2b2118;
-    font-size: 16px;
-    font-weight: 600;
+    border-color: #cbbda5;
+    background-color: #fbf7f0;
+    color: #2a231c;
+    font-size: 17px;
+    font-weight: 500;
     cursor: pointer;
   }
 
-  .toggle:dark {
-    border-color: #4a4d55;
-    background-color: #2c2e33;
-    color: #f1ede4;
+  .toggle:hover {
+    border-color: #2a231c;
   }
 
   .small {
-    color: #5a4520;
-    font-size: 15px;
-    line-height: 20px;
-  }
-
-  .small:dark {
-    color: #d8cfbf;
+    color: #5c5146;
+    font-size: 16px;
+    line-height: 1.3;
   }
 </style>
-<Panel class="panel-root">
-  <div class="panel-content">
-    <div class="eyebrow">ATELIER  |  HANDS-FIRST STUDIO</div>
+<div class="sheet">
+  <div class="content">
+    <div class="label">Atelier, your fitting room</div>
     <div id="look-name" class="heading">Choose a look</div>
-    <div id="look-note" class="note">Tap any outfit on the brass rail to dress the form.</div>
-    <div id="hint" class="hint">Pinch a gold pin and pull to tailor. Drop a fabric swatch on the form to re-skin it.</div>
+    <div id="look-note" class="note">Tap any outfit on the rail to dress the form.</div>
+    <div class="hint-row">
+      <div class="stitch"></div>
+      <div id="hint" class="hint">Pinch a pin and pull to tailor. Drop a fabric swatch on the form to change it.</div>
+    </div>
   </div>
-  <div class="actions">
-    <Button id="xr-button">
-      <ButtonIcon>
-        <RectangleGoggles></RectangleGoggles>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Enter Atelier</ButtonLabel>
-    </Button>
-    <Button id="exit-button" style="display: none">
-      <ButtonIcon>
-        <LogIn></LogIn>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Exit</ButtonLabel>
-    </Button>
-    <Button id="reset-button">
-      <ButtonIcon>
-        <RotateCcw></RotateCcw>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Reset look</ButtonLabel>
-    </Button>
+  <div class="row">
+    <div id="xr-button" class="btn btn-main">
+      <RectangleGoggles class="icon"></RectangleGoggles>
+      <div>Enter Atelier</div>
+    </div>
+    <div id="exit-button" class="btn btn-main" style="display: none">
+      <LogIn class="icon"></LogIn>
+      <div>Exit</div>
+    </div>
   </div>
-  <div id="edit-actions" class="actions">
-    <Button id="undo-button" variant="secondary">
-      <ButtonIcon>
-        <Undo2></Undo2>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Undo</ButtonLabel>
-    </Button>
-    <Button id="redo-button" variant="secondary">
-      <ButtonIcon>
-        <Redo2></Redo2>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Redo</ButtonLabel>
-    </Button>
-    <Button id="turn-button" variant="secondary">
-      <ButtonIcon>
-        <RotateCw></RotateCw>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Turn</ButtonLabel>
-    </Button>
-    <Button id="share-button" variant="secondary">
-      <ButtonIcon>
-        <Share2></Share2>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Share</ButtonLabel>
-    </Button>
+  <div id="edit-actions" class="row">
+    <div id="undo-button" class="btn">
+      <Undo2 class="icon"></Undo2>
+      <div>Undo</div>
+    </div>
+    <div id="redo-button" class="btn">
+      <Redo2 class="icon"></Redo2>
+      <div>Redo</div>
+    </div>
+    <div id="turn-button" class="btn">
+      <RotateCw class="icon"></RotateCw>
+      <div>Turn</div>
+    </div>
+    <div id="share-button" class="btn">
+      <Share2 class="icon"></Share2>
+      <div>Share</div>
+    </div>
   </div>
-  <div class="actions">
-    <Button id="place-button" variant="secondary">
-      <ButtonIcon>
-        <LocateFixed></LocateFixed>
-      </ButtonIcon>
-      <ButtonLabel class="button-label">Move studio</ButtonLabel>
-    </Button>
-    <Button id="tour-button" variant="secondary">
-      <ButtonIcon>
-        <Hand></Hand>
-      </ButtonIcon>
-      <ButtonLabel id="tour-label" class="button-label">Tour</ButtonLabel>
-    </Button>
-    <Button id="access-button" variant="secondary">
-      <ButtonIcon>
-        <Accessibility></Accessibility>
-      </ButtonIcon>
-      <ButtonLabel id="access-label" class="button-label">Access</ButtonLabel>
-    </Button>
+  <div class="divider"></div>
+  <div class="links">
+    <div id="reset-button" class="link">
+      <RotateCcw class="small-icon"></RotateCcw>
+      <div>Reset look</div>
+    </div>
+    <div id="place-button" class="link">
+      <LocateFixed class="small-icon"></LocateFixed>
+      <div>Move studio</div>
+    </div>
+    <div id="tour-button" class="link">
+      <Hand class="small-icon"></Hand>
+      <div id="tour-label">Tour</div>
+    </div>
+    <div id="access-button" class="link">
+      <Accessibility class="small-icon"></Accessibility>
+      <div id="access-label">Access</div>
+    </div>
   </div>
   <div id="access-section" class="access" style="display: none">
-    <div class="eyebrow">ACCESSIBILITY</div>
+    <div class="label">Accessibility</div>
     <div class="toggle-row">
       <div id="acc-largeText" class="toggle">Large text</div>
       <div id="acc-highContrast" class="toggle">High contrast</div>
@@ -218,7 +274,7 @@
       <div id="acc-readAloud" class="toggle">Read aloud</div>
       <div id="acc-voice" class="toggle">Voice commands</div>
     </div>
-    <div class="eyebrow">TAILOR WITHOUT DRAGGING</div>
+    <div class="label">Tailor without dragging</div>
     <div class="toggle-row">
       <div id="tl-hem-up" class="toggle">Shorter</div>
       <div id="tl-hem-down" class="toggle">Longer</div>
@@ -231,4 +287,4 @@
     </div>
     <div id="access-status" class="small">Settings stay on this device.</div>
   </div>
-</Panel>
+</div>
