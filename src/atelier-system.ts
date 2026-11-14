@@ -17,6 +17,7 @@ import {
   Group,
   Hovered,
   Mesh,
+  Object3D,
   MeshStandardMaterial,
   MovementMode,
   Pressed,
@@ -35,7 +36,7 @@ import {
   TailorParams,
   TailorPin,
 } from './atelier-components.js';
-import { fabricById, fabricMaterial, SWATCH_WALL, swatchMaterial } from './atelier/fabrics.js';
+import { fabricById, fabricMaterial, miniMaterial, SWATCH_WALL, swatchMaterial } from './atelier/fabrics.js';
 import {
   buildPieceGroup,
   GarmentPiece,
@@ -47,8 +48,10 @@ import {
   pieceSpan,
   pinPosition,
   TailorParam,
+  DRAG_DETAIL,
+  Detail,
 } from './atelier/garments.js';
-import { makeLabel } from './atelier/labels.js';
+import { makeLabel, makeTextSheet } from './atelier/labels.js';
 import { sfx } from './atelier/sfx.js';
 import { cloneLook, LOOKS } from './atelier/looks.js';
 import { createHanger, RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
@@ -78,6 +81,8 @@ export interface Snapshot {
 const HISTORY_LIMIT = 30;
 const TURN_STEP = Math.PI / 4;
 const BADGE_HEIGHT = 1.86;
+/** Seconds between light rebuilds while a pin is dragged (~20 Hz). */
+const DRAG_INTERVAL = 0.05;
 
 interface PinState {
   entity: Entity;
@@ -96,6 +101,8 @@ export class AtelierSystem extends createSystem({
   pinsGrabbed: { required: [TailorPin, Grabbed] },
   forms: { required: [DressForm] },
   anyPressed: { required: [RayInteractable, Pressed] },
+  looksHovered: { required: [RackLook, Hovered] },
+  swatchesHovered: { required: [FabricSwatch, Hovered] },
 }) {
   /** Counters other systems (onboarding) watch to see what the user has done. */
   wearCount = 0;
@@ -110,6 +117,14 @@ export class AtelierSystem extends createSystem({
   private outfitName = '';
   /** Set by the closet while a draft piece is open (history is paused). */
   draftOpen = false;
+  /** Listeners told whenever the outfit on the form changes. */
+  private outfitListeners = new Set<() => void>();
+  /** A pin is held but has not moved yet (no undo step until it does). */
+  private pinPending = false;
+  private pinChanged = false;
+  private dragClock = 0;
+  private tooltip?: Mesh;
+  private tooltipText = '';
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];
   private origin?: Snapshot;
@@ -167,6 +182,17 @@ export class AtelierSystem extends createSystem({
     this.cleanupFuncs.push(
       // One tactile tap for every pinch on anything interactive.
       this.queries.anyPressed.subscribe('qualify', () => sfx.tap()),
+      // Big, readable names for what the hand ray points at.
+      this.queries.looksHovered.subscribe('qualify', (e) => {
+        const look = LOOKS[e.getValue(RackLook, 'lookIndex') ?? -1];
+        if (look) this.showTooltip(look.name, e.object3D!, -0.56);
+      }),
+      this.queries.looksHovered.subscribe('disqualify', () => this.hideTooltip()),
+      this.queries.swatchesHovered.subscribe('qualify', (e) => {
+        const id = SWATCH_WALL[e.getValue(FabricSwatch, 'fabricIndex') ?? -1];
+        if (id) this.showTooltip(fabricById(id).name, e.object3D!, -0.11);
+      }),
+      this.queries.swatchesHovered.subscribe('disqualify', () => this.hideTooltip()),
       this.queries.rackPressed.subscribe('qualify', (entity) => {
         this.wearLook(entity.getValue(RackLook, 'lookIndex') ?? 0);
       }),
@@ -178,14 +204,26 @@ export class AtelierSystem extends createSystem({
       this.queries.swatchesGrabbed.subscribe('disqualify', (entity) => {
         this.onSwatchReleased(entity);
       }),
-      this.queries.pinsGrabbed.subscribe('disqualify', () => {
-        this.tailorCount++;
+      this.queries.pinsGrabbed.subscribe('disqualify', (entity) => {
+        const changed = this.pinChanged;
+        this.pinPending = false;
+        this.pinChanged = false;
+        if (changed) {
+          // The drag used a light mesh; settle on the full-detail garment.
+          const param = entity.getValue(TailorPin, 'param') as TailorParam;
+          const piece = pieceForParam(this.pieces, param);
+          if (piece) this.rebuildPiece(this.pieces.indexOf(piece));
+          this.tailorCount++;
+          this.saveState();
+          this.emitOutfit();
+          this.setHint('Nice cut. Undo if you change your mind, or drop a fabric on the form.');
+        }
         this.layoutPins();
-        this.saveState();
-        this.setHint('Nice cut. Undo if you change your mind, or drop a fabric on the form.');
       }),
       this.queries.pinsGrabbed.subscribe('qualify', (entity) => {
-        this.checkpoint();
+        this.pinPending = true;
+        this.pinChanged = false;
+        this.dragClock = 0;
         const param = entity.getValue(TailorPin, 'param') as TailorParam;
         const target = pieceForParam(this.pieces, param);
         if (target) this.selectedPiece = this.pieces.indexOf(target);
@@ -210,7 +248,7 @@ export class AtelierSystem extends createSystem({
       mini.scale.setScalar(MINI_SCALE);
       mini.position.y = -0.064 - 1.432 * MINI_SCALE;
       for (const p of look.pieces) {
-        mini.add(buildPieceGroup(p, fabricMaterial(p.fabric), MINI_DETAIL));
+        mini.add(buildPieceGroup(p, miniMaterial(p.fabric), MINI_DETAIL));
       }
       item.add(mini);
       // Generous invisible hit box so the small outfits are easy to target.
@@ -252,6 +290,7 @@ export class AtelierSystem extends createSystem({
     });
     title.position.set(0, centerY + height / 2 + 0.07, 0.02);
     board.add(title);
+    const captions: { text: string; x: number; y: number }[] = [];
     SWATCH_WALL.forEach((fabricId, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
@@ -271,14 +310,12 @@ export class AtelierSystem extends createSystem({
         translate: true,
         returnToOrigin: true,
       });
-      const label = makeLabel(fabricById(fabricId).name, {
-        width: 0.17,
-        fontSize: 42,
-        color: '#3a2a1c',
-      });
-      label.position.set(x, y - 0.078, 0.012);
-      board.add(label);
+      captions.push({ text: fabricById(fabricId).name, x, y: y - centerY - 0.08 });
     });
+    // All fabric names on one sheet: one draw call, and larger than before.
+    const sheet = makeTextSheet(width + 0.04, height + 0.08, captions, { textHeight: 0.019, color: '#3a2a1c' });
+    sheet.position.set(0, centerY, 0.012);
+    board.add(sheet);
   }
 
   private buildPins(): void {
@@ -394,6 +431,7 @@ export class AtelierSystem extends createSystem({
     this.setHint('Pinch a coloured pin and pull to tailor. Tap Turn to see the back.');
     this.origin = this.snapshot();
     this.saveState();
+    this.emitOutfit();
   }
 
   /** Apply a fabric to a worn piece (defaults to the selected piece). */
@@ -418,6 +456,7 @@ export class AtelierSystem extends createSystem({
     const kind = piece.kind === 'top' ? 'top' : piece.kind;
     this.setHint(`${fabricById(fabricId).name} on the ${kind}. Beautiful.`);
     this.saveState();
+    this.emitOutfit();
   }
 
   private onSwatchReleased(entity: Entity): void {
@@ -486,11 +525,11 @@ export class AtelierSystem extends createSystem({
     this.layoutPins();
   }
 
-  private rebuildPiece(index: number): void {
+  private rebuildPiece(index: number, detail: Detail = HERO_DETAIL): void {
     const old = this.pieceGroups[index];
     if (old) this.disposeGroup(old);
     const p = this.pieces[index];
-    const g = buildPieceGroup(p, fabricMaterial(p.fabric), HERO_DETAIL);
+    const g = buildPieceGroup(p, fabricMaterial(p.fabric), detail);
     this.outfit.add(g);
     this.pieceGroups[index] = g;
   }
@@ -543,6 +582,7 @@ export class AtelierSystem extends createSystem({
     this.setPanel(name, note);
     if (!opts.quiet) this.origin = this.snapshot();
     this.saveState();
+    this.emitOutfit();
   }
 
   // ---------------------------------------------------------------- history
@@ -566,6 +606,7 @@ export class AtelierSystem extends createSystem({
 
   /** Put a snapshot back on the form (no history entry of its own). */
   restore(s: Snapshot, note: string): void {
+    this.setBadge(null);
     this.lookIndex = s.lookIndex;
     this.pieces = s.pieces.map((p) => ({ ...p }));
     this.selectedPiece = this.outermostPiece();
@@ -573,6 +614,17 @@ export class AtelierSystem extends createSystem({
     this.wearT = 0.55;
     this.setPanel(s.name || 'Choose a look', note);
     this.saveState();
+    this.emitOutfit();
+  }
+
+  /** Subscribe to outfit changes; returns the unsubscribe function. */
+  onOutfitChange(fn: () => void): () => void {
+    this.outfitListeners.add(fn);
+    return () => this.outfitListeners.delete(fn);
+  }
+
+  private emitOutfit(): void {
+    for (const fn of this.outfitListeners) fn();
   }
 
   get canUndo(): boolean {
@@ -629,6 +681,45 @@ export class AtelierSystem extends createSystem({
     const from = this.turnTarget ?? this.tmpEuler.y;
     this.turnTarget = from + direction * TURN_STEP;
     this.setHint('Turning the form. Grab it with a pinch to spin it freely.');
+  }
+
+  /**
+   * A large name label next to the hovered item (rail labels are small so
+   * the hangers fit); readable from a seated distance. Shared by the closet
+   * and boutique rails.
+   */
+  showTooltip(text: string, anchor: Object3D, dy: number): void {
+    if (!this.tooltip || this.tooltipText !== text) {
+      this.disposeTooltip();
+      this.tooltip = makeLabel(text, {
+        width: 0.34,
+        fontSize: 52,
+        color: '#2b2118',
+        background: 'rgba(250,246,238,0.96)',
+        pill: true,
+      });
+      this.tooltip.raycast = () => {};
+      this.tooltip.renderOrder = 20;
+      this.tooltipText = text;
+    }
+    anchor.add(this.tooltip);
+    this.tooltip.position.set(0, dy, 0.03);
+    this.tooltip.visible = true;
+  }
+
+  hideTooltip(): void {
+    if (this.tooltip) this.tooltip.visible = false;
+  }
+
+  private disposeTooltip(): void {
+    if (!this.tooltip) return;
+    this.tooltip.removeFromParent();
+    const mat = this.tooltip.material as unknown as { map?: { dispose(): void } | null; dispose(): void };
+    mat.map?.dispose();
+    mat.dispose();
+    this.tooltip.geometry.dispose();
+    this.tooltip = undefined;
+    this.tooltipText = '';
   }
 
   /** A floating tag over the form (e.g. STYLIST PREVIEW); null hides it. */
@@ -762,15 +853,24 @@ export class AtelierSystem extends createSystem({
     }
 
     // Live tailoring while a pin is held.
+    // Rebuilds use the light drag mesh, at most ~20 times a second; the full
+    // garment is rebuilt once on release.
+    this.dragClock += delta;
     for (const entity of this.queries.pinsGrabbed.entities) {
       const param = entity.getValue(TailorPin, 'param') as TailorParam;
       const piece = pieceForParam(this.pieces, param);
       if (!piece) continue;
       const obj = entity.object3D!;
       const value = paramFromPin(piece, param, obj.position.x, obj.position.y);
-      if (Math.abs(value - piece[param]) > 0.002) {
+      if (Math.abs(value - piece[param]) > 0.002 && this.dragClock >= DRAG_INTERVAL) {
+        if (this.pinPending) {
+          this.checkpoint();
+          this.pinPending = false;
+        }
+        this.pinChanged = true;
+        this.dragClock = 0;
         piece[param] = value;
-        this.rebuildPiece(this.pieces.indexOf(piece));
+        this.rebuildPiece(this.pieces.indexOf(piece), DRAG_DETAIL);
         sfx.tick();
       }
     }

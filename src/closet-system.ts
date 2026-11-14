@@ -41,7 +41,7 @@ import {
   ClosetColor,
   closetFabricId,
   ClosetMaterial,
-  fabricMaterial,
+  miniMaterial,
   parseClosetFabric,
 } from './atelier/fabrics.js';
 import { buildPieceGroup, GarmentPiece, MINI_DETAIL, PieceKind } from './atelier/garments.js';
@@ -196,7 +196,7 @@ export class ClosetSystem extends createSystem({
       const mini = new Group();
       mini.scale.setScalar(MINI_SCALE);
       mini.position.y = -0.064 - 1.432 * MINI_SCALE;
-      mini.add(buildPieceGroup(item.piece, fabricMaterial(item.piece.fabric), MINI_DETAIL));
+      mini.add(buildPieceGroup(item.piece, miniMaterial(item.piece.fabric), MINI_DETAIL));
       group.add(mini);
       const hit = new Mesh(this.hitGeo, this.hitMaterial);
       hit.position.y = -0.2;

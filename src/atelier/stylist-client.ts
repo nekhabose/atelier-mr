@@ -4,7 +4,7 @@
  * answer ready and never wait on the network in the headset.
  */
 export const STYLIST_ENDPOINT: string = import.meta.env.VITE_STYLIST_URL || 'api/stylist';
-export const STYLIST_TIMEOUT_MS = 15_000;
+export const STYLIST_TIMEOUT_MS = 8_000;
 
 export async function postStylist<T>(body: object): Promise<T | null> {
   const controller = new AbortController();

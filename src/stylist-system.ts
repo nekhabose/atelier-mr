@@ -71,6 +71,12 @@ export class StylistSystem extends createSystem({
   private lookbook?: LookbookSystem;
   /** Bumped by Keep / Undo / Back so a plan that lands late is dropped. */
   private generation = 0;
+  /** True while this system itself dresses the form. */
+  private applying = false;
+  /** A refine request is in flight. */
+  private refining = false;
+  /** The user acted on the current proposal (next idea, refine). */
+  private touched = false;
   ootd!: OotdState;
   private atelier!: AtelierSystem;
   private closet!: ClosetSystem;
@@ -81,6 +87,17 @@ export class StylistSystem extends createSystem({
     this.atelier = this.world.getSystem(AtelierSystem)!;
     this.closet = this.world.getSystem(ClosetSystem)!;
     this.lookbook = this.world.getSystem(LookbookSystem);
+    // Someone else changed the outfit (Undo, a rack look, the boutique):
+    // the preview is over; don't let Keep log the wrong outfit.
+    this.cleanupFuncs.push(
+      this.atelier.onOutfitChange(() => {
+        if (this.applying || !this.proposal) return;
+        this.proposal = undefined;
+        this.generation++;
+        this.ui.refine?.setProperties({ display: 'none' });
+        if (this.atelier.stylistOpen) this.showAsk('Preview closed - your change is on the form. Style me for new ideas.');
+      }),
+    );
     this.ootd = loadOotd();
 
     const panel = this.world.getSceneObject<UIKitMLAsset>('closet-panel');
@@ -185,38 +202,54 @@ export class StylistSystem extends createSystem({
       return;
     }
     const before = this.proposal?.before ?? this.atelier.snapshot();
-    const generation = this.generation;
-    this.busy = true;
-    this.ui.styleLabel?.setProperties({ text: 'Styling...' });
-    this.ui.eyebrow?.setProperties({ text: 'AI STYLIST  |  THINKING' });
-    this.ui.title?.setProperties({ text: 'Reading your closet...' });
-    this.ui.note?.setProperties({
-      display: 'flex',
-      text: `Weighing ${plan.considered} outfits from ${items.length} pieces for ${this.occasion}, ${this.weather}, ${this.mood}.`,
-    });
+    // A new plan supersedes any earlier one still on its way.
+    const generation = ++this.generation;
 
-    let options: StylistResult[] = plan.options;
+    // Act at once with the on-device plan...
+    this.busy = true;
+    this.touched = false;
+    this.proposal = { ...this.toProposal(plan, plan.options), before };
+    this.lastSource = 'offline';
+    this.showOption();
+    const proposal = this.proposal;
+
+    // ...then let the live AI improve it if it answers in time.
+    let remote: StylistResult[] = [];
     try {
-      const remote = await this.askClaude(items);
-      if (remote.length > 0) options = remote;
+      remote = await this.askClaude(items);
     } catch {
-      /* keep the offline plan */
+      /* keep the on-device plan */
     }
     this.busy = false;
-    this.ui.styleLabel?.setProperties({ text: 'Style me' });
-    if (generation !== this.generation) {
-      // The user kept, undid or left while this plan was on its way.
-      this.replan = false;
+    if (generation !== this.generation || this.proposal !== proposal) {
+      // Superseded; honour a Style me tapped while this one was in flight.
+      if (this.replan) {
+        this.replan = false;
+        return this.styleMe();
+      }
       return;
     }
     if (this.replan) {
       this.replan = false;
-      this.proposal = { ...this.toProposal(plan, options), before };
       return this.styleMe();
     }
-    this.proposal = { ...this.toProposal(plan, options), before };
-    this.lastSource = options[0].source;
-    this.showOption();
+    if (remote.length > 0 && !this.touched) {
+      this.proposal = { ...this.toProposal(plan, remote), before };
+      this.lastSource = 'claude';
+      this.showOption();
+    } else {
+      this.paintEyebrow();
+    }
+  }
+
+  /** PREVIEW n OF m | source, plus a note while the live AI is thinking. */
+  private paintEyebrow(): void {
+    const p = this.proposal;
+    if (!p) return;
+    const opt = p.options[p.index];
+    const source = opt.source === 'claude' ? 'LIVE AI' : 'ON-DEVICE';
+    const thinking = this.busy ? '  |  LIVE AI THINKING' : '';
+    this.ui.eyebrow?.setProperties({ text: `PREVIEW ${p.index + 1} OF ${p.options.length}  |  ${source}${thinking}` });
   }
 
   private toProposal(plan: StylistPlan, options: StylistResult[]) {
@@ -228,12 +261,13 @@ export class StylistSystem extends createSystem({
     const p = this.proposal;
     if (!p) return;
     const opt = p.options[p.index];
+    this.applying = true;
     this.closet.wearOutfit(opt.itemIds, opt.title, opt.reason);
+    this.applying = false;
     sfx.sparkle();
     this.atelier.styleCount++;
     this.atelier.setBadge(`STYLIST PREVIEW  ${p.index + 1}/${p.options.length}`);
-    const source = opt.source === 'claude' ? 'LIVE AI' : 'ON-DEVICE';
-    this.ui.eyebrow?.setProperties({ text: `PREVIEW ${p.index + 1} OF ${p.options.length}  |  ${source}` });
+    this.paintEyebrow();
     this.ui.title?.setProperties({ text: opt.title });
     // The reason is on the studio panel (look-note); keep this panel short
     // so it stays inside a narrow field of view.
@@ -256,12 +290,13 @@ export class StylistSystem extends createSystem({
    */
   async refine(kind: Refine): Promise<void> {
     const p = this.proposal;
-    if (!p || this.busy) return;
+    if (!p || this.refining) return;
+    this.touched = true;
     const pieces = this.atelier.currentPieces;
     const outfit = describeOutfit(pieces);
     const items = this.closet.items.map(describeItem);
     const offline = planRefineOffline(kind, outfit, items, this.occasion, this.weather, this.mood);
-    this.busy = true;
+    this.refining = true;
     this.ui.eyebrow?.setProperties({ text: 'AI STYLIST  |  REFINING' });
     let reply: RefineReply = offline;
     let source: 'claude' | 'offline' = 'offline';
@@ -282,7 +317,7 @@ export class StylistSystem extends createSystem({
     } catch {
       /* keep the offline edits */
     }
-    this.busy = false;
+    this.refining = false;
     if (this.proposal !== p) return; // the user moved on meanwhile
     const result = applyRefine(this.atelier.currentPieces, reply, this.closet.items);
     if (!result.changed) {
@@ -291,7 +326,9 @@ export class StylistSystem extends createSystem({
       return;
     }
     const title = p.options[p.index].title;
+    this.applying = true;
     this.closet.wearPieces(result.pieces, title, reply.summary);
+    this.applying = false;
     sfx.sparkle();
     this.atelier.setBadge(`STYLIST PREVIEW  |  ${kind === 'colour' ? 'MORE COLOUR' : kind.toUpperCase()}`);
     this.lastSource = source;
@@ -302,8 +339,10 @@ export class StylistSystem extends createSystem({
 
   nextIdea(): void {
     const p = this.proposal;
-    if (!p || this.busy) return;
+    if (!p) return;
+    this.touched = true;
     if (p.options.length < 2) {
+      if (this.busy) return;
       void this.styleMe();
       return;
     }
@@ -331,6 +370,7 @@ export class StylistSystem extends createSystem({
     this.proposal = undefined;
     this.generation++;
     this.atelier.setBadge(null);
+    this.applying = true;
     if (p.before.pieces.length > 0) {
       this.atelier.restore(p.before, 'Back to what you had before the stylist.');
     } else {
@@ -338,6 +378,7 @@ export class StylistSystem extends createSystem({
         quiet: true,
       });
     }
+    this.applying = false;
     this.showAsk('Undone - your previous outfit is back. Change the chips and try again.');
   }
 

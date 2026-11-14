@@ -6,9 +6,13 @@ import {
   CanvasTexture,
   Color,
   DoubleSide,
+  FrontSide,
   MeshPhysicalMaterial,
+  MeshStandardMaterial,
+  NoColorSpace,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector2,
 } from '@iwsdk/core';
 
 export type Finish = 'satin' | 'silk' | 'cotton' | 'denim' | 'wool' | 'velvet' | 'linen' | 'knit';
@@ -381,6 +385,96 @@ function drawPattern(ctx: CanvasRenderingContext2D, fabric: Fabric): void {
 
 const textureCache = new Map<string, CanvasTexture>();
 const materialCache = new Map<string, MeshPhysicalMaterial>();
+const standardCache = new Map<string, MeshStandardMaterial>();
+const weaveCache = new Map<Finish, CanvasTexture | null>();
+
+/**
+ * Weave relief per finish, as a tangent-space normal map: plain weave for
+ * cotton, slubby linen, diagonal twill for denim, herringbone for wool, ribs
+ * for knit and a fine pile for velvet. Satin and silk stay smooth (their look
+ * comes from sheen). Built once per finish and shared.
+ */
+const WEAVE: Partial<Record<Finish, { tile: number; strength: number; normalScale: number }>> = {
+  cotton: { tile: 0.03, strength: 2.2, normalScale: 0.35 },
+  linen: { tile: 0.035, strength: 2.6, normalScale: 0.5 },
+  denim: { tile: 0.025, strength: 2.8, normalScale: 0.6 },
+  wool: { tile: 0.04, strength: 2.4, normalScale: 0.5 },
+  knit: { tile: 0.04, strength: 3.0, normalScale: 0.7 },
+  velvet: { tile: 0.02, strength: 1.4, normalScale: 0.22 },
+};
+
+function weaveHeight(finish: Finish, x: number, y: number, rnd: number): number {
+  const TAU = Math.PI * 2;
+  switch (finish) {
+    case 'cotton':
+      return 0.5 + 0.5 * Math.sin((TAU * x) / 8) * Math.sin((TAU * y) / 8);
+    case 'linen':
+      return 0.5 + 0.35 * Math.sin((TAU * x) / 8) * Math.sin((TAU * y) / 8) + 0.3 * rnd;
+    case 'denim':
+      return 0.5 + 0.5 * Math.sin((TAU * (x + y)) / 6) + 0.15 * rnd;
+    case 'wool': {
+      const band = Math.floor(y / 16) % 2 === 0 ? 1 : -1;
+      return 0.5 + 0.5 * Math.sin((TAU * (x + band * y)) / 10) + 0.2 * rnd;
+    }
+    case 'knit': {
+      const rib = Math.abs(Math.sin((Math.PI * x) / 8));
+      const v = Math.abs(Math.sin((Math.PI * (y + Math.abs((x % 16) - 8))) / 8));
+      return 0.6 * rib + 0.4 * v;
+    }
+    case 'velvet':
+      return rnd;
+    default:
+      return 0.5;
+  }
+}
+
+export function weaveNormalMap(finish: Finish): CanvasTexture | null {
+  if (weaveCache.has(finish)) return weaveCache.get(finish) ?? null;
+  const spec = WEAVE[finish];
+  if (!spec) {
+    weaveCache.set(finish, null);
+    return null;
+  }
+  const S = 128;
+  // Seeded noise so the texture is the same every session.
+  let seed = finish.length * 9301 + 49297;
+  const noise = new Float32Array(S * S);
+  for (let i = 0; i < noise.length; i++) {
+    seed = (seed * 9301 + 49297) % 233280;
+    noise[i] = seed / 233280;
+  }
+  const h = new Float32Array(S * S);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) h[y * S + x] = weaveHeight(finish, x, y, noise[y * S + x]);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = S;
+  canvas.height = S;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const img = ctx.createImageData(S, S);
+  const at = (x: number, y: number) => h[((y + S) % S) * S + ((x + S) % S)];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const nx = (at(x - 1, y) - at(x + 1, y)) * spec.strength;
+      const ny = (at(x, y - 1) - at(x, y + 1)) * spec.strength;
+      const len = Math.hypot(nx, ny, 1);
+      const o = (y * S + x) * 4;
+      img.data[o] = ((nx / len) * 0.5 + 0.5) * 255;
+      img.data[o + 1] = ((ny / len) * 0.5 + 0.5) * 255;
+      img.data[o + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = NoColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.wrapT = RepeatWrapping;
+  tex.anisotropy = 4;
+  tex.repeat.set(1 / spec.tile, 1 / spec.tile);
+  weaveCache.set(finish, tex);
+  return tex;
+}
 
 export function fabricTexture(fabric: Fabric): CanvasTexture {
   let tex = textureCache.get(fabric.id);
@@ -405,6 +499,7 @@ export function fabricMaterial(fabricId: string): MeshPhysicalMaterial {
   const fabric = fabricById(fabricId);
   const f = FINISH[fabric.finish];
   const base = new Color(fabric.colors[0]);
+  const weave = weaveNormalMap(fabric.finish);
   mat = new MeshPhysicalMaterial({
     map: fabricTexture(fabric),
     roughness: f.roughness,
@@ -412,8 +507,11 @@ export function fabricMaterial(fabricId: string): MeshPhysicalMaterial {
     sheen: f.sheen,
     sheenRoughness: f.sheenRoughness,
     sheenColor: base.clone().lerp(new Color('#ffffff'), 0.35),
-    clearcoat: f.clearcoat,
+    // Clearcoat is the costliest layer: keep it for the glossy satins only.
+    clearcoat: f.clearcoat >= 0.1 ? f.clearcoat : 0,
     clearcoatRoughness: 0.4,
+    normalMap: weave,
+    normalScale: new Vector2(1, 1).multiplyScalar(WEAVE[fabric.finish]?.normalScale ?? 0),
     side: DoubleSide,
   });
   mat.name = `fabric-${fabric.id}`;
@@ -421,25 +519,47 @@ export function fabricMaterial(fabricId: string): MeshPhysicalMaterial {
   return mat;
 }
 
-/** A flat swatch material (pattern scaled to fit a ~16 cm square). */
-export function swatchMaterial(fabricId: string): MeshPhysicalMaterial {
+/**
+ * A flat swatch material (pattern scaled to fit a ~16 cm square). Standard
+ * shading, front faces only: twelve of these sit on the board at once.
+ */
+export function swatchMaterial(fabricId: string): MeshStandardMaterial {
   const key = `swatch-${fabricId}`;
-  let mat = materialCache.get(key);
+  let mat = standardCache.get(key);
   if (mat) return mat;
   const fabric = fabricById(fabricId);
   const tex = fabricTexture(fabric).clone();
   tex.needsUpdate = true;
   tex.repeat.set(0.16 / fabric.tile, 0.16 / fabric.tile);
   const f = FINISH[fabric.finish];
-  mat = new MeshPhysicalMaterial({
+  mat = new MeshStandardMaterial({
     map: tex,
+    roughness: Math.min(1, f.roughness + (f.sheen > 0.5 ? -0.12 : 0)),
+    metalness: 0,
+    normalMap: weaveNormalMap(fabric.finish),
+    normalScale: new Vector2(1, 1).multiplyScalar(WEAVE[fabric.finish]?.normalScale ?? 0),
+    side: FrontSide,
+  });
+  standardCache.set(key, mat);
+  return mat;
+}
+
+/**
+ * Cheap material for the miniature garments on the rail (a dozen or more on
+ * screen): the same pattern, standard shading, no sheen or clearcoat.
+ */
+export function miniMaterial(fabricId: string): MeshStandardMaterial {
+  const key = `mini-${fabricId}`;
+  let mat = standardCache.get(key);
+  if (mat) return mat;
+  const fabric = fabricById(fabricId);
+  const f = FINISH[fabric.finish];
+  mat = new MeshStandardMaterial({
+    map: fabricTexture(fabric),
     roughness: f.roughness,
-    sheen: f.sheen,
-    sheenRoughness: f.sheenRoughness,
-    sheenColor: new Color(fabric.colors[0]).lerp(new Color('#ffffff'), 0.35),
-    clearcoat: f.clearcoat,
+    metalness: 0,
     side: DoubleSide,
   });
-  materialCache.set(key, mat);
+  standardCache.set(key, mat);
   return mat;
 }

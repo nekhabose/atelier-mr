@@ -6,7 +6,7 @@
  * UVs are in meters (u around the body, v along the length) so a fabric
  * texture with `repeat = 1 / tileSize` tiles at a consistent physical scale.
  */
-import { BufferGeometry, Float32BufferAttribute, Vector3 } from '@iwsdk/core';
+import { BufferGeometry, Float32BufferAttribute, Uint32BufferAttribute, Vector3 } from '@iwsdk/core';
 
 export type RadiusFn = (y: number) => { rx: number; rz: number };
 
@@ -21,6 +21,8 @@ interface ShellOptions {
   capBottom?: boolean;
   /** Optional per-ring vertical offset (e.g. a scoop neckline dip at the front). */
   yOffset?: (y: number, theta: number) => number;
+  /** Optional radial offset in metres (drape folds, creases). */
+  fold?: (y: number, theta: number) => number;
 }
 
 /** Elliptical shell from yBottom to yTop. Theta 0 points to +Z (front). */
@@ -42,7 +44,8 @@ export function buildShell(
     for (let j = 0; j <= segments; j++) {
       const theta = (j / segments) * Math.PI * 2;
       const yy = opts.yOffset ? y + opts.yOffset(y, theta) : y;
-      positions.push(rx * Math.sin(theta), yy, rz * Math.cos(theta));
+      const f = opts.fold ? opts.fold(y, theta) : 0;
+      positions.push((rx + f) * Math.sin(theta), yy, (rz + f) * Math.cos(theta));
       uvs.push((j / segments) * uC, y);
     }
   }
@@ -92,6 +95,8 @@ interface TubeOptions {
   uCircumference?: number;
   capEnd?: boolean;
   capStart?: boolean;
+  /** Optional radial offset in metres at (distance along tube, angle). */
+  fold?: (s: number, theta: number) => number;
 }
 
 const _dir = new Vector3();
@@ -137,10 +142,11 @@ export function buildTube(
       const theta = (j / segments) * Math.PI * 2;
       const sn = Math.sin(theta);
       const cs = Math.cos(theta);
+      const rr = opts.fold ? r + opts.fold(s, theta) : r;
       positions.push(
-        cx + r * (sn * _e1.x + cs * _e2.x),
-        cy + r * (sn * _e1.y + cs * _e2.y),
-        cz + r * (sn * _e1.z + cs * _e2.z),
+        cx + rr * (sn * _e1.x + cs * _e2.x),
+        cy + rr * (sn * _e1.y + cs * _e2.y),
+        cz + rr * (sn * _e1.z + cs * _e2.z),
       );
       uvs.push((j / segments) * uC, s);
     }
@@ -216,4 +222,48 @@ function finish(positions: number[], uvs: number[], indices: number[]): BufferGe
   g.computeBoundingSphere();
   g.computeBoundingBox();
   return g;
+}
+
+/**
+ * Merge indexed geometries (position, normal, uv) into one, so a garment is a
+ * single draw call. The inputs are disposed.
+ */
+export function mergeGeometries(geos: BufferGeometry[]): BufferGeometry {
+  if (geos.length === 1) return geos[0];
+  let vertCount = 0;
+  let indexCount = 0;
+  for (const g of geos) {
+    vertCount += g.attributes.position.count;
+    indexCount += g.index ? g.index.count : g.attributes.position.count;
+  }
+  const pos = new Float32Array(vertCount * 3);
+  const nor = new Float32Array(vertCount * 3);
+  const uv = new Float32Array(vertCount * 2);
+  const idx = new Uint32Array(indexCount);
+  let v = 0;
+  let k = 0;
+  for (const g of geos) {
+    const n = g.attributes.position.count;
+    pos.set(g.attributes.position.array as Float32Array, v * 3);
+    if (g.attributes.normal) nor.set(g.attributes.normal.array as Float32Array, v * 3);
+    if (g.attributes.uv) uv.set(g.attributes.uv.array as Float32Array, v * 2);
+    if (g.index) {
+      const src = g.index.array;
+      for (let i = 0; i < src.length; i++) idx[k + i] = src[i] + v;
+      k += src.length;
+    } else {
+      for (let i = 0; i < n; i++) idx[k + i] = v + i;
+      k += n;
+    }
+    v += n;
+    g.dispose();
+  }
+  const out = new BufferGeometry();
+  out.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  out.setAttribute('normal', new Float32BufferAttribute(nor, 3));
+  out.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  out.setIndex(new Uint32BufferAttribute(idx, 1));
+  out.computeBoundingSphere();
+  out.computeBoundingBox();
+  return out;
 }

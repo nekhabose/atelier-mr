@@ -24,10 +24,20 @@ export class LookbookSystem extends createSystem({}) {
   private note: El;
   /** The look most recently put on from the lookbook (a second tap removes it). */
   private wornId?: string;
+  /** True while this system itself dresses the form. */
+  private applying = false;
 
   init(): void {
     this.atelier = this.world.getSystem(AtelierSystem)!;
     this.looks = loadLookbook();
+    // Any other change to the outfit means the saved look is no longer worn.
+    this.cleanupFuncs.push(
+      this.atelier.onOutfitChange(() => {
+        if (this.applying || !this.wornId) return;
+        this.wornId = undefined;
+        this.render();
+      }),
+    );
     const panel = this.world.getSceneObject<UIKitMLAsset>('closet-panel');
     if (!panel) return;
     const el = (id: string) => panel.getElementById<UIKit.Text>(id) ?? undefined;
@@ -86,11 +96,13 @@ export class LookbookSystem extends createSystem({}) {
     }
     this.wornId = look.id;
     this.render();
+    this.applying = true;
     this.atelier.dress(
       look.pieces.map((p) => ({ ...p })),
       look.name,
       `From your lookbook, saved ${look.date}.`,
     );
+    this.applying = false;
     this.say(`Wearing "${look.name}". Tap the gold chip again to remove it from the lookbook.`);
   }
 

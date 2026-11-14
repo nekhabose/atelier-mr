@@ -28,7 +28,7 @@ import { AtelierSystem } from './atelier-system.js';
 import { BoutiqueSlot, BoutiqueTab } from './atelier-components.js';
 import { ClosetSystem } from './closet-system.js';
 import { analyse, bestPick, Boutique, BOUTIQUES, BoutiqueAnalysis, BoutiquePiece } from './atelier/boutique.js';
-import { fabricMaterial } from './atelier/fabrics.js';
+import { miniMaterial } from './atelier/fabrics.js';
 import { buildPieceGroup, GarmentPiece, MINI_DETAIL } from './atelier/garments.js';
 import { makeLabel } from './atelier/labels.js';
 import { sfx } from './atelier/sfx.js';
@@ -67,6 +67,8 @@ export class BoutiqueSystem extends createSystem({
   source: 'claude' | 'offline' = 'offline';
   private pairing = 0;
   private request = 0;
+  /** True while this system itself dresses the form. */
+  private applying = false;
   private atelier!: AtelierSystem;
   private closet!: ClosetSystem;
   private ui: Record<string, El> = {};
@@ -83,6 +85,17 @@ export class BoutiqueSystem extends createSystem({
     this.buildTab();
     this.wirePanel();
     this.closet.onLeaveBoutique = () => this.close(false);
+    // Undo, a rack look or the stylist replaced the try-on: forget it.
+    this.cleanupFuncs.push(
+      this.atelier.onOutfitChange(() => {
+        if (this.applying || !this.selected) return;
+        this.selected = undefined;
+        this.analysis = undefined;
+        this.request++;
+        this.atelier.setBadge(null);
+        if (this.shop >= 0) this.buildRail(false);
+      }),
+    );
     this.cleanupFuncs.push(
       this.queries.tabPressed.subscribe('qualify', () => this.open(this.shop >= 0 ? this.shop : 0)),
       this.queries.slotPressed.subscribe('qualify', (e) => {
@@ -173,7 +186,7 @@ export class BoutiqueSystem extends createSystem({
       const mini = new Group();
       mini.scale.setScalar(MINI_SCALE);
       mini.position.y = -0.064 - 1.432 * MINI_SCALE;
-      mini.add(buildPieceGroup(bp.piece, fabricMaterial(bp.piece.fabric), MINI_DETAIL));
+      mini.add(buildPieceGroup(bp.piece, miniMaterial(bp.piece.fabric), MINI_DETAIL));
       group.add(mini);
       const hit = new Mesh(this.hitGeo, this.hitMaterial);
       hit.position.y = -0.2;
@@ -277,7 +290,9 @@ export class BoutiqueSystem extends createSystem({
       .filter((p): p is GarmentPiece => !!p)
       .map((p) => ({ ...p }));
     // A lone top or bottom still gets tried on by itself.
+    this.applying = true;
     this.atelier.dress(pieces, bp.name, `${BOUTIQUES[this.shop].name}  |  ${bp.blurb}`, { quiet });
+    this.applying = false;
     this.atelier.setBadge('BOUTIQUE TRY-ON');
   }
 

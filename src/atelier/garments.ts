@@ -14,7 +14,7 @@ import {
   shoulderJoint,
   torsoAt,
 } from './body.js';
-import { buildShell, buildTube } from './geometry.js';
+import { buildShell, buildTube, mergeGeometries } from './geometry.js';
 
 export type PieceKind = 'dress' | 'top' | 'skirt' | 'trousers' | 'jacket';
 
@@ -105,6 +105,8 @@ export interface Detail {
 }
 
 export const HERO_DETAIL: Detail = { segments: 56, ringDensity: 70 };
+/** Used while a tailoring pin is being dragged: same shape, far less work. */
+export const DRAG_DETAIL: Detail = { segments: 30, ringDensity: 34 };
 export const MINI_DETAIL: Detail = { segments: 20, ringDensity: 24 };
 
 function rings(length: number, detail: Detail): number {
@@ -160,6 +162,76 @@ function skirtRadius(top: number, hem: number, fit: number, flare: number, ease:
   };
 }
 
+// ------------------------------------------------------------------ drape
+//
+// Real cloth never hangs as a perfect cylinder. These offsets add soft
+// vertical folds that deepen toward the hem (more for flared, relaxed
+// garments), a hem that rises and falls with them, relaxed folds under the
+// bust, wrinkles along sleeves and a pressed crease on tailored trousers.
+// They are deterministic per garment, so a rebuild never "shimmers".
+
+const FOLDS = 11;
+
+function foldPhase(piece: GarmentPiece): number {
+  return (piece.fabric.length * 0.37 + piece.flare * 13) % (Math.PI * 2);
+}
+
+/** Folds that grow from the waist (top) to the hem. */
+function hangingFolds(top: number, hem: number, piece: GarmentPiece) {
+  const span = Math.max(0.01, top - hem);
+  const amp = 0.0022 + piece.flare * 0.055 + (1 - piece.fit) * 0.0045;
+  const ph = foldPhase(piece);
+  return (y: number, theta: number) => {
+    const t = clamp((top - y) / span, 0, 1);
+    const w = Math.pow(t, 1.6);
+    return amp * w * (0.62 * Math.sin(FOLDS * theta + ph) + 0.38 * Math.sin(2.1 * FOLDS * theta + ph * 1.7));
+  };
+}
+
+/** The hem lifts slightly where a fold swings out. */
+function hemWave(hem: number, piece: GarmentPiece) {
+  const amp = 0.0025 + piece.flare * 0.02;
+  const ph = foldPhase(piece);
+  return (y: number, theta: number) => {
+    const w = clamp(1 - (y - hem) / 0.05, 0, 1);
+    return w * w * amp * Math.sin(FOLDS * theta + ph);
+  };
+}
+
+/** Relaxed folds below the bust; tailored pieces stay smooth. */
+function bodiceFolds(piece: GarmentPiece) {
+  const amp = 0.0008 + (1 - piece.fit) * 0.0028;
+  return (y: number, theta: number) => {
+    const below = clamp((BODY.bustY - y) / 0.22, 0, 1);
+    return amp * below * Math.sin(9 * theta + 0.8) * (0.55 + 0.45 * Math.cos(theta));
+  };
+}
+
+/** Soft wrinkles along a sleeve, strongest past the elbow. */
+function sleeveFolds(piece: GarmentPiece) {
+  const amp = 0.0011 + (1 - piece.fit) * 0.0016;
+  return (s: number, theta: number) => amp * clamp(s / 0.12, 0, 1) * Math.sin(5 * theta + s * 38);
+}
+
+/** Trouser legs: folds near the hem plus a pressed front crease when tailored. */
+function legFolds(len: number, piece: GarmentPiece, side: 1 | -1) {
+  const amp = 0.0012 + (1 - piece.fit) * 0.0025 + piece.flare * 0.02;
+  const crease = piece.fit * 0.0022;
+  return (s: number, theta: number) => {
+    const t = clamp(s / Math.max(0.01, len), 0, 1);
+    const folds = amp * Math.pow(t, 1.4) * Math.sin(7 * theta + side * 1.3 + s * 6);
+    // theta 0 points to +Z (the front) for a downward tube.
+    const front = Math.exp(-(theta * theta) / 0.02) + Math.exp(-((theta - Math.PI * 2) ** 2) / 0.02);
+    return folds + crease * front;
+  };
+}
+
+function combineY(...fns: (((y: number, theta: number) => number) | undefined)[]) {
+  const list = fns.filter((f): f is (y: number, theta: number) => number => !!f);
+  if (list.length === 0) return undefined;
+  return (y: number, theta: number) => list.reduce((acc, f) => acc + f(y, theta), 0);
+}
+
 function neckOffset(depth: number, top: number) {
   return (y: number, theta: number) => {
     if (depth <= 0) return 0;
@@ -185,7 +257,11 @@ function sleeveTube(side: 1 | -1, piece: GarmentPiece, ease: number, detail: Det
     dir,
     len,
     (s) => armRadiusAt(Math.max(0, s - back)) + ease + 0.004 + relaxed * (s / len),
-    { rings: rings(len, detail), segments: Math.max(12, Math.round(detail.segments * 0.4)) },
+    {
+      rings: rings(len, detail),
+      segments: Math.max(12, Math.round(detail.segments * 0.4)),
+      fold: sleeveFolds(piece),
+    },
   );
 }
 
@@ -207,7 +283,11 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
       out.push(
         buildShell(bodiceBottom, top, bodiceRadius(piece.fit, ease), {
           ...shellOpts(top - bodiceBottom),
-          yOffset: piece.strapless ? undefined : neckOffset(piece.neck, top),
+          yOffset: combineY(
+            piece.strapless ? undefined : neckOffset(piece.neck, top),
+            piece.kind === 'dress' ? undefined : hemWave(bodiceBottom, piece),
+          ),
+          fold: bodiceFolds(piece),
         }),
       );
       if (piece.kind === 'dress') {
@@ -216,7 +296,11 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
             piece.hem,
             BODY.waistY + 0.002,
             skirtRadius(BODY.waistY, piece.hem, piece.fit, piece.flare, ease),
-            shellOpts(BODY.waistY - piece.hem),
+            {
+              ...shellOpts(BODY.waistY - piece.hem),
+              fold: hangingFolds(BODY.waistY, piece.hem, piece),
+              yOffset: hemWave(piece.hem, piece),
+            },
           ),
         );
       }
@@ -231,7 +315,11 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
           piece.hem,
           SKIRT_TOP,
           skirtRadius(SKIRT_TOP, piece.hem, piece.fit, piece.flare, ease),
-          shellOpts(SKIRT_TOP - piece.hem),
+          {
+            ...shellOpts(SKIRT_TOP - piece.hem),
+            fold: hangingFolds(SKIRT_TOP, piece.hem, piece),
+            yOffset: hemWave(piece.hem, piece),
+          },
         ),
       );
       break;
@@ -255,6 +343,7 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
             {
               rings: rings(len, detail),
               segments: Math.max(14, Math.round(detail.segments * 0.5)),
+              fold: legFolds(len, piece, side),
             },
             (s) => [side * (legCenterXAt(top - s) - legCenterXAt(top)), 0, 0],
           ),
@@ -270,13 +359,12 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
 export function buildPieceGroup(piece: GarmentPiece, material: Material, detail: Detail): Group {
   const group = new Group();
   group.name = `garment-${piece.kind}`;
-  for (const g of buildPieceGeometries(piece, detail)) {
-    const mesh = new Mesh(g, material);
-    mesh.castShadow = detail === HERO_DETAIL;
-    mesh.receiveShadow = false;
-    mesh.renderOrder = LAYER[piece.kind];
-    group.add(mesh);
-  }
+  // One mesh per garment (one draw call), whatever its parts.
+  const mesh = new Mesh(mergeGeometries(buildPieceGeometries(piece, detail)), material);
+  mesh.castShadow = detail === HERO_DETAIL;
+  mesh.receiveShadow = false;
+  mesh.renderOrder = LAYER[piece.kind];
+  group.add(mesh);
   return group;
 }
 

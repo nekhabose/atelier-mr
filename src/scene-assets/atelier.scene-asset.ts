@@ -4,6 +4,7 @@
  * runtime and the editor realm).
  */
 import {
+  BufferGeometry,
   BoxGeometry,
   CylinderGeometry,
   Group,
@@ -21,7 +22,7 @@ import {
   shoulderJoint,
   torsoAt,
 } from '../atelier/body.js';
-import { buildShell, buildTube } from '../atelier/geometry.js';
+import { buildShell, buildTube, mergeGeometries } from '../atelier/geometry.js';
 
 const porcelain = createSceneMaterial({
   id: 'atelier-porcelain',
@@ -62,6 +63,21 @@ function mesh(name: string, geometry: Mesh['geometry'], material: Mesh['material
   return m;
 }
 
+/**
+ * Bake several same-material meshes into one (one draw call instead of many).
+ * Each part's local transform is applied to a copy of its geometry.
+ */
+function bake(name: string, parts: Mesh[], material: Mesh['material'], cast = true): Mesh {
+  const geos = parts.map((part) => {
+    part.updateMatrix();
+    const g = (part.geometry as BufferGeometry).clone();
+    g.applyMatrix4(part.matrix);
+    part.geometry.dispose();
+    return g;
+  });
+  return mesh(name, mergeGeometries(geos), material, cast);
+}
+
 /** Full-body porcelain mannequin on a brass turntable base. Origin = floor. */
 export function createMannequin(): Group {
   const root = new Group();
@@ -75,8 +91,11 @@ export function createMannequin(): Group {
   const body = new Group();
   body.name = 'mannequin-body';
   root.add(body);
+  // Parts are collected here and baked into one porcelain mesh at the end.
+  const parts: Mesh[] = [];
+  const shell = { add: (...m: Mesh[]) => parts.push(...m) };
 
-  body.add(
+  shell.add(
     mesh(
       'mannequin-torso',
       buildShell(BODY.crotchY - 0.04, BODY.neckBaseY, (y) => torsoAt(y), {
@@ -89,7 +108,7 @@ export function createMannequin(): Group {
   );
 
   // Neck + head.
-  body.add(
+  shell.add(
     mesh(
       'mannequin-neck',
       buildTube([0, BODY.neckBaseY - 0.01, 0], [0, 1, 0], BODY.neckTopY - BODY.neckBaseY + 0.03, () => 0.043, {
@@ -102,13 +121,13 @@ export function createMannequin(): Group {
   const head = mesh('mannequin-head', new SphereGeometry(1, 32, 24), porcelain);
   head.scale.set(0.082, 0.108, 0.094);
   head.position.set(0, BODY.headCenterY, 0.006);
-  body.add(head);
+  body.add(head); // kept separate: the face photo maps onto it
 
   // Legs + feet.
   const legTop = BODY.legTopY + 0.02;
   const legLen = legTop - 0.035;
   for (const side of [1, -1] as const) {
-    body.add(
+    shell.add(
       mesh(
         `mannequin-leg-${side > 0 ? 'l' : 'r'}`,
         buildTube(
@@ -125,14 +144,14 @@ export function createMannequin(): Group {
     const foot = mesh(`mannequin-foot-${side > 0 ? 'l' : 'r'}`, new SphereGeometry(1, 20, 12), porcelain);
     foot.scale.set(0.036, 0.026, 0.1);
     foot.position.set(side * BODY.ankleX, 0.045, 0.045);
-    body.add(foot);
+    shell.add(foot);
   }
 
   // Arms + hands.
   for (const side of [1, -1] as const) {
     const dir = armDirection(side);
     const joint = shoulderJoint(side);
-    body.add(
+    shell.add(
       mesh(
         `mannequin-arm-${side > 0 ? 'l' : 'r'}`,
         buildTube(joint, dir, BODY.armLength, (s) => armRadiusAt(s), {
@@ -146,15 +165,16 @@ export function createMannequin(): Group {
     );
     const shoulder = mesh(`mannequin-shoulder-${side > 0 ? 'l' : 'r'}`, new SphereGeometry(0.05, 20, 14), porcelain);
     shoulder.position.set(joint[0], joint[1], joint[2]);
-    body.add(shoulder);
+    shell.add(shoulder);
     const hand = mesh(`mannequin-hand-${side > 0 ? 'l' : 'r'}`, new SphereGeometry(1, 16, 12), porcelain);
     hand.scale.set(0.022, 0.06, 0.034);
     const reach = BODY.armLength + 0.05;
     hand.position.set(joint[0] + dir[0] * reach, joint[1] + dir[1] * reach, joint[2]);
     hand.rotation.z = side * BODY.armSplay;
-    body.add(hand);
+    shell.add(hand);
   }
 
+  body.add(bake('mannequin-shell', parts, porcelain));
   return root;
 }
 
@@ -245,5 +265,9 @@ export function createHanger(): Group {
   bar.rotation.z = Math.PI / 2;
   bar.position.set(0, -0.062, 0);
   root.add(bar);
+  // One draw call per hanger (there are a dozen or more on the rail).
+  const baked = bake('hanger', [hook, neck, bar], brass, false);
+  root.clear();
+  root.add(baked);
   return root;
 }

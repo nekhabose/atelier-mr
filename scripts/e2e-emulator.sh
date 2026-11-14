@@ -52,6 +52,9 @@ click style-button; sleep 2; click keep-button
                                     check $CP closet-note "Kept" "keep the proposal"
 click today-button;                 check $CP streak-title "Today is logged" "wear today logs OOTD"
 click lb-1;                         check $AP look-note "From your lookbook" "restore a saved look"
+click stylist-button; click style-button; sleep 2; click undo-button; sleep 1
+                                    check $CP closet-note "Preview closed" "undo during a preview closes it"
+click stylist-back; sleep 1
 click rack-tab-boutique; sleep 1;   check $CP closet-eyebrow "BOUTIQUE" "open the boutique"
                                     check $CP closet-note "start with the" "boutique stylist recommends a piece"
 click shop-1; sleep 1;              check $CP closet-eyebrow "STUDIO NORD" "switch boutique"

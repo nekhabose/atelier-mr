@@ -59,3 +59,39 @@ export function makeLabel(text: string, style: LabelStyle): Mesh {
   mesh.renderOrder = 10;
   return mesh;
 }
+
+/**
+ * Many small captions drawn on one transparent plane (one draw call), e.g.
+ * the fabric names under every swatch. Coordinates are in metres relative to
+ * the sheet centre; the sheet is `width` x `height` metres.
+ */
+export function makeTextSheet(
+  width: number,
+  height: number,
+  items: { text: string; x: number; y: number }[],
+  style: { textHeight: number; color: string; weight?: number },
+): Mesh {
+  const W = 1024;
+  const H = Math.max(8, Math.round((W * height) / width));
+  const pxPerM = W / width;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  ctx.fillStyle = style.color;
+  ctx.font = `${style.weight ?? 700} ${Math.round(style.textHeight * pxPerM)}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const it of items) {
+    ctx.fillText(it.text, W / 2 + it.x * pxPerM, H / 2 - it.y * pxPerM);
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 4;
+  const mat = new MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+  const mesh = new Mesh(new PlaneGeometry(width, height), mat);
+  mesh.name = 'label-sheet';
+  mesh.renderOrder = 10;
+  mesh.raycast = () => {};
+  return mesh;
+}
