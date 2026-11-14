@@ -154,6 +154,9 @@ export class AtelierSystem extends createSystem({
   private outfit!: Group;
   private pieces: GarmentPiece[] = [];
   private pieceGroups: Group[] = [];
+  /** Body proportions from your photo: width (x/z) and height scale. */
+  private bodyW = 1;
+  private bodyH = 1;
   private lookIndex = -1;
   private selectedPiece = -1;
   private wearT = 1;
@@ -553,6 +556,7 @@ export class AtelierSystem extends createSystem({
     // A drop: find which garment it landed on.
     const local = this.tmpVec2.copy(now);
     this.formEntity.object3D!.worldToLocal(local);
+    local.set(local.x / this.bodyW, local.y / this.bodyH, local.z / this.bodyW);
     const horizontal = Math.hypot(local.x, local.z);
     if (horizontal > 0.55 || local.y < 0 || local.y > 1.8) {
       this.setHint('Drop the swatch right onto the form to use it.');
@@ -627,11 +631,24 @@ export class AtelierSystem extends createSystem({
       if (hidden || !piece) continue;
       if (pin.entity.hasComponent(Grabbed) || pin.touch.hasComponent(Grabbed)) continue;
       const [x, y, z] = pinPosition(piece, pin.param);
-      obj.position.set(x, y, z);
+      obj.position.set(x * this.bodyW, y * this.bodyH, z * this.bodyW);
       obj.rotation.set(0, 0, 0);
-      touchObj.position.set(x, y, z);
+      touchObj.position.copy(obj.position);
       touchObj.rotation.set(0, 0, 0);
     }
+  }
+
+  /**
+   * Reshape the form to your proportions (from your photo): the body, the
+   * clothes on it and the tailoring pins scale together, so every garment
+   * stays fitted and the pins keep their meaning.
+   */
+  setBodyScale(width: number, height: number): void {
+    this.bodyW = width;
+    this.bodyH = height;
+    this.formEntity.object3D!.getObjectByName('mannequin-body')?.scale.set(width, height, width);
+    this.outfit.scale.set(width, height, width);
+    this.layoutPins();
   }
 
   // ---------------------------------------------------------------- closet hooks
@@ -988,7 +1005,7 @@ export class AtelierSystem extends createSystem({
       // Float above the form's head and face the viewer.
       this.badge.position.set(
         form.position.x,
-        form.position.y + BADGE_HEIGHT * form.scale.y + (access.calmMotion ? 0 : Math.sin(this.badgeT += delta * 1.6) * 0.008),
+        form.position.y + BADGE_HEIGHT * Math.max(1, this.bodyH) * form.scale.y + (access.calmMotion ? 0 : Math.sin(this.badgeT += delta * 1.6) * 0.008),
         form.position.z,
       );
       this.world.camera.getWorldPosition(this.tmpVec);
@@ -1045,7 +1062,7 @@ export class AtelierSystem extends createSystem({
       const piece = pieceForParam(this.pieces, param);
       if (!piece) continue;
       const obj = entity.object3D!;
-      const value = paramFromPin(piece, param, obj.position.x, obj.position.y);
+      const value = paramFromPin(piece, param, obj.position.x / this.bodyW, obj.position.y / this.bodyH);
       if (Math.abs(value - piece[param]) > 0.002 && this.dragClock >= DRAG_INTERVAL) {
         if (this.pinPending) {
           this.checkpoint();

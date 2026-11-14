@@ -53,8 +53,9 @@ form changes. Plan week lays out seven varied outfits from your closet, and
 Pack finds the fewest pieces for a 3, 5 or 7-day trip. The boutique turns shopping around: three original labels hang their pieces
 on your rail, each tagged with how many new outfits it unlocks with what you
 already own. Try one on and the boutique stylist tries it with your clothes and
-says buy, maybe or skip, with the cost per new outfit. Add your photo and skin
-tone on the start page (kept on your device) and the form becomes you.
+says buy, maybe or skip, with the cost per new outfit. Take or upload a
+full-length photo on the start page and the form becomes you: your face and
+hair, skin tone and proportions, checked and kept on your device.
 Save the looks you love to a lookbook
 and log an Outfit of the Day to keep a streak, a reason to come back each
 morning. Share any look as a link or QR code: the outfit travels inside the
@@ -156,7 +157,7 @@ server key configured it shows "LIVE AI".
 | Lookbook (6) and Outfit of the Day streak; share a look by link or QR code | Shared lookbooks, friends' rails |
 | Access panel: large text, high contrast, calm motion, read aloud, voice commands, tap-to-tailor | On-device check of speech features on Quest Browser |
 | Boutique: 3 original labels, 15 pieces, try-on with your closet, buy / maybe / skip with new-outfit count and cost per outfit, add to closet | Official retailer feeds through partner programs |
-| Face photo (device-only) and 6 skin tones on the form | Body measurements to size the form to you |
+| Full-length photo turns the form into you (on-device pose check refuses partial photos; your head, skin, hair, proportions and height) | Exact body measurements in cm, and 3D faces from more than one photo |
 | Claude stylist live on the production URL (server-side key), offline fallback | Tuning for Meta VR Glasses on device |
 
 Not yet verified: frame rate, hand tracking, depth occlusion and haptics on a
@@ -223,7 +224,7 @@ addition (Meta Quest Developer Hub can record or cast).
 view masked black), 08-accessibility-panel (Large text and High contrast on), and from the
 mixed-reality cut: 09-mr-reveal, 10-mr-tailor-by-voice, 11-mr-week-plan,
 12-mr-boutique-verdict. Replace with on-device captures when a Quest is available.
-Use only your own face if you show the photo feature.
+Use only your own full-length photo if you show the photo feature.
 
 ## Special awards
 

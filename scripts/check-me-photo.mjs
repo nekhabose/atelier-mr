@@ -1,9 +1,11 @@
-// Checks "Make the form you": uploads a synthetic portrait (no real person)
-// through the real file input and confirms the face lands on the form and is
-// stored on the device only.
+// Checks "Make the form you" refuses anything but a full-length photo:
+// uploads a synthetic head-and-shoulders portrait (no real person) through the
+// real file input and confirms it is refused with a reason, nothing is stored
+// and the form stays the form. (A real full-length photo is needed to see the
+// accepted path; MediaPipe does not count drawings or mannequins as people.)
 //
 // Usage (dev server started with --allow-browser-automation):
-//   npx @iwsdk/cli browser run scripts/check-face-upload.mjs
+//   npx @iwsdk/cli browser run scripts/check-me-photo.mjs --timeout 60000
 export default async function run({ frame, page }) {
   const target = frame ?? page;
   await target.waitForFunction(() => !!globalThis.me, null, { timeout: 30000 });
@@ -42,11 +44,15 @@ export default async function run({ frame, page }) {
     mimeType: 'image/jpeg',
     buffer,
   });
-  await target.waitForFunction(() => globalThis.me.hasFace === true, null, { timeout: 10000 });
+  await target.waitForFunction(
+    () => /Photo not used/.test(document.querySelector('#make-it-you [data-status]')?.textContent ?? ''),
+    null,
+    { timeout: 45000 },
+  );
   return target.evaluate(() => ({
-    hasFace: globalThis.me.hasFace,
-    storedBytes: (localStorage.getItem('atelier.face.v1') || '').length,
+    refused: globalThis.me.hasFace === false,
+    problem: globalThis.me.lastCheck?.problem,
+    storedBytes: (localStorage.getItem('atelier.me.v2') || '').length,
     status: document.querySelector('#make-it-you [data-status]')?.textContent,
-    removeVisible: getComputedStyle(document.querySelector('#make-it-you [data-remove]')).display !== 'none',
   }));
 }

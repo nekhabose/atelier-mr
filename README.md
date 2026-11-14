@@ -65,8 +65,14 @@ journey with captions.
   on the form with the pieces you own, and the boutique stylist gives a verdict
   - BUY / MAYBE / SKIP - with new outfits, cost per outfit and near-duplicates.
   Add to closet keeps it. (Original labels only; no real brands or catalogues.)
-- **Make the form you:** on the start page, add a photo (kept on the device,
-  never uploaded) and pick a skin tone; your face and tone appear on the form.
+- **Make the form you:** on the start page, take (camera with a head-to-feet
+  guide and auto-capture) or upload a full-length photo. It is checked on the
+  device with MediaPipe Pose: one person, head to feet, facing the camera, or
+  it is refused with the reason (a head-only photo is not enough). A good
+  photo turns the porcelain form into you: your head and hair cut out of the
+  background, your skin tone, hair colour and length, your shoulder and hip
+  proportions, and your height if you add it. Clothes and pins reshape with
+  the body. Nothing is uploaded; it is kept on the device only.
 - **Opening reveal:** on entry the studio settles into your room piece by piece
   and the ATELIER title card appears before the tour starts.
 - **Lookbook and Outfit of the Day:** save whole outfits (with tailoring) and
@@ -131,7 +137,7 @@ Regression checks against the emulator (dev server running, XR session entered):
 
 ```sh
 bash scripts/e2e-emulator.sh                         # 42-step hands-free journey
-npx @iwsdk/cli browser run scripts/check-face-upload.mjs   # needs dev up --allow-browser-automation
+npx @iwsdk/cli browser run scripts/check-me-photo.mjs      # needs dev up --allow-browser-automation
 npx @iwsdk/cli browser run scripts/check-pause-resume.mjs  # system menu blur / resume
 npx @iwsdk/cli browser run scripts/check-layout.mjs        # FoV-aware layout decision
 npx @iwsdk/cli browser run scripts/check-showcase.mjs      # flat page, not in XR: every tour beat
@@ -181,7 +187,9 @@ src/closet-system.ts      Digital Closet rail and builder
 src/stylist-system.ts     stylist proposals, Outfit of the Day
 src/lookbook-system.ts    saved looks
 src/boutique-system.ts    boutique rail, try-on and buy / maybe / skip verdicts
-src/me-system.ts          face photo + skin tone for the form (device-only)
+src/me-system.ts          full-length photo -> the form becomes you (device-only)
+src/atelier/body-scan.ts  full-body check, proportions, skin/hair colour (pure, tested)
+src/atelier/pose.ts       MediaPipe Pose loader, person cut-out (lazy, on device)
 src/room-system.ts        floor / wall placement + persistent anchor
 src/onboarding-system.ts  ghost-hand tour
 src/access-system.ts      accessibility panel, voice, read aloud, share links
@@ -192,3 +200,10 @@ public/scenes/            scene composition (JSON)
 public/ui/                spatial panels (UIKitML)
 docs/                     submission kit and screenshots
 ```
+
+## Third-party
+
+- [MediaPipe Tasks Vision](https://github.com/google-ai-edge/mediapipe) and the
+  Pose Landmarker (lite) model in `public/models/`, Apache-2.0, Google. Used on
+  the device only, to check and read a full-length photo.
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator), MIT.
