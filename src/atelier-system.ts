@@ -138,6 +138,7 @@ export class AtelierSystem extends createSystem({
   private tooltip?: Mesh;
   private occluderGeo = new BoxGeometry(0.001, 0.001, 0.001);
   private occlusionOn = false;
+  private occludeRoots: Entity[] = [];
   /** Cloth sway: the skirt lags the turntable and settles (a damped spring). */
   private prevYaw = 0;
   private sway = 0;
@@ -157,6 +158,8 @@ export class AtelierSystem extends createSystem({
   private pieces: GarmentPiece[] = [];
   private pieceGroups: Group[] = [];
   private tools = new TailorTools();
+  /** Seconds the tape stays up after a measurement set without a pin. */
+  private toolsHold = 0;
   /** Body proportions from your photo: width (x/z) and height scale. */
   private bodyW = 1;
   private bodyH = 1;
@@ -260,8 +263,16 @@ export class AtelierSystem extends createSystem({
     );
 
     this.restoreState();
-    // Depth occlusion for the form, its garments and pins (not the panels).
-    this.formEntity.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
+    // Depth occlusion for the form, its garments and pins, the rack and the
+    // fabric board, so a real hand reaching in shows in front (not the panels).
+    this.occludeRoots = [
+      this.formEntity,
+      this.world.requireSceneEntity('clothing-rack'),
+      this.world.requireSceneEntity('swatch-board'),
+    ];
+    for (const root of this.occludeRoots) {
+      root.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
+    }
     this.occlusionOn = true;
     this.markOccluded();
   }
@@ -283,30 +294,35 @@ export class AtelierSystem extends createSystem({
     // Not hasComponent(): before the depth system registers the component that
     // throws, which would abort whatever rebuild called this.
     if (!this.occlusionOn) return;
-    const fresh = new Set<Material>();
-    this.formEntity.object3D!.traverse((o) => {
-      const mesh = o as Mesh;
-      if (!mesh.isMesh) return;
-      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        if (m && m.visible && !m.userData.atelierOccluded) fresh.add(m);
+    for (const root of this.occludeRoots) {
+      const fresh = new Set<Material>();
+      root.object3D!.traverse((o) => {
+        const mesh = o as Mesh;
+        // Rail tags are rebuilt with new materials each time; they stay unpatched.
+        if (!mesh.isMesh || mesh.name.startsWith('label-')) return;
+        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+          if (m && m.visible && !m.userData.atelierOccluded) fresh.add(m);
+        }
+      });
+      for (const m of fresh) {
+        m.userData.atelierOccluded = true;
+        const holder = new Mesh(this.occluderGeo, m);
+        holder.name = `occluder-${m.name || m.uuid.slice(0, 8)}`;
+        holder.visible = false;
+        holder.raycast = () => {};
+        const e = this.world.createTransformEntity(holder, { parent: root });
+        e.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
       }
-    });
-    for (const m of fresh) {
-      m.userData.atelierOccluded = true;
-      const holder = new Mesh(this.occluderGeo, m);
-      holder.name = `occluder-${m.name || m.uuid.slice(0, 8)}`;
-      holder.visible = false;
-      holder.raycast = () => {};
-      const e = this.world.createTransformEntity(holder, { parent: this.formEntity });
-      e.addComponent(DepthOccludable, { mode: OcclusionShadersMode.HardOcclusion });
     }
   }
 
   private markOccluded(): void {
-    this.formEntity.object3D!.traverse((o) => {
-      const mat = (o as Mesh).material as { userData?: Record<string, unknown> } | undefined;
-      if ((o as Mesh).isMesh && mat?.userData) mat.userData.atelierOccluded = true;
-    });
+    for (const root of this.occludeRoots) {
+      root.object3D!.traverse((o) => {
+        const mat = (o as Mesh).material as { userData?: Record<string, unknown> } | undefined;
+        if ((o as Mesh).isMesh && mat?.userData) mat.userData.atelierOccluded = true;
+      });
+    }
   }
 
   // ---------------------------------------------------------------- building
@@ -898,6 +914,45 @@ export class AtelierSystem extends createSystem({
     return true;
   }
 
+  /** The form's proportions (1, 1 for the standard form). */
+  get bodyScale(): { w: number; h: number } {
+    return { w: this.bodyW, h: this.bodyH };
+  }
+
+  /**
+   * Set one measurement directly (a mark made on your own body). The piece is
+   * the worn one whose range holds the value (a top's hem at the hip, the
+   * trousers' hem at the ankle), else the usual piece, clamped. Shows the tape
+   * for a moment. Returns the piece and the value used, or null.
+   */
+  setMeasure(param: TailorParam, value: number): { piece: GarmentPiece; value: number } | null {
+    if (this.pieces.length === 0) return null;
+    const fits = (p: GarmentPiece) => {
+      const r = RANGES[p.kind][param];
+      return !!r && value >= r.min - 0.01 && value <= r.max + 0.01 && !((param === 'sleeve' || param === 'neck') && p.strapless);
+    };
+    const usual = pieceForParam(this.pieces, param);
+    const piece = usual && fits(usual) ? usual : this.pieces.find(fits) ?? usual;
+    const range = piece ? RANGES[piece.kind][param] : undefined;
+    if (!piece || !range || ((param === 'sleeve' || param === 'neck') && piece.strapless)) return null;
+    const next = Math.min(range.max, Math.max(range.min, value));
+    this.checkpoint();
+    piece[param] = next;
+    const index = this.pieces.indexOf(piece);
+    this.selectedPiece = index;
+    this.rebuildPiece(index);
+    this.layoutPins();
+    this.tailorCount++;
+    this.saveState();
+    this.emitOutfit();
+    const pin = this.pins.find((p) => p.param === param);
+    if (pin) {
+      this.tools.show(param, piece, pin.entity.object3D!.position, this.bodyW, this.bodyH);
+      this.toolsHold = 3;
+    }
+    return { piece, value: next };
+  }
+
   /** Rebuild every worn piece after an external edit (e.g. template change). */
   refreshAll(): void {
     this.selectedPiece = this.outermostPiece();
@@ -1061,7 +1116,8 @@ export class AtelierSystem extends createSystem({
       const t = this.wearT;
       const ease = 1 - Math.pow(1 - t, 3);
       this.outfit.position.y = (1 - ease) * 0.35;
-      this.outfit.scale.set(1, 0.85 + 0.15 * ease, 1);
+      // Keep the body proportions (a form made from your photo).
+      this.outfit.scale.set(this.bodyW, this.bodyH * (0.85 + 0.15 * ease), this.bodyW);
     }
 
     // Live tailoring while a pin is held.
@@ -1090,7 +1146,10 @@ export class AtelierSystem extends createSystem({
       }
       this.tools.show(param, piece, obj.position, this.bodyW, this.bodyH);
     }
-    if (!held) this.tools.hide();
+    if (!held) {
+      if (this.toolsHold > 0) this.toolsHold -= delta;
+      else this.tools.hide();
+    }
     // A pin pinched directly (near handle): the visible pin follows the fingers.
     for (const pin of this.pins) {
       if (pin.touch.hasComponent(Grabbed)) pin.entity.object3D!.position.copy(pin.touch.object3D!.position);

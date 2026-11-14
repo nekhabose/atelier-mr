@@ -12,11 +12,18 @@ import {
 } from './fabrics.js';
 import type { GarmentPiece, PieceKind } from './garments.js';
 import { piece } from './looks.js';
+import { localDate } from './ootd.js';
 
 export interface ClosetItem {
   id: string;
   name: string;
   piece: GarmentPiece;
+  /** What it cost, in dollars (rough is fine; for cost per wear). */
+  price?: number;
+  /** Local dates it was worn (logged with Wear today), oldest first. */
+  worn?: string[];
+  /** Local date it was added. */
+  added?: string;
 }
 
 /** The rail holds 8 hangers; one is reserved for "+ New piece". */
@@ -70,17 +77,27 @@ export function mixIn(outfit: GarmentPiece[], p: GarmentPiece): GarmentPiece[] {
   return [...outfit.filter((o) => !replaced.includes(o.kind)), { ...p }];
 }
 
-function makeItem(p: GarmentPiece): ClosetItem {
-  return { id: Math.random().toString(36).slice(2, 10), name: pieceName(p), piece: { ...p } };
+function makeItem(p: GarmentPiece, price?: number): ClosetItem {
+  const item: ClosetItem = {
+    id: Math.random().toString(36).slice(2, 10),
+    name: pieceName(p),
+    piece: { ...p },
+    added: localDate(),
+  };
+  if (price) item.price = price;
+  return item;
 }
 
-/** A few everyday basics so the closet is not empty on first visit. */
+/**
+ * A few everyday basics so the closet is not empty on first visit, with
+ * typical prices (edit a piece to set what yours cost).
+ */
 function starterCloset(): ClosetItem[] {
   return [
-    makeItem(piece({ kind: 'top', fabric: closetFabricId('cotton', 'white'), hem: 0.93, sleeve: 0.13, fit: 0.4 })),
-    makeItem(piece({ kind: 'trousers', fabric: closetFabricId('denim', 'blue'), hem: 0.07, fit: 0.55 })),
-    makeItem(piece({ kind: 'jacket', fabric: closetFabricId('wool', 'black'), hem: 0.84, sleeve: 0.56, fit: 0.62 })),
-    makeItem(piece({ kind: 'skirt', fabric: closetFabricId('check', 'camel'), hem: 0.55, fit: 0.5, flare: 0.08 })),
+    makeItem(piece({ kind: 'top', fabric: closetFabricId('cotton', 'white'), hem: 0.93, sleeve: 0.13, fit: 0.4 }), 25),
+    makeItem(piece({ kind: 'trousers', fabric: closetFabricId('denim', 'blue'), hem: 0.07, fit: 0.55 }), 50),
+    makeItem(piece({ kind: 'jacket', fabric: closetFabricId('wool', 'black'), hem: 0.84, sleeve: 0.56, fit: 0.62 }), 200),
+    makeItem(piece({ kind: 'skirt', fabric: closetFabricId('check', 'camel'), hem: 0.55, fit: 0.5, flare: 0.08 }), 50),
   ];
 }
 
@@ -107,6 +124,6 @@ export function saveCloset(items: ClosetItem[]): void {
   }
 }
 
-export function newClosetItem(p: GarmentPiece): ClosetItem {
-  return makeItem(p);
+export function newClosetItem(p: GarmentPiece, price?: number): ClosetItem {
+  return makeItem(p, price);
 }

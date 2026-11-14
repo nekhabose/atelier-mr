@@ -36,6 +36,7 @@ import {
 } from './atelier/stylist-contract.js';
 import { describeItem, planOffline, StylistPlan, StylistResult } from './atelier/stylist-engine.js';
 import { sfx } from './atelier/sfx.js';
+import { CHIP, CREAM_TEXT, INK, PAPER_LIGHT } from './atelier/palette.js';
 import { postStylist } from './atelier/stylist-client.js';
 import { applyRefine, describeOutfit, planRefineOffline } from './atelier/refine.js';
 
@@ -48,8 +49,8 @@ interface Proposal {
   gap?: string;
 }
 
-const ON = { bg: '#e2c27d', border: '#e2c27d', text: '#2b2118' };
-const OFF = { bg: '#2c2e33', border: '#4a4d55', text: '#f1ede4' };
+const ON = CHIP.on;
+const OFF = CHIP.off;
 
 type El = UIKit.Text | undefined;
 
@@ -66,6 +67,8 @@ export class StylistSystem extends createSystem({
   proposal?: Proposal;
   /** The last kept answer, for scripted checks. */
   last?: StylistResult;
+  /** The next plan is built around this closet piece ("Style it"). */
+  private include?: string;
   /** Where the last plan came from, for scripted checks. */
   lastSource?: 'claude' | 'offline';
   private lookbook?: LookbookSystem;
@@ -133,6 +136,10 @@ export class StylistSystem extends createSystem({
     on('revert-button', () => this.revert());
     for (const r of REFINES) on(`refine-${r}`, () => void this.refine(r));
     on('today-button', () => this.wearToday());
+    on('style-it', () => {
+      const item = this.closet.leastWornItem();
+      if (item) this.styleAround(item.id);
+    });
     for (const o of OCCASIONS) {
       this.chips[`occ-${o}`] = el(`occ-${o}`);
       on(`occ-${o}`, () => this.choose({ occasion: o }));
@@ -177,6 +184,15 @@ export class StylistSystem extends createSystem({
     this.ui.proposalActions?.setProperties({ display: proposal ? 'flex' : 'none' });
   }
 
+  /** Plan looks around one closet piece (your least worn, say). */
+  styleAround(itemId: string): void {
+    const item = this.closet.items.find((i) => i.id === itemId);
+    if (!item) return;
+    this.open();
+    this.include = itemId;
+    void this.styleMe();
+  }
+
   choose(c: { occasion?: Occasion; weather?: Weather; mood?: Mood }): void {
     if (c.occasion) this.occasion = c.occasion;
     if (c.weather) this.weather = c.weather;
@@ -193,7 +209,9 @@ export class StylistSystem extends createSystem({
       return;
     }
     const items = this.closet.items.map(describeItem);
-    const plan = planOffline(items, this.occasion, this.weather, this.mood, MAX_OPTIONS);
+    const include = this.include;
+    this.include = undefined;
+    const plan = planOffline(items, this.occasion, this.weather, this.mood, MAX_OPTIONS, Date.now(), include);
     if (plan.options.length === 0) {
       this.ui.title?.setProperties({ text: 'Your closet needs more' });
       this.ui.note?.setProperties({
@@ -212,6 +230,10 @@ export class StylistSystem extends createSystem({
     this.lastSource = 'offline';
     this.showOption();
     const proposal = this.proposal;
+    const around = include ? this.closet.items.find((i) => i.id === include) : undefined;
+    if (around) {
+      this.atelier.setHint(`Built around your ${around.name.toLowerCase()}. Keep it, or see the next idea.`);
+    }
 
     // ...then let the live AI improve it if it answers in time.
     let remote: StylistResult[] = [];
@@ -220,6 +242,8 @@ export class StylistSystem extends createSystem({
     } catch {
       /* keep the on-device plan */
     }
+    // Built around a piece: only answers that wear it.
+    if (include) remote = remote.filter((o) => o.itemIds.includes(include));
     this.busy = false;
     if (generation !== this.generation || this.proposal !== proposal) {
       // Superseded; honour a Style me tapped while this one was in flight.
@@ -441,11 +465,13 @@ export class StylistSystem extends createSystem({
     const extended = logToday(this.ootd, name);
     this.lookbook?.saveCurrent(name);
     const streak = currentStreak(this.ootd);
+    const worn = this.closet.recordWear(pieces);
+    const wears = worn > 0 ? ` ${worn === 1 ? 'One closet piece' : `${worn} closet pieces`} logged as worn.` : '';
     sfx.success();
     this.closet.backToBrowse(
-      extended
+      (extended
         ? `Logged "${name}" as today's outfit. ${streak === 1 ? 'Streak started!' : `${streak} days in a row!`}`
-        : `Updated today's outfit to "${name}".`,
+        : `Updated today's outfit to "${name}".`) + wears,
     );
     this.atelier.setHint(`Outfit of the Day saved. Come back tomorrow to keep the streak.`);
     this.renderStreak();
@@ -455,8 +481,8 @@ export class StylistSystem extends createSystem({
     const streak = currentStreak(this.ootd);
     const today = loggedToday(this.ootd);
     this.ui.count?.setProperties({ text: String(streak) });
-    this.ui.badge?.setProperties({ backgroundColor: today ? '#e2c27d' : '#34363c' });
-    this.ui.count?.setProperties({ color: today ? '#2b2118' : '#f1ede4' });
+    this.ui.badge?.setProperties({ backgroundColor: today ? INK : PAPER_LIGHT });
+    this.ui.count?.setProperties({ color: today ? CREAM_TEXT : INK });
     this.ui.streakTitle?.setProperties({
       text: today ? 'Today is logged' : streak > 0 ? 'Keep it going today' : 'Outfit of the Day',
     });

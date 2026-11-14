@@ -254,6 +254,10 @@
       <LocateFixed class="small-icon"></LocateFixed>
       <div>Move studio</div>
     </div>
+    <div id="mark-button" class="link">
+      <Ruler class="small-icon"></Ruler>
+      <div id="mark-label">Mark on me</div>
+    </div>
     <div id="tour-button" class="link">
       <Hand class="small-icon"></Hand>
       <div id="tour-label">Tour</div>
@@ -273,6 +277,7 @@
     <div class="toggle-row">
       <div id="acc-readAloud" class="toggle">Read aloud</div>
       <div id="acc-voice" class="toggle">Voice commands</div>
+      <div id="acc-seated" class="toggle">Seated</div>
     </div>
     <div class="label">Tailor without dragging</div>
     <div class="toggle-row">

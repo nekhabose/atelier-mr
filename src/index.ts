@@ -15,6 +15,8 @@ import { PerfSystem } from './perf-system.js';
 import { PlannerSystem } from './planner-system.js';
 import { WardrobeSystem } from './wardrobe-system.js';
 import { StartSystem } from './start-system.js';
+import { MarkSystem } from './mark-system.js';
+import { MorningSystem } from './morning-system.js';
 
 // Offline after one visit (production only; the dev server injects the emulator).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -34,8 +36,11 @@ World.create(
   world.registerSystem(MeSystem);
   world.registerSystem(StylistSystem);
   world.registerSystem(RoomPlacementSystem);
+  world.registerSystem(MarkSystem);
   world.registerSystem(OnboardingSystem);
   world.registerSystem(AccessSystem);
+  // Before the wardrobe: its start-page section sits above "Your real clothes".
+  world.registerSystem(MorningSystem);
   world.registerSystem(WardrobeSystem);
   world.registerSystem(PlannerSystem);
   world.registerSystem(StartSystem);
@@ -62,6 +67,8 @@ World.create(
   g.perf = world.getSystem(PerfSystem);
   g.wardrobe = world.getSystem(WardrobeSystem);
   g.planner = world.getSystem(PlannerSystem);
+  g.mark = world.getSystem(MarkSystem);
+  g.morning = world.getSystem(MorningSystem);
 
   // Installed on Quest (Trusted Web Activity): there is no 2D page to tap, so
   // the app-icon tap enters the studio. Browser tabs keep the Enter button.

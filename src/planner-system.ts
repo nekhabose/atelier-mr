@@ -14,7 +14,8 @@ import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { StylistSystem } from './stylist-system.js';
 import { describeItem } from './atelier/stylist-engine.js';
-import { planPacking, planWeek, WEEK, WeekPlan } from './atelier/planner.js';
+import { planPacking, planWeek, PlanDay, WEEK, WeekPlan } from './atelier/planner.js';
+import { MorningSystem } from './morning-system.js';
 import { localDate } from './atelier/ootd.js';
 import { sfx } from './atelier/sfx.js';
 
@@ -30,6 +31,8 @@ interface SavedWeek {
   /** Monday of the planned week (local date). */
   week: string;
   plan: WeekPlan;
+  /** The days it was planned for (a new calendar or forecast replans). */
+  basis?: string;
 }
 
 /** Monday of the week containing `date` (YYYY-MM-DD). */
@@ -88,11 +91,23 @@ export class PlannerSystem extends createSystem({}) {
       saved = null;
     }
     const ids = new Set(items.map((i) => i.id));
+    // Your calendar decides the occasion and the forecast the weather, day by day.
+    const morning = this.world.getSystem(MorningSystem);
+    const real = morning?.hasRealDay ? morning.weekDays(week) : null;
+    const days: PlanDay[] = WEEK.map((d, i) => ({
+      day: d.day,
+      occasion: real?.[i].occasion ?? d.occasion,
+      weather: real?.[i].weather,
+    }));
+    const basis = JSON.stringify(days);
     const stillValid =
-      !!saved && saved.week === week && saved.plan.days.every((d) => d.itemIds.every((id) => ids.has(id)));
-    this.plan = !replan && stillValid ? saved!.plan : planWeek(items, this.stylist.weather, this.stylist.mood);
+      !!saved &&
+      saved.week === week &&
+      (saved.basis ?? JSON.stringify(WEEK)) === basis &&
+      saved.plan.days.every((d) => d.itemIds.every((id) => ids.has(id)));
+    this.plan = !replan && stillValid ? saved!.plan : planWeek(items, this.stylist.weather, this.stylist.mood, days);
     try {
-      localStorage.setItem(KEY, JSON.stringify({ week, plan: this.plan } satisfies SavedWeek));
+      localStorage.setItem(KEY, JSON.stringify({ week, plan: this.plan, basis } satisfies SavedWeek));
     } catch {
       /* fine for this visit */
     }
@@ -104,11 +119,19 @@ export class PlannerSystem extends createSystem({}) {
       return;
     }
     this.ui['closet-title']?.setProperties({ text: 'Your week, planned' });
+    const special = days
+      .map((d, i) => (d.occasion !== WEEK[i].occasion ? `${d.day} ${d.occasion === 'date' ? 'date' : d.occasion}` : ''))
+      .filter(Boolean);
+    const forecast = days.some((d) => d.weather);
     this.ui['closet-note']?.setProperties({
-      text: `${this.plan.outfits} different outfits from ${this.plan.pieces} pieces, for ${this.stylist.weather} weather.`,
+      text: `${this.plan.outfits} different outfits from ${this.plan.pieces} pieces, ${
+        forecast ? 'each for its day\'s forecast' : `for ${this.stylist.weather} weather`
+      }.`,
     });
     this.ui['week-summary']?.setProperties({
-      text: 'Mon to Thu for work, a Friday date, a relaxed weekend. Today is outlined.',
+      text: special.length
+        ? `From your calendar: ${special.slice(0, 3).join(', ')}. Today is outlined.`
+        : 'Mon to Thu for work, a Friday date, a relaxed weekend. Today is outlined.',
     });
     this.ui['pack-list']?.setProperties({ display: 'none' });
     this.selected = -1;

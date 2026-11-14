@@ -28,14 +28,14 @@ import { WardrobeSystem } from './wardrobe-system.js';
 const ON = CHIP.on;
 const OFF = CHIP.off;
 const OFF_HC = { bg: '#000000', border: '#ffffff', text: '#ffffff' };
-const KEYS: AccessKey[] = ['largeText', 'highContrast', 'calmMotion', 'readAloud', 'voice'];
+const KEYS: AccessKey[] = ['largeText', 'highContrast', 'calmMotion', 'readAloud', 'voice', 'seated'];
 const SHARE_KEY = 'atelier.share.v1';
 
 /** Text that turns pure white (or bright gold) in high contrast. */
 const HC_TEXT: Record<string, string[]> = {
   'atelier-panel': ['look-name', 'look-note', 'access-status'],
   'closet-panel': [
-    'closet-title', 'closet-note', 'streak-title', 'streak-sub', 'lookbook-empty',
+    'closet-title', 'closet-note', 'streak-title', 'streak-sub', 'lookbook-empty', 'morning-text', 'wear-text',
     'stylist-tip', 'stylist-meta', 'verdict-stat', 'verdict-sub', 'verdict-reason',
   ],
 };

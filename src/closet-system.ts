@@ -47,12 +47,16 @@ import {
 } from './atelier/fabrics.js';
 import { buildPieceGroup, GarmentPiece, MINI_DETAIL, PieceKind } from './atelier/garments.js';
 import { makeLabel } from './atelier/labels.js';
+import { itemsOnForm, leastWorn, PRICES, recordWear, wearLine } from './atelier/wear.js';
+import { localDate } from './atelier/ootd.js';
 import { createHanger, RACK } from './scene-assets/atelier.scene-asset.js';
 
 const MINI_SCALE = 0.19;
 
 interface Design {
   draft: GarmentPiece;
+  /** What the piece cost (for cost per wear). */
+  price?: number;
   editingId?: string;
   stash: GarmentPiece[];
   stashName: string;
@@ -253,6 +257,7 @@ export class ClosetSystem extends createSystem({
       e.addComponent(ClosetSlot, { slot: -1 });
       e.addComponent(RayInteractable);
     }
+    this.atelier.refreshOcclusion();
   }
 
   // ------------------------------------------------------------------ wearing
@@ -286,6 +291,7 @@ export class ClosetSystem extends createSystem({
     this.atelier.draftOpen = true;
     this.design = {
       draft,
+      price: item?.price,
       editingId: item?.id,
       stash: this.atelier.currentPieces.map((p) => ({ ...p })),
       stashName: this.atelier.outfitTitle,
@@ -335,8 +341,9 @@ export class ClosetSystem extends createSystem({
     if (item) {
       item.piece = { ...d.draft };
       item.name = name;
+      if (d.price) item.price = d.price;
     } else {
-      item = newClosetItem(d.draft);
+      item = newClosetItem(d.draft, d.price);
       this.items.push(item);
     }
     saveCloset(this.items);
@@ -444,6 +451,17 @@ export class ClosetSystem extends createSystem({
       this.chips[`mat-${m.key}`] = el(`mat-${m.key}`);
       on(`mat-${m.key}`, () => this.setFabric(m.key, undefined));
     }
+    for (const p of PRICES) {
+      this.chips[`price-${p}`] = el(`price-${p}`);
+      on(`price-${p}`, () => {
+        if (!this.design) return;
+        this.design.price = p;
+        this.paintChips();
+      });
+    }
+    this.ui.morning = el('morning-section');
+    this.ui.wear = el('wear-row');
+    this.ui.wearText = el('wear-text');
   }
 
   private setNote(text: string): void {
@@ -459,11 +477,42 @@ export class ClosetSystem extends createSystem({
     });
     this.setNote(
       note ??
-        (this.closetMode
-          ? 'Tap a piece on the rail to wear it. Mix tops, bottoms and jackets.'
-          : 'Recreate clothes you own. Tap MY CLOSET above the rail to see them.'),
+        (selected
+          ? wearLine(selected, localDate())
+          : this.closetMode
+            ? 'Tap a piece on the rail to wear it. Mix tops, bottoms and jackets.'
+            : 'Recreate clothes you own. Tap My closet above the rail to see them.'),
     );
     this.panelSections('browse');
+    this.paintWearRow();
+  }
+
+  /** The piece worn least recently, for "Style it". */
+  leastWornItem(): ClosetItem | undefined {
+    return leastWorn(this.items, localDate()) as ClosetItem | undefined;
+  }
+
+  private paintWearRow(): void {
+    const item = this.leastWornItem();
+    this.ui.wear?.setProperties({ display: item ? 'flex' : 'none' });
+    if (!item) return;
+    this.ui.wearText?.setProperties({ text: `Least worn: ${item.name}. ${wearLine(item, localDate())}` });
+  }
+
+  /**
+   * Log a wear for every closet piece on the form (Wear today). Returns how
+   * many pieces were logged.
+   */
+  recordWear(pieces: GarmentPiece[]): number {
+    const today = localDate();
+    let n = 0;
+    for (const id of itemsOnForm(this.items, pieces)) {
+      const item = this.items.find((i) => i.id === id);
+      if (item && recordWear(item, today)) n++;
+    }
+    if (n > 0) saveCloset(this.items);
+    this.paintWearRow();
+    return n;
   }
 
   /** Show exactly one of the panel's three states. */
@@ -473,6 +522,8 @@ export class ClosetSystem extends createSystem({
     show(this.ui.browse2, state === 'browse');
     show(this.ui.streak, state === 'browse');
     show(this.ui.lookbook, state === 'browse');
+    show(this.ui.morning, state === 'browse');
+    show(this.ui.wear, state === 'browse');
     show(this.ui.boutique, state === 'boutique');
     show(this.ui.boutiqueActions, state === 'boutique');
     show(this.ui.proposalActions, false);
@@ -523,9 +574,9 @@ export class ClosetSystem extends createSystem({
   }
 
   /** Add a piece to the closet (from the boutique). Null when the rail is full. */
-  addItem(piece: GarmentPiece, name: string): ClosetItem | null {
+  addItem(piece: GarmentPiece, name: string, price?: number): ClosetItem | null {
     if (this.items.length >= CLOSET_CAPACITY) return null;
-    const item = newClosetItem({ ...piece });
+    const item = newClosetItem({ ...piece }, price);
     item.name = name;
     this.items.push(item);
     saveCloset(this.items);
@@ -545,7 +596,7 @@ export class ClosetSystem extends createSystem({
     if (!d) return;
     this.ui.eyebrow?.setProperties({ text: d.editingId ? 'My closet, editing' : 'My closet, new piece' });
     this.ui.title?.setProperties({ text: pieceName(d.draft) });
-    this.setNote('Garment, colour, fabric - then pull the pins to match yours.');
+    this.setNote('Garment, colour, fabric and what it cost - then pull the pins to match yours.');
     this.panelSections('design');
     this.paintChips();
   }
@@ -560,6 +611,7 @@ export class ClosetSystem extends createSystem({
     for (const m of CLOSET_MATERIALS) {
       this.chip(`mat-${m.key}`, fabric?.material === m.key);
     }
+    for (const p of PRICES) this.chip(`price-${p}`, d.price === p);
     for (const c of CLOSET_COLORS) {
       const el = this.chips[`col-${c.key}`];
       const on = fabric?.color === c.key;

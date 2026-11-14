@@ -147,12 +147,17 @@ server key configured it shows "LIVE AI".
 | Works today (verified in the IWSDK emulator and production URL) | Future |
 |---|---|
 | Room-aware placement on floor/wall planes, manual re-place, persistent anchor restore (emulator-verified) | Multi-anchor layouts (panels on separate surfaces) |
+| Keeps clear of furniture: detected tables, sofas, lamps and plants (planes and meshes) are kept out of the studio's footprint; it slides and says why (emulator living room: "Moved the studio 30 cm right and 30 cm toward you to clear your table and couch") | Placement around room corners and doorways |
+| Mark it on yourself: pinch at your knee, wrist or collarbone to set hem, sleeve or neckline, scaled to your height (emulated hand pinches) | Calibrating to a full body-tracking skeleton |
+| Seated layout around your chair, everything within reach (Access > Seated) | Automatic seated detection |
 | 8 looks, live tailoring of 4 regions (ray or direct pinch), undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
-| Depth occlusion of form, garments and pins (Quest 3 depth API; emulator-verified that depth is granted and occlusion is live) | Occlusion quality tuning on device |
+| Depth occlusion of form, garments, pins, the rail and the fabric board (Quest 3 depth API; emulator-verified that depth is granted and occlusion is live) | Occlusion quality tuning on device |
 | Installable app (manifest, icons, offline service worker), shadows on demand, `?perf` meter, unit tests in CI | Horizon Store packaging (bubblewrap APK) |
 | 12 fabrics applied per garment | Photo-to-garment closet entry |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
-| Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints, calendar and weather context |
+| Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints |
+| Your mornings: local forecast (Open-Meteo, location rounded to about 10 km), calendar import (.ics, read on the device, only day and kind of event kept), Dress me for today, Lay out tomorrow, week plan by each day's forecast and calendar | Live calendar sync (Google, Outlook) with consent |
+| Wear what you own: wear log per piece from Wear today, cost per wear, least worn piece with Style it | Wardrobe insights over months |
 | Photo to closet (Claude vision; colour-only fallback on device), tailoring in plain words (on-device parser, live AI for the rest), week planner and packing list | Photo capture from the headset's passthrough camera |
 | Lookbook (6) and Outfit of the Day streak; share a look by link or QR code | Shared lookbooks, friends' rails |
 | Access panel: large text, high contrast, calm motion, read aloud, voice commands, tap-to-tailor | On-device check of speech features on Quest Browser |

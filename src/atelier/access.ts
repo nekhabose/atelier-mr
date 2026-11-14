@@ -7,6 +7,8 @@
  *  - readAloud: panel changes are spoken (Web Speech API, where available).
  *  - voice: spoken commands ("style me", "undo", "shorter"...), where the
  *    browser supports speech recognition.
+ *  - seated: in the headset, the studio is laid out around your chair, with
+ *    the form, rail, board and panels in easy reach.
  *
  * Defaults follow the operating system's "reduce motion" and "more contrast"
  * preferences. Stored on this device only.
@@ -17,6 +19,7 @@ export interface AccessSettings {
   calmMotion: boolean;
   readAloud: boolean;
   voice: boolean;
+  seated: boolean;
 }
 
 export type AccessKey = keyof AccessSettings;
@@ -27,6 +30,7 @@ export const ACCESS_LABELS: Record<AccessKey, string> = {
   calmMotion: 'Calm motion',
   readAloud: 'Read aloud',
   voice: 'Voice commands',
+  seated: 'Seated',
 };
 
 const KEY = 'atelier.access.v1';
@@ -46,6 +50,7 @@ function load(): AccessSettings {
     calmMotion: prefers('(prefers-reduced-motion: reduce)'),
     readAloud: false,
     voice: false,
+    seated: false,
   };
   try {
     const raw = localStorage.getItem(KEY);

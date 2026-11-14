@@ -7,6 +7,11 @@
  *  - if a wall is in front of you, the rack, form and fabric board back up
  *    against it, the way a real fitting corner would be laid out;
  *  - with no usable wall, the studio is placed in front of where you look.
+ *  - real furniture (tables, sofas, beds: detected planes and meshes) is kept
+ *    clear: the studio slides sideways along the wall, or a little toward
+ *    you, until the form, rack and board stand free;
+ *  - seated (Access > Seated): the studio is laid out around your chair, in
+ *    front of you rather than against a wall, with everything in easy reach.
  * "Move studio" on the panel re-runs the placement for wherever you face now.
  * Leaving XR restores the authored layout for the desktop view.
  *
@@ -33,8 +38,11 @@ import {
   SceneUnderstandingSystem,
   VisibilityState,
   XRAnchor,
+  XRMesh,
   XRPlane,
 } from '@iwsdk/core';
+import { Circle, Clearance, clearanceText, findClearance, Obstacle } from './atelier/clearance.js';
+import { RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
 import { AtelierSystem } from './atelier-system.js';
 import { sfx } from './atelier/sfx.js';
 import { access } from './atelier/access.js';
@@ -100,6 +108,23 @@ const COMPACT: Record<string, { pos: [number, number, number]; rotDeg: [number, 
 };
 
 /**
+ * Seated: the studio around your chair. The form stands just past your knees,
+ * the rail and board turn in at your sides at a height you can reach sitting,
+ * and the panels sit low, tilted up toward you.
+ */
+const SEATED: Record<string, { pos: [number, number, number]; rotDeg: [number, number, number]; scale: number }> = {
+  'dress-form': { pos: [0, 0, -0.95], rotDeg: [0, 0, 0], scale: 1 },
+  'shadow-catcher': { pos: [0, 0.001, -0.85], rotDeg: [0, 0, 0], scale: 1 },
+  'clothing-rack': { pos: [-0.9, 0, -0.65], rotDeg: [0, 55, 0], scale: 0.72 },
+  'swatch-board': { pos: [0.9, 0, -0.65], rotDeg: [0, -55, 0], scale: 0.75 },
+  'atelier-panel': { pos: [0.42, 0.95, -0.5], rotDeg: [-30, -38, 0], scale: 0.07 },
+  'closet-panel': { pos: [-0.42, 0.95, -0.5], rotDeg: [-30, 38, 0], scale: 0.07 },
+};
+
+/** Furniture labels worth keeping clear of (not the room's own surfaces). */
+const NOT_FURNITURE = new Set(['floor', 'ceiling', 'wall', 'door', 'window', 'wall art', 'wall_art', 'global mesh', 'global_mesh', 'invisible wall face']);
+
+/**
  * The opening reveal: each studio piece settles into place in turn, then the
  * title appears. Delays are seconds from the moment the studio is placed.
  */
@@ -136,7 +161,12 @@ export type PlacementResult = 'wall' | 'front' | 'restored' | 'authored';
 
 export class RoomPlacementSystem extends createSystem({
   planes: { required: [XRPlane] },
+  meshes: { required: [XRMesh] },
 }) {
+  /** What the last placement had to avoid (for the panel and scripted checks). */
+  lastClearance: Clearance | null = null;
+  /** Furniture seen at the last placement (for scripted checks). */
+  lastObstacles: Obstacle[] = [];
   private nodes: StudioNode[] = [];
   private yaw = 0;
   private inXR = false;
@@ -283,8 +313,20 @@ export class RoomPlacementSystem extends createSystem({
     }
 
     this.cleanupFuncs.push(
-      access.subscribe((_s, changed) => {
+      access.subscribe((s, changed) => {
         if (changed === null || changed === 'largeText') this.relayout();
+        if (changed === 'seated' && this.inXR && this.layoutDecided) {
+          this.applyFrame(0, 0, 0, 0);
+          this.useLayout(this.compact);
+          this.place(false);
+          this.world
+            .getSystem(AtelierSystem)
+            ?.setHint(
+              s.seated
+                ? 'Seated: the studio is around your chair now, all within reach.'
+                : 'Standing layout. Face a wall and tap Move studio to back the studio up there.',
+            );
+        }
       }),
       this.world.visibilityState.subscribe((state) => {
         const inXR = state !== VisibilityState.NonImmersive;
@@ -360,7 +402,8 @@ export class RoomPlacementSystem extends createSystem({
     }
 
     let result: PlacementResult;
-    if (bestT < Infinity) {
+    const seated = access.settings.seated;
+    if (bestT < Infinity && !seated) {
       // Studio frame: -Z points into the wall, origin STUDIO_DEPTH out from it.
       const yaw = Math.atan2(this.bestN.x, this.bestN.z);
       this.origin.copy(this.bestN).multiplyScalar(STUDIO_DEPTH + (this.compact ? 0.35 : 0)).add(this.bestHit);
@@ -373,6 +416,7 @@ export class RoomPlacementSystem extends createSystem({
       result = 'front';
       this.wallDistance = 0;
     }
+    const cleared = this.clearFurniture(floorY);
     this.placed = true;
     this.lastPlacement = result;
     this.ringT = 0;
@@ -383,14 +427,117 @@ export class RoomPlacementSystem extends createSystem({
     this.startReveal();
 
     const atelier = this.world.getSystem(AtelierSystem);
-    if (atelier && (announce || result === 'wall')) {
+    if (atelier && cleared) {
+      atelier.setHint(cleared);
+    } else if (atelier && (announce || result === 'wall')) {
       atelier.setHint(
-        result === 'wall'
-          ? 'Studio set against your wall. Face another spot and tap Move studio to try it there.'
-          : 'Studio placed in front of you. Face a wall and tap Move studio to back it up there.',
+        seated
+          ? 'Studio set around your chair. Turn and tap Move studio to face it another way.'
+          : result === 'wall'
+            ? 'Studio set against your wall. Face another spot and tap Move studio to try it there.'
+            : 'Studio placed in front of you. Face a wall and tap Move studio to back it up there.',
       );
     }
     return result;
+  }
+
+  /** The studio's floor footprint in its own frame: form, rail and board. */
+  private footprint(): Circle[] {
+    const out: Circle[] = [];
+    for (const node of this.nodes) {
+      const scale = node.baseScale.x;
+      // The node's turn within the studio frame.
+      this.n.set(1, 0, 0).applyQuaternion(node.obj.quaternion);
+      const yaw = Math.atan2(-this.n.z, this.n.x) - this.yaw;
+      const c = Math.cos(yaw);
+      const sn = Math.sin(yaw);
+      const along = (x: number, r: number) =>
+        out.push({ x: node.basePos.x + x * c, z: node.basePos.z - x * sn, r });
+      if (node.id === 'dress-form') along(0, 0.36);
+      else if (node.id === 'clothing-rack') {
+        const half = (RACK.width / 2 - 0.25) * scale;
+        for (const x of [-half, 0, half]) along(x, 0.28 * scale);
+      } else if (node.id === 'swatch-board') {
+        const half = (SWATCH_BOARD.width / 2 - 0.2) * scale;
+        for (const x of [-half, half]) along(x, 0.24 * scale);
+      }
+    }
+    return out;
+  }
+
+  /** Tables, sofas, beds and the like, as rectangles on the floor. */
+  private furniture(floorY: number): Obstacle[] {
+    const out: Obstacle[] = [];
+    const add = (obj: Object3D, label: string, minX: number, maxX: number, minZ: number, maxZ: number, cy: number) => {
+      this.local.set((minX + maxX) / 2, cy, (minZ + maxZ) / 2);
+      obj.localToWorld(this.local);
+      obj.getWorldQuaternion(this.q);
+      this.n.set(1, 0, 0).applyQuaternion(this.q);
+      out.push({
+        x: this.local.x,
+        z: this.local.z,
+        hx: (maxX - minX) / 2,
+        hz: (maxZ - minZ) / 2,
+        yaw: Math.atan2(-this.n.z, this.n.x),
+        label: label.replace(/_/g, ' ') || 'furniture',
+      });
+    };
+    for (const entity of this.queries.planes.entities) {
+      const plane = entity.getValue(XRPlane, '_plane') as DetectedPlane | undefined;
+      const obj = entity.object3D;
+      const label = (plane?.semanticLabel ?? '').toLowerCase();
+      if (!plane || !obj || plane.orientation !== 'horizontal' || NOT_FURNITURE.has(label)) continue;
+      obj.getWorldPosition(this.o);
+      const h = this.o.y - floorY;
+      // A surface you could bump into: seat, table or bed height.
+      if (h < 0.15 || h > 1.5 || !plane.polygon || plane.polygon.length < 3) continue;
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minZ = Infinity;
+      let maxZ = -Infinity;
+      for (let i = 0; i < plane.polygon.length; i++) {
+        const p = plane.polygon[i];
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minZ = Math.min(minZ, p.z);
+        maxZ = Math.max(maxZ, p.z);
+      }
+      add(obj, label || 'table', minX, maxX, minZ, maxZ, 0);
+    }
+    for (const entity of this.queries.meshes.entities) {
+      const obj = entity.object3D;
+      const label = String(entity.getValue(XRMesh, 'semanticLabel') ?? '').toLowerCase();
+      if (!obj || entity.getValue(XRMesh, 'isBounded3D') !== true || NOT_FURNITURE.has(label)) continue;
+      const min = entity.getVectorView(XRMesh, 'min');
+      const max = entity.getVectorView(XRMesh, 'max');
+      this.local.set(0, max[1], 0);
+      obj.localToWorld(this.local);
+      if (this.local.y - floorY < 0.15) continue; // rugs and the like
+      add(obj, label || 'furniture', min[0], max[0], min[2], max[2], (min[1] + max[1]) / 2);
+    }
+    return out;
+  }
+
+  /**
+   * Slide the studio clear of furniture. Returns what to tell the user, or
+   * null when the spot was already clear.
+   */
+  private clearFurniture(floorY: number): string | null {
+    const obstacles = this.furniture(floorY);
+    this.lastObstacles = obstacles;
+    if (obstacles.length === 0) {
+      this.lastClearance = null;
+      return null;
+    }
+    const { x, y, z, yaw } = this.frame;
+    const c = findClearance(this.footprint(), { x, z, yaw }, obstacles);
+    this.lastClearance = c;
+    if (c.dx !== 0 || c.dz !== 0) {
+      const cos = Math.cos(yaw);
+      const sin = Math.sin(yaw);
+      this.applyFrame(x + c.dx * cos + c.dz * sin, y, z - c.dx * sin + c.dz * cos, yaw);
+    }
+    return clearanceText(c);
   }
 
   /** Is the hit point (this.hit) within the plane polygon's bounds? */
@@ -532,8 +679,9 @@ export class RoomPlacementSystem extends createSystem({
   /** Switch the studio's base layout (call while the frame yaw is 0). */
   private useLayout(compact: boolean): void {
     this.compact = compact;
+    const layout = this.inXR && access.settings.seated ? SEATED : compact ? COMPACT : undefined;
     for (const node of this.nodes) {
-      const c = compact ? COMPACT[node.id] : undefined;
+      const c = layout?.[node.id];
       if (c) {
         node.basePos.set(c.pos[0], c.pos[1], c.pos[2]);
         this.euler.set((c.rotDeg[0] * Math.PI) / 180, (c.rotDeg[1] * Math.PI) / 180, (c.rotDeg[2] * Math.PI) / 180);
@@ -640,9 +788,9 @@ export class RoomPlacementSystem extends createSystem({
         const session = this.world.renderer.xr.getSession();
         const gaze = !!session?.enabledFeatures?.includes('gaze-tracking');
         this.narrowReason = fov !== null && fov < NARROW_FOV_DEG ? 'fov' : gaze ? 'gaze' : 'none';
-        if (this.narrowReason !== 'none') {
+        if (this.narrowReason !== 'none' || access.settings.seated) {
           this.applyFrame(0, 0, 0, 0);
-          this.useLayout(true);
+          this.useLayout(this.narrowReason !== 'none');
           for (const node of this.nodes) node.obj.visible = false;
         }
       }
@@ -651,7 +799,8 @@ export class RoomPlacementSystem extends createSystem({
       this.waitT += delta;
       if (!this.layoutDecided) return;
       const saved = this.saved;
-      const sameAnchor = live && !!saved && readStorage(IWSDK_ANCHOR_KEY) === saved.uuid;
+      const sameAnchor =
+        live && !!saved && !access.settings.seated && readStorage(IWSDK_ANCHOR_KEY) === saved.uuid;
       if (sameAnchor && saved) {
         this.restoreFromAnchor(saved);
       } else {

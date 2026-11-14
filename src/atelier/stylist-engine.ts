@@ -227,8 +227,10 @@ export function planOffline(
   mood: Mood,
   count = 3,
   seed = Date.now(),
+  /** Only outfits with this closet piece in them (build a look around it). */
+  include?: string,
 ): StylistPlan {
-  const all = candidates(items);
+  const all = candidates(items).filter((o) => !include || o.some((i) => i.id === include));
   const scored = all
     .map((o, i) => ({ o, s: score(o, occasion, weather, mood) + (((seed >> (i % 16)) & 7) / 7) * 0.25 }))
     .sort((a, b) => b.s - a.s);

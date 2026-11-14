@@ -225,6 +225,7 @@ export class BoutiqueSystem extends createSystem({
       this.hangers.push({ group, targetX, delay: i * 0.08 });
     });
     if (animate) this.slideT = 0;
+    this.atelier.refreshOcclusion();
   }
 
   private owns(bp: BoutiquePiece): boolean {
@@ -390,7 +391,7 @@ export class BoutiqueSystem extends createSystem({
       this.atelier.setHint(`The ${bp.name} is already in your closet.`);
       return;
     }
-    const item = this.closet.addItem(bp.piece, bp.name);
+    const item = this.closet.addItem(bp.piece, bp.name, bp.price);
     if (!item) {
       this.ui['verdict-reason']?.setProperties({
         text: 'Your closet rail is full. Remove a piece in My closet to make room.',

@@ -12,7 +12,14 @@ export interface DayPlan {
   itemIds: string[];
 }
 
-export const WEEK: { day: string; occasion: Occasion }[] = [
+/** A day to plan: its occasion, and its own weather when the forecast is known. */
+export interface PlanDay {
+  day: string;
+  occasion: Occasion;
+  weather?: Weather;
+}
+
+export const WEEK: PlanDay[] = [
   { day: 'Mon', occasion: 'work' },
   { day: 'Tue', occasion: 'work' },
   { day: 'Wed', occasion: 'work' },
@@ -41,7 +48,7 @@ export function planWeek(
   items: StylistItem[],
   weather: Weather,
   mood: Mood,
-  days: { day: string; occasion: Occasion }[] = WEEK,
+  days: PlanDay[] = WEEK,
 ): WeekPlan {
   const all = candidates(items);
   const uses = new Map<string, number>();
@@ -51,7 +58,7 @@ export function planWeek(
     let best: StylistItem[] | undefined;
     let bestScore = -Infinity;
     for (const o of all) {
-      let s = score(o, d.occasion, weather, mood);
+      let s = score(o, d.occasion, d.weather ?? weather, mood);
       for (const i of o) s -= 0.6 * (uses.get(i.id) ?? 0);
       if (worn.has(key(o.map((i) => i.id)))) s -= 2;
       if (s > bestScore) {

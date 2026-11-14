@@ -188,7 +188,11 @@ export class MeSystem extends createSystem({}) {
       m.raycast = () => {};
       head.add(m);
     }
-    this.hairBack = new Mesh(undefined, this.hairMat);
+    // A tiny stand-in until a hair length is chosen: an empty geometry has no
+    // positions, and the input system cannot index it for ray hits.
+    this.hairBack = new Mesh(new SphereGeometry(0.001, 3, 2), this.hairMat);
+    this.hairBack.visible = false;
+    this.hairBack.raycast = () => {};
     this.hairBack.name = 'you-hair-length';
     this.hairBack.position.z = 0.006;
     // Shoes: a simple leather pair over the form's feet.

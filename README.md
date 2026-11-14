@@ -24,10 +24,31 @@ journey with captions.
 - **Purposeful passthrough:** on entry the studio is placed on your real floor,
   snapped against a detected wall when one is in a comfortable range, or set in
   front of you when no planes are reported. **Move studio** re-places it.
+- **Keeps clear of your furniture:** tables, sofas, beds and lamps reported by
+  plane and mesh detection are kept out of the studio's footprint. If the form,
+  rail or board would stand in one, the studio slides along the wall (or a
+  little toward you) and says why ("Moved the studio 30 cm right to clear your
+  table").
 - **Remembers your room:** the studio is saved against a persistent world
   anchor, so next time it returns to the same spot in your room (falls back to
   plane placement when the anchor cannot be restored).
 - **Tap to wear:** eight original designer looks hang on the rail.
+- **Mark it on yourself:** tap **Mark on me**, then pinch your own clothes
+  where you want the garment to end: at your knee for a hem, at your wrist for a
+  sleeve, below your collarbone for a neckline. The pinch is scaled from your
+  height to the form's and the tape measure shows the result. A pinch held out
+  in front to point at a panel is not taken as a mark.
+- **Your mornings:** on the start page, **Use my local weather** fetches the
+  week's forecast from Open-Meteo (only your location rounded to about 10 km
+  is sent), and **Import a calendar (.ics)** reads your calendar on the device,
+  keeping only the day and kind of event (interview, party, trip, work). On the
+  closet panel, **This morning** shows today's weather and plans, with **Dress
+  me for today** (the stylist, set to today) and **Lay out tomorrow** (picked
+  tonight, waiting on the form in the morning). **Plan week** plans each day for
+  its own forecast and calendar.
+- **Wear what you own:** **Wear today** logs a wear for each closet piece on
+  the form. Pieces keep what they cost, so the closet shows cost per wear and
+  your least worn piece, with **Style it** to build a look around it.
 - **Live tailoring:** garments are generated from measurements, so dragging a
   pin rebuilds the cloth every frame. **Undo / Redo / Reset look** cover every
   tailoring, fabric and outfit change.
@@ -117,8 +138,12 @@ journey with captions.
   60); `?perf` shows frame rate, draw calls, triangles and shadow redraws on the
   page and above the studio panel. Fixed foveation is at the maximum (1.0).
 - **Depth occlusion (Quest 3):** real hands and furniture hide the form,
-  garments and pins behind them. Depth sensing is optional, so other devices
+  garments, pins, the rail and the fabric board behind them, so a hand reaching
+  into the rail shows in front. Depth sensing is optional, so other devices
   skip it.
+- **Seated:** **Access > Seated** lays the studio out around your chair: the
+  form just past your knees, the rail and board turned in at your sides at a
+  height you can reach sitting, the panels low and tilted up.
 - **Pins by ray or by fingers:** pull a pin with a ray from a seat, or pinch it
   directly (a near-grab handle on each pin), with a light controller tap on
   every tailoring step.
