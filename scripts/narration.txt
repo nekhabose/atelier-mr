@@ -1,14 +1,15 @@
-# start seconds | line   (the mixed-reality cut; read by voice-over.sh and mix-video.sh)
-0.7|This is Atelier. A fashion studio, in your own room.
-5.4|It stands on your real floor, and remembers where you left it.
-9.4|Tap a look on the rail. The form wears it, life size.
-13.9|Pinch a pin and pull. The hem is real geometry, recut as you move.
-18.7|Drop a swatch to change the fabric: satin, velvet, denim, wool.
-23.7|Or just say it: make it midi, with long sleeves.
-28.8|Ask the stylist. It plans from your own closet, and puts its idea on the form.
-34.2|Say warmer, or dressier, and it edits the outfit for you.
-39.1|Plan your whole week in one tap, or pack a trip in the fewest pieces.
-44.6|The boutique shows what each piece adds to your closet, with an honest verdict.
-51.1|Large text, high contrast, calm motion, voice, and tailoring by tap.
-56.7|Share a look with a link. Come back tomorrow; your studio is waiting.
-61.2|Atelier. Open it in your Quest browser.
+# start seconds | line   (the story cut; read by split-voice.py and mix-video.sh)
+0.6|Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear.
+8.4|So I put on my headset, and my own room becomes a fitting studio.
+14.9|Atelier checks today's forecast and my calendar, and dresses the form from my own closet.
+22.4|It's an interview, so I want it sharper. I say dressier, and the outfit changes.
+28.9|For tonight, I take a dress from the rail.
+32.9|It's too long for me, so I pinch my own leg at the knee, and the hem moves there.
+39.9|Or I pull a pin, and the tape measure reads the length as I go.
+45.4|A different fabric? I drop a swatch on it: satin, then silk.
+51.4|Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.
+57.4|It shows me what I never wear, what it costs per wear, and builds a look around it.
+64.4|Before I buy something new, it counts the outfits it would add, and gives me an honest verdict.
+72.4|And when I sit down, the whole studio comes within reach.
+78.9|Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.
+85.4|Atelier. Get dressed for your real day. Open it in your Quest browser today.

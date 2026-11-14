@@ -2,7 +2,7 @@
 // at each beat, so a broken step shows up without watching the tour.
 //
 // Usage (dev server with --allow-browser-automation, NOT in an XR session):
-//   npx @iwsdk/cli browser run scripts/check-showcase.mjs --timeout 100000
+//   npx @iwsdk/cli browser run scripts/check-showcase.mjs --timeout 130000
 export default async function run({ frame, page }) {
   const target = frame ?? page;
   return await target.evaluate(async () => {
@@ -26,9 +26,9 @@ export default async function run({ frame, page }) {
         caption: document.querySelector('.atelier-sc [data-title]')?.textContent,
       });
     for (const [at, label] of [
-      [3, 'opening'], [8, 'wore a look'], [12.6, 'hem pulled'], [17.5, 'fabrics'], [22.5, 'told the tailor'],
-      [28, 'stylist'], [33.5, 'refined'], [38.8, 'week planned'], [45, 'boutique try-on'], [50, 'access panel'],
-      [58, 'end card'],
+      [5, 'opening'], [21, 'dressed for today'], [27.5, 'refined'], [31.5, 'dress from the rail'],
+      [38, 'marked on yourself'], [44, 'pin pulled'], [50, 'fabrics'], [56, 'laid out tomorrow'],
+      [63, 'styled around least worn'], [70, 'boutique try-on'], [83, 'access panel'], [93, 'end card'],
     ]) {
       while (s.t < at && s.playing) await wait(100);
       sample(label);

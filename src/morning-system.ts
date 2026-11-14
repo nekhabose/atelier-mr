@@ -22,6 +22,7 @@ import { sideSection } from './atelier/side-panel.js';
 import { localDate } from './atelier/ootd.js';
 import { sfx } from './atelier/sfx.js';
 import { describeItem, planOffline } from './atelier/stylist-engine.js';
+import { itemsOnForm } from './atelier/wear.js';
 import type { Occasion, Weather } from './atelier/stylist-contract.js';
 import { calendarDays, CalendarDay, loadCalendar, saveCalendar, SavedCalendar } from './atelier/calendar.js';
 import { DayForecast, describeDay, fetchForecast, Forecast, loadForecast, roughPosition, saveForecast } from './atelier/weather.js';
@@ -87,6 +88,8 @@ export class MorningSystem extends createSystem({}) {
   calendar: SavedCalendar | null = null;
   /** The last laid-out outfit (for scripted checks). */
   layout: Layout | null = null;
+  /** The guided tour's sample day is showing (nothing is saved meanwhile). */
+  private sample = false;
   private atelier!: AtelierSystem;
   private closet!: ClosetSystem;
   private stylist!: StylistSystem;
@@ -149,6 +152,41 @@ export class MorningSystem extends createSystem({}) {
     return out;
   }
 
+  /**
+   * The guided tour: a sample rainy day with an interview, and a party
+   * tomorrow. Kept in memory only; endSample() puts your own day back.
+   */
+  useSample(): void {
+    const today = localDate();
+    const tomorrow = addDays(today, 1);
+    this.sample = true;
+    this.forecast = {
+      fetched: today,
+      days: [
+        { date: today, code: 61, max: 9, min: 4, rain: 80, weather: 'rainy' },
+        { date: tomorrow, code: 1, max: 14, min: 7, rain: 5, weather: 'mild' },
+      ],
+    };
+    this.calendar = {
+      imported: today,
+      days: [
+        { date: today, occasion: 'interview', cue: 'interview' },
+        { date: tomorrow, occasion: 'party', cue: 'party' },
+      ],
+    };
+    this.layout = null;
+    this.paint();
+  }
+
+  endSample(): void {
+    if (!this.sample) return;
+    this.sample = false;
+    this.forecast = loadForecast();
+    this.calendar = loadCalendar();
+    this.layout = read<Layout>(LAYOUT_KEY);
+    this.paint();
+  }
+
   /** True once a calendar or a forecast is on the device. */
   get hasRealDay(): boolean {
     return !!this.calendar || !!this.forecast;
@@ -208,7 +246,10 @@ export class MorningSystem extends createSystem({}) {
     const day = this.dayFor(date);
     const items = this.closet.items.map(describeItem);
     const weather = day.forecast?.weather ?? this.stylist.weather;
-    const best = planOffline(items, day.occasion, weather, this.stylist.mood, 1).options[0];
+    // Something other than what is on the form today, where the closet allows.
+    const today = new Set(itemsOnForm(this.closet.items, this.atelier.currentPieces));
+    const options = planOffline(items, day.occasion, weather, this.stylist.mood, 3).options;
+    const best = options.find((o) => o.itemIds.some((id) => !today.has(id))) ?? options[0];
     if (!best) {
       this.closet.backToBrowse('Your closet needs a top and a bottom, or a dress, to lay out an outfit.');
       return;
@@ -216,7 +257,7 @@ export class MorningSystem extends createSystem({}) {
     const names = best.itemIds.map((id) => this.closet.items.find((i) => i.id === id)?.name ?? '').filter(Boolean);
     const title = names.join(', ');
     this.layout = { date, itemIds: best.itemIds, title };
-    write(LAYOUT_KEY, this.layout);
+    if (!this.sample) write(LAYOUT_KEY, this.layout);
     const label = dayLabel(date).split(' ')[0];
     const why = [OCCASION_WORDS[day.occasion], day.forecast ? describeDay(day.forecast) : ''].filter(Boolean).join(', ');
     this.closet.wearOutfit(best.itemIds, `Laid out for ${label}`, `For ${why}. It will be on the form when you open Atelier tomorrow.`);

@@ -32,7 +32,7 @@ export default async function run({ frame, page, cdp }) {
     await cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
   });
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 92, maxWidth: W, maxHeight: H, everyNthFrame: 1 });
-  await app.waitForFunction(() => globalThis.showcaseDone === true, null, { timeout: 95_000, polling: 250 });
+  await app.waitForFunction(() => globalThis.showcaseDone === true, null, { timeout: 104_000, polling: 250 });
   await page.waitForTimeout(600);
   await cdp.send('Page.stopScreencast');
   writeFileSync(join(OUT, 'frames.txt'), shots.join('\n'));

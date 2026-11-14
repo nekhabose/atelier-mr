@@ -166,6 +166,12 @@ describe('wear and cost per wear', () => {
     recordWear(list[1], '2026-11-14');
     expect(leastWorn(list, '2026-11-14')?.id).toBe('a');
   });
+
+  it('breaks ties in favour of a piece not on the form', () => {
+    const list = items().map((i) => ({ ...i, added: '2026-11-14' }));
+    expect(leastWorn(list, '2026-11-14')?.id).toBe('a');
+    expect(leastWorn(list, '2026-11-14', ['a'])?.id).toBe('b');
+  });
 });
 
 describe('furniture-aware placement', () => {

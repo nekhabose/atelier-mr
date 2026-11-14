@@ -163,6 +163,8 @@ export class RoomPlacementSystem extends createSystem({
   planes: { required: [XRPlane] },
   meshes: { required: [XRMesh] },
 }) {
+  /** While true, the studio waits to be placed (the guided tour's opening). */
+  hold = false;
   /** What the last placement had to avoid (for the panel and scripted checks). */
   lastClearance: Clearance | null = null;
   /** Furniture seen at the last placement (for scripted checks). */
@@ -797,7 +799,7 @@ export class RoomPlacementSystem extends createSystem({
     }
     if (this.inXR && !this.placed) {
       this.waitT += delta;
-      if (!this.layoutDecided) return;
+      if (!this.layoutDecided || this.hold) return;
       const saved = this.saved;
       const sameAnchor =
         live && !!saved && !access.settings.seated && readStorage(IWSDK_ANCHOR_KEY) === saved.uuid;

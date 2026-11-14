@@ -115,6 +115,11 @@ export class MarkSystem extends createSystem({}) {
     return this.apply(result);
   }
 
+  /** The guided tour: a mark as if pinched on a 1.72 m body. */
+  demo(param: BodyMark['param'], cm: number): string {
+    return this.apply({ param, value: cm / 100, cm });
+  }
+
   private apply(mark: BodyMark): string {
     const set = this.atelier.setMeasure(mark.param, mark.value);
     if (!set) {

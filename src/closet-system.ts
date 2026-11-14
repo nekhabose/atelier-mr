@@ -489,7 +489,8 @@ export class ClosetSystem extends createSystem({
 
   /** The piece worn least recently, for "Style it". */
   leastWornItem(): ClosetItem | undefined {
-    return leastWorn(this.items, localDate()) as ClosetItem | undefined;
+    const wearing = itemsOnForm(this.items, this.atelier.currentPieces);
+    return leastWorn(this.items, localDate(), wearing) as ClosetItem | undefined;
   }
 
   private paintWearRow(): void {

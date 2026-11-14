@@ -953,6 +953,15 @@ export class AtelierSystem extends createSystem({
     return { piece, value: next };
   }
 
+  /** Show the tape measure for one measurement for a few seconds (the guided tour). */
+  showTape(param: TailorParam, seconds = 2): void {
+    const piece = pieceForParam(this.pieces, param);
+    const pin = this.pins.find((p) => p.param === param);
+    if (!piece || !pin) return;
+    this.tools.show(param, piece, pin.entity.object3D!.position, this.bodyW, this.bodyH);
+    this.toolsHold = seconds;
+  }
+
   /** Rebuild every worn piece after an external edit (e.g. template change). */
   refreshAll(): void {
     this.selectedPiece = this.outermostPiece();

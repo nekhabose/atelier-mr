@@ -1,7 +1,7 @@
 /**
  * StartSystem – the flat start page. Owns the side panel (src/atelier/
  * side-panel.ts): its welcome section says what Atelier is in one line, with
- * one big "Enter the studio" button and the 1-minute tour for anyone without
+ * one big "Enter the studio" button and the 90-second tour for anyone without
  * a headset. The panel hides inside the immersive session and during the tour.
  *
  * The camera's view is shifted so the studio sits in the middle of the space
@@ -25,7 +25,7 @@ export class StartSystem extends createSystem({}) {
       <button type="button" data-enter class="as-btn as-btn-main as-wide">
         ${xr ? 'Enter the studio' : 'Open on Meta Quest to enter'}
       </button>
-      <button type="button" data-tour class="as-btn as-wide" style="margin-top:8px">Watch the 1-minute tour</button>
+      <button type="button" data-tour class="as-btn as-wide" style="margin-top:8px">Watch the 90-second tour</button>
       <div class="as-note">${
         xr ? 'Put your controllers down: everything works with a pinch.' : 'On this screen you can explore the studio and play the tour.'
       }</div>`;

@@ -6,141 +6,145 @@ Deadline: **Nov 18, 2026, 12:00 PM PT**. Track: **Productivity**. Division: **Ne
 
 - Play: https://atelier-mr.vercel.app (mirror: https://nekhabose.github.io/atelier-mr/)
 - Code: https://github.com/nekhabose/atelier-mr
-- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (66 s, 1080p, narrated, music; kept out of git). How it is made: see Demo video below.
-- No headset? Open the link on a desktop and press **Watch the 1-minute tour**: it plays the real journey with captions.
+- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (about 94 s, 1080p; kept out of git) once your narration is mixed in. See Demo video below.
+- No headset? Open the link on a desktop and press **Watch the 90-second tour**: it plays the real app with captions.
 
 ## Name and tagline
 
 **Atelier**
 
-Tagline (128 characters):
+Tagline (124 of 128 characters):
 
-> Your personal AI fashion studio in mixed reality: dress, tailor and style your own clothes with your hands, right in your room.
+> A fitting room in your own room: pinch your clothes to tailor them, and get dressed for your real weather and your real day.
 
-## Description (about 450 words)
+## Description
 
-**Inspiration.** Getting dressed is a daily, physical decision, but every
-wardrobe app treats clothes as flat photos in a grid. You can't feel how a
-hem change moves a silhouette, or hold a fabric against a garment, on a phone.
-Atelier is a fashion studio in your real room: a life-size dress form you can
-dress, tailor and style with your hands, built around a moment you have every
-morning.
+**Inspiration.** Most mornings I stand in front of a full wardrobe and wear
+the same three things. Getting dressed is a physical decision (how long, how
+warm, does it go together), but every wardrobe app I tried turns clothes into
+flat photos in a grid. I wanted a fitting room I could step into at 7:40 on a
+rainy morning, with the clothes I actually own, sized to me, that already
+knows I have an interview at ten.
 
-**What it does.** When you enter, Atelier reads your room and stands the
-studio on your real floor: the rack, form and fabric library snap against a
-nearby wall when one is detected, or face you when none is. Pinch any of eight
-designer looks to dress the form. Pull the coloured pins to change hem,
-neckline, sleeves and waist; the garment is regenerated from measurements every
-frame while you drag. Drop a swatch onto one layer of the outfit (satin, velvet,
-silk, denim, linen, plaid, pinstripe and more) and only that piece changes.
-Undo, redo, reset and turn the form without leaving your seat. The studio is
-saved against a persistent world anchor, so next time it is waiting in the same
-corner of your room.
+**What it does.** Atelier puts a fitting studio in your room on Meta Quest. It
+reads the room, stands a life-size dress form, a clothes rail and a fabric
+board on your real floor, backs them against a wall, keeps them clear of your
+sofa and table, and remembers the spot for next time.
 
-The Digital Closet lets you recreate the clothes you actually own: pick a
-template, colour and fabric, then pull the pins until the length and fit match.
-The stylist then works for you, not as a chat window. Choose occasion, weather
-and mood; it weighs every wearable combination in your closet, puts its best
-idea on the form as a preview, and waits for you to Keep it, see the Next idea,
-or Undo. Change the weather and it re-plans. Ask it to make the look warmer,
-dressier or more colourful and it edits the garments on the form - lets a hem
-down, adds sleeves, switches to knit or satin, layers your jacket - and tells
-you what it changed. It also tells you which piece your closet is missing.
-Photograph a real garment and it joins your closet, cut to match: Claude
-reads its type, colour, fabric, length and sleeves. Tell the tailor in your
-own words, "make the dress midi with long sleeves", by voice or text, and the
-form changes. Plan week lays out seven varied outfits from your closet, and
-Pack finds the fewest pieces for a 3, 5 or 7-day trip. The boutique turns shopping around: three original labels hang their pieces
-on your rail, each tagged with how many new outfits it unlocks with what you
-already own. Try one on and the boutique stylist tries it with your clothes and
-says buy, maybe or skip, with the cost per new outfit. Take or upload a
-full-length photo on the start page and the form becomes you: your face and
-hair, skin tone and proportions, checked and kept on your device.
-Save the looks you love to a lookbook
-and log an Outfit of the Day to keep a streak, a reason to come back each
-morning. Share any look as a link or QR code: the outfit travels inside the
-link, so nothing is uploaded, and opening it dresses your friend's form.
+You dress the form by pinching a look on the rail, and tailor it with your
+hands. Pull a pin and the hem is recut as you pull, while a tape measure reads
+the length in centimetres. Or mark it on yourself: pinch your own skirt at the
+knee and the form's hem moves there, scaled from your height; your wrist sets
+a sleeve, your collarbone a neckline. Drop a swatch to change the fabric of one
+piece.
 
-**Accessible by design.** An Access panel in the studio offers large text,
-high contrast, calm motion (no bouncing, sliding or spinning), read aloud
-(the panel speaks each change), voice commands ("style me", "undo",
-"shorter", "turn", "share"), and tailoring without dragging: one-tap buttons
-for hem, waist and sleeves, so every edit works with one hand and no grip.
-Calm motion and high contrast follow the system's preferences by default.
+The productivity loop is the morning. Recreate the clothes you own in the
+Digital Closet, or photograph one. Atelier reads today's forecast and your
+calendar (an .ics file, read on the device), and the stylist dresses the form
+from your closet for that day. Keep it, see the next idea, or say "dressier"
+and it edits the garments. At night, **Lay out tomorrow** picks tomorrow's
+outfit, and it is waiting on the form in the morning. **Plan week** plans seven
+days around your calendar and forecast; **Pack** finds the fewest pieces for a
+trip.
 
-**How we built it.** Atelier is built from scratch with Meta's Immersive Web SDK
-(WebXR, Three.js, ECS) during the competition window. Garments, the mannequin
-and 12 fabrics are procedural, with no downloaded models, so tailoring is real
-geometry, not a swapped mesh. Scene understanding (detected planes) drives
-placement. Spatial panels use UIKitML. The stylist runs as a Vercel Function
-that calls Claude with structured, validated output and a server-side key; a
-deterministic offline planner gives the same preview, keep and undo flow when the
-network or the key is unavailable, so the studio never depends on a third-party
-service.
+It also helps you wear what you own. **Wear today** logs each piece you wear,
+so the closet shows cost per wear and your least worn piece, and **Style it**
+builds a look around that piece. The boutique turns shopping around: a new
+piece is tried with your clothes and gets a count of the outfits it would add,
+a cost per outfit and an honest buy, maybe or skip.
 
-Built for headset budgets: shadows are redrawn only when something moves
-(0 shadow redraws a second when the studio is still, instead of 60), garments
-and props are merged into few draw calls, and a `?perf` meter shows frame
-rate, draw calls and triangles inside the headset. On Quest 3, the depth API
-lets your real hands and furniture hide the form and garments behind them
-(optional, so other headsets simply skip it). Pins can be pulled with a ray
-from a seat or pinched directly with your fingers, with a light controller
-tap on every step. Atelier installs as an app (web manifest and an offline
-service worker: after one visit it opens without a network, with the on-device
-stylist). 25 unit tests (stylist planner, refinements, boutique maths,
-tailoring maths, share links, API input validation, streaks) run in CI on
-every push next to a 42-step emulator journey; the tests caught two real
-tailoring bugs, now fixed.
+A full-length photo turns the form into you (checked on the device; partial
+photos are refused). **Access** offers large text, high contrast, calm motion,
+read aloud, voice commands, one-tap tailoring, and a seated layout that brings
+the form, rail and panels within reach of your chair.
 
-**What's next.** Photographing garments straight from the headset's
-passthrough camera; calendar and weather context for the week plan; shared
-lookbooks; and on-device tuning for the Meta
-VR Glasses' narrower view (the compact layout is emulator-tested).
+**How I built it.** From scratch with Meta's Immersive Web SDK (WebXR,
+Three.js, ECS) during the competition. The garments, the form and twelve
+fabrics are procedural, so tailoring changes real geometry rather than
+swapping meshes. Scene understanding (planes and meshes) places the studio and
+keeps it off furniture, a persistent anchor brings it back, and the Quest 3
+depth API lets your real hands show in front of the form, rail and board. The
+panels are UIKitML. The stylist calls Claude through a Vercel Function with
+validated, structured output, and a deterministic on-device planner gives the
+same flow offline. The photo check runs MediaPipe Pose on the device. The
+forecast comes from Open-Meteo with your location rounded to about 10 km.
+Typecheck, 68 unit tests and a production build run in CI on every push, and a
+46-step journey drives the app in the IWSDK emulator with emulated controllers
+and hands.
+
+**Challenges.** Telling a mark from a point: a hand-ray pinch at a panel looks
+like a pinch near your body, so marks only count within 30 cm in front of you.
+Keeping procedural cloth fast while you drag: a light mesh is rebuilt about 20
+times a second and the full garment on release, and shadows are redrawn only
+when something moves. Placing the studio in rooms I have never seen: it reads
+furniture from planes and meshes, slides until it is clear, and says why.
+
+**Accomplishments.** Everything works with a pinch, near or far; nothing needs
+a controller. The stylist acts on the form instead of chatting, and every
+change can be undone. Your photo, calendar and closet stay on your device.
+
+**What I learned.** Hands-first means designing for distance as much as for
+touch: every target also works by ray from a seat, and every drag has a tap
+alternative. And productivity apps earn a place in the day by being tied to a
+moment. For clothes, that moment is the morning.
+
+**What's next.** Testing on Quest 3 and 3S (frame rate, hand tracking near the
+body, depth occlusion in real rooms) before the Store release. Then live
+calendar sync (Google, Outlook) with consent, photographing garments with the
+headset's passthrough camera, shared lookbooks, and tuning the compact layout
+for Meta VR Glasses on the device.
+
+**Target launch date.** Live today as a web app: open atelier-mr.vercel.app in
+the Meta Quest Browser. Release on the Meta Horizon Store, as a packaged web
+app, in **February 2027**.
+
+**Performance (measured).** In the Immersive Web Emulator on a Mac: 58-60 fps
+(the emulator's 60 Hz cap), 192 draw calls and 185k triangles per stereo
+frame, and no shadow redraws while the studio is still. Not yet measured on a
+Quest headset.
 
 ## Hand interactions (optional field)
 
 Every action works with a pinch, near or far, and nothing requires a
-controller. Tap to wear a look; pinch-and-pull a tailoring pin (the cloth
-rebuilds live); pinch a swatch and drop it on a garment; pinch the form and
-twist to turn it; and tap the spatial panels. Everything is reachable from a
-seat: the form, rack and board work at a distance with hand rays, and Turn,
-Undo and Redo replace any need to stand up and walk around. A ghost hand
-demonstrates the core gestures on first launch instead of a wall of text.
-For people who cannot pinch-and-drag, the Access panel's tap buttons tailor
-hem, waist and sleeves, and voice commands cover the main actions where the
-browser supports speech recognition.
+controller. Pinch a look to wear it; pinch and pull a tailoring pin (the cloth
+rebuilds as you pull, and a tape measure reads it); pinch your own clothes to
+mark a length on yourself; pinch a swatch and drop it on a garment; pinch the
+form and twist to turn it; and tap the spatial panels. Everything is reachable
+from a seat: hand rays work at a distance, Turn, Undo and Redo replace walking
+around, and **Access > Seated** brings the studio to your chair. A ghost hand
+demonstrates the core gestures on first launch instead of a wall of text. For
+people who cannot pinch and drag, one-tap buttons tailor hem, waist and
+sleeves, and voice commands cover the main actions where the browser supports
+speech recognition.
 
 ## Judge instructions
 
 1. On Quest 3/3S, open **https://atelier-mr.vercel.app** in the Meta Quest
-   Browser. Allow passthrough and hand tracking when asked; put controllers down.
-2. Tap **Enter Atelier** (or accept the immersive prompt). The studio places
-   itself on your floor; a ghost hand starts a 3-step tour (skip any time with
-   **Tour**). Tap **Move studio** to re-place it in front of you.
-3. Try: pinch a look on the rail, pull the coloured pins, drop a swatch on the
-   jacket, tap **Turn**, then **Undo**.
-4. On the left panel: **Ask stylist**, choose Interview / Cold / Classic,
-   **Style me**, then **Next idea**, tap **Warmer** and watch the outfit change,
-   then **Keep**.
-5. Leave and come back: the studio returns to the same spot in your room.
-6. **Save look** and **Wear today**; reload the page and your look, lookbook and
-   streak are still there.
-7. Left panel, **Ask stylist**, then **Plan week**: tap Mon to wear it, then
-   **5 days** under Pack for a trip.
-8. On the start page (desktop or Quest browser): **Add a garment from a
-   photo**, and type "midi, long sleeves" in Tell the tailor.
-9. Tap **Access** on the right panel: try Large text, High contrast, and the
-   Shorter / Waist in buttons. Tap **Share**, exit, and the start page shows
-   the look's link and QR code.
+   Browser. Put controllers down; allow hand tracking when asked.
+2. Tap **Enter the studio**. The studio places itself on your floor, clear of
+   furniture; a ghost hand starts a 3-step tour (skip it with **Tour**).
+3. Pinch a look on the rail, pull a coloured pin (watch the tape measure), and
+   drop a swatch on the form. **Undo** if you like.
+4. Studio panel, **Mark on me**: pinch your own clothes at your knee. The hem
+   moves to that height. Try your wrist for a sleeve.
+5. Closet panel, **This morning**: **Dress me for today**, then **Keep**. Then
+   **Lay out tomorrow**.
+6. Closet panel: **Wear today**, then **Style it** next to your least worn
+   piece.
+7. Studio panel, **Access > Seated**: the studio comes to your chair. Turn it
+   off again the same way.
+8. Leave and come back: the studio returns to the same spot in your room.
 
-Optional: open **https://atelier-mr.vercel.app/?perf** to see frame rate,
-draw calls and triangles above the studio panel.
+Before entering, on the start page: **Your mornings > Use my local weather**
+and **Import a calendar (.ics)** set up the morning (both optional; without
+them the stylist uses the weather you pick).
 
-No headset at hand: open the link on a desktop and press **Watch the 1-minute
-tour** (top right) for a captioned walk through the same journey.
+No headset at hand: open the link on a desktop and press **Watch the 90-second
+tour** for a captioned walk through the same story.
 
-Works without any API key (the stylist header shows "ON-DEVICE"). With the
-server key configured it shows "LIVE AI".
+Optional: **https://atelier-mr.vercel.app/?perf** shows frame rate, draw calls
+and triangles above the studio panel. The stylist works without any API key
+("on-device"); with the server key it shows "live AI".
 
 ## Works today vs. future
 
@@ -165,76 +169,74 @@ server key configured it shows "LIVE AI".
 | Full-length photo turns the form into you (on-device pose check refuses partial photos; your head, skin, hair, proportions and height) | Exact body measurements in cm, and 3D faces from more than one photo |
 | Claude stylist live on the production URL (server-side key), offline fallback | Tuning for Meta VR Glasses on device |
 
-Not yet verified: frame rate, hand tracking, depth occlusion and haptics on a
-physical Quest, and placement in real rooms. Read aloud and voice commands are feature-detected;
+Not yet verified: frame rate, hand tracking (including marking on your own
+body), depth occlusion and haptics on a physical Quest, placement in real
+rooms, and the live Open-Meteo request (tested with a stand-in response; the
+test browsers block outside requests). Read aloud and voice commands are feature-detected;
 whether Quest Browser provides speech synthesis and recognition is not yet
 verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.
 
-## Demo video (66 s, ready to upload)
+## Demo video (about 94 s)
 
-`docs/video/atelier-demo.mp4` is a mixed-reality cut recorded from the real
-app in the Immersive Web Emulator's simulated living room: the studio is
-placed on the room's floor by scene understanding, the opening reveal plays,
-and the emulated headset moves through the studio like a person's head while
-the tour drives the real systems. Captions are burned in; the soundtrack is an
-original synthesised music bed, the app's kinds of UI sounds, and narration
-from Piper neural text-to-speech (voice "Cori", trained on public-domain
-LibriVox recordings), run locally. Describe it on Devpost as emulator footage
-with a synthetic voice. Recording your own voice over the same lines
-sounds better: save them as `docs/video/vo/l0.wav` ... `l10.wav` and run the mix
-again.
+`docs/video/atelier-story.mp4` is the picture: the real app recorded in the
+Immersive Web Emulator's simulated living room, with the emulated headset
+moving like a person's head while the guided tour drives the real systems.
+Captions are burned in. `docs/video/atelier-demo.mp4` adds the original music
+bed and UI sounds; it gets your narration once you record it (see
+`docs/RECORDING.md`): there is no synthetic voice in this cut. On Devpost,
+describe it as emulator footage narrated by you.
+
+It tells one story, a real morning, so the features arrive as reasons:
+
+| Time | On screen | Narration |
+|---|---|---|
+| 0:00 | The empty living room, "7:40 am" | Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear. |
+| 0:08 | The studio settles into the room, clear of the furniture | So I put on my headset, and my own room becomes a fitting studio. |
+| 0:15 | "This morning: 9°C, rain likely. An interview", the stylist dresses the form | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
+| 0:22 | "Dressier" recuts the outfit in satin | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
+| 0:29 | A dress from the rail | For tonight, I take a dress from the rail. |
+| 0:33 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
+| 0:40 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |
+| 0:45 | Satin, then silk | A different fabric? I drop a swatch on it: satin, then silk. |
+| 0:51 | Tomorrow laid out | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
+| 0:57 | Least worn piece, a look built around it | It shows me what I never wear, what it costs per wear, and builds a look around it. |
+| 1:04 | Boutique try-on with a verdict | Before I buy something new, it counts the outfits it would add, and gives me an honest verdict. |
+| 1:12 | Seated: the studio comes to the chair | And when I sit down, the whole studio comes within reach. |
+| 1:19 | The Access panel | Large text, high contrast, calm motion, voice, and tailoring by tap are all built in. |
+| 1:25 | The form turns; end card with the URL and launch date | Atelier. Get dressed for your real day. Open it in your Quest browser today. |
 
 Rebuild it:
 
 ```sh
 npx @iwsdk/cli dev restart --ai-mode agent --allow-browser-automation   # hides emulator controls
 npx @iwsdk/cli browser run scripts/record-mr-frames.mjs --timeout 110000
-PIPER_PY=... PIPER_VOICE=.../en_GB-cori-high.onnx PIPER_DATA=.../espeak-ng-data bash scripts/voice-over.sh
-node scripts/frames-to-mp4.mjs docs/video/frames-mr docs/video/atelier-mr.mp4 --crop-toolbar
-bash scripts/mix-video.sh docs/video/atelier-mr.mp4 docs/video/atelier-demo.mp4
+node scripts/frames-to-mp4.mjs docs/video/frames-mr docs/video/atelier-story.mp4 --crop-toolbar
+python3 scripts/split-voice.py docs/video/voice-take.m4a                 # your narration
+bash scripts/mix-video.sh docs/video/atelier-story.mp4 docs/video/atelier-demo.mp4
 npx @iwsdk/cli dev restart --ai-mode collaborate --allow-browser-automation
 ```
 
-| Time | On screen | Narration |
-|---|---|---|
-| 0:00 | Studio settles into the living room, ATELIER title card | This is Atelier. A fashion studio, in your own room. |
-| 0:05 | Wide view of the placed studio | It stands on your real floor, and remembers where you left it. |
-| 0:09 | Head turns to the rail; Riviera Sundress drops onto the form | Tap a look on the rail. The form wears it, life size. |
-| 0:14 | Close on the hem as the pin pulls it up | Pinch a pin and pull. The hem is real geometry, recut as you move. |
-| 0:19 | Fabric library; velvet, then satin, on the dress | Drop a swatch to change the fabric: satin, velvet, denim, wool. |
-| 0:24 | The dress is recut to midi with long sleeves | Or just say it: make it midi, with long sleeves. |
-| 0:29 | Stylist panel; preview badge over the form | Ask the stylist. It plans from your own closet, and puts its idea on the form. |
-| 0:34 | Dressier refinement lands on the form | Say warmer, or dressier, and it edits the outfit for you. |
-| 0:39 | Week plan; Monday, then Friday on the form | Plan your whole week in one tap, or pack a trip in the fewest pieces. |
-| 0:45 | Boutique rail; silk blouse tried on with a verdict | The boutique shows what each piece adds to your closet, with an honest verdict. |
-| 0:51 | Access panel open | Large text, high contrast, calm motion, voice, and tailoring by tap. |
-| 0:57 | Head steps back; the form turns | Share a look with a link. Come back tomorrow; your studio is waiting. |
-| 1:01 | End card with the URL | Atelier. Open it in your Quest browser. |
-
-Narration lines and their start times live in `scripts/narration.txt`;
-`scripts/voice-over.sh` regenerates them with Piper.
-
-A flat-page version without sound (`docs/video/atelier-showcase.mp4`) comes
-from `node scripts/record-showcase.mjs`. If you get time on a real Quest, a
-10-second on-device clip of hands pinching a pin would be the strongest
-addition (Meta Quest Developer Hub can record or cast).
+Lines and times live in `scripts/narration.txt` (the tour's times are in
+`src/showcase-system.ts`). If you get time on a real Quest, a 10-second clip
+of your hands pinching a pin would be the strongest addition (Meta Quest
+Developer Hub can record or cast).
 
 ## Screenshots
 
-`docs/screenshots/` (Immersive Web Emulator, simulated living room):
-01-studio (opening reveal), 02-stylist-preview (after "Warmer"), 03-turned,
-04-closet-builder, 05-start-page (make the form you), 06-boutique-verdict,
-07-glasses-compact-layout (Meta VR Glasses profile, area outside the glasses'
-view masked black), 08-accessibility-panel (Large text and High contrast on), and from the
-mixed-reality cut: 09-mr-reveal, 10-mr-tailor-by-voice, 11-mr-week-plan,
-12-mr-boutique-verdict. Replace with on-device captures when a Quest is available.
-Use only your own full-length photo if you show the photo feature.
+`docs/screenshots/`, stills from the story cut (Immersive Web Emulator,
+simulated living room), plus the start page: 01-a-real-morning,
+02-room-becomes-studio, 03-dressed-for-today, 04-mark-on-yourself,
+05-start-page, 06-tape-measure, 07-lay-out-tomorrow, 08-wear-what-you-own,
+09-boutique-verdict, 10-seated, 11-accessibility, 12-get-dressed. Replace
+with on-device captures when a Quest is available. Use only your own
+full-length photo if you show the photo feature.
 
 ## Special awards
 
-Worth claiming: **Best Agentic Interaction** (plan, act on the form, confirm or
-undo, re-plan), **Best Reason to Come Back** (closet, lookbook, streak,
-anchored studio), **Best First Five Minutes** (ghost-hand tour, instant
-payoff), **Best Accessibility Forward Experience** (Access panel, tap-to-tailor,
-voice, read aloud).
+Worth claiming: **Best Agentic Interaction** (the stylist plans, acts on the
+form, and you keep, refine or undo), **Best Reason to Come Back** (the morning
+routine, Lay out tomorrow, wear log and streak, the anchored studio), **Best
+First Five Minutes** (ghost-hand tour, a dressed form on first visit),
+**Best Accessibility Forward Experience** (Access panel, tap-to-tailor, voice,
+read aloud, Seated).

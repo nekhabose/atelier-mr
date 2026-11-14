@@ -14,10 +14,13 @@ New Experience) with Meta's [Immersive Web SDK](https://iwsdk.dev) (WebXR).
 - **Live (primary):** https://atelier-mr.vercel.app
 - **Mirror:** https://nekhabose.github.io/atelier-mr/
 
-Open it in the Meta Quest Browser and tap **Enter Atelier** (or accept the
+Open it in the Meta Quest Browser and tap **Enter the studio** (or accept the
 immersive prompt). On a desktop browser the studio opens as a flat 3D preview
-you can click, and **Watch the 1-minute tour** (top right) plays the whole
-journey with captions.
+you can click, and **Watch the 90-second tour** plays the whole story with
+captions.
+
+Live now as a web app; on the Meta Horizon Store (packaged web app) in
+February 2027.
 
 ## What it does
 
@@ -128,8 +131,9 @@ journey with captions.
   (`#look=...`; nothing is uploaded). The start page shows the link and a QR
   code; opening it dresses the form in that look. Shared links are validated
   and every measurement is clamped to the garment's range.
-- **Guided showcase:** a captioned tour that drives the real systems on the
-  flat page, for judges without a headset and for recording the demo video
+- **Guided showcase:** a captioned 90-second story (a rainy morning with an
+  interview at ten) that drives the real systems on the flat page, for judges
+  without a headset and for recording the demo video
   (`?showcase`; `?showcase=record` for unattended capture). Under the IWSDK
   emulator, `?showcase=mr` plays it inside XR in the simulated room, moving the
   emulated headset (used for the mixed-reality demo video).
@@ -177,8 +181,10 @@ npx @iwsdk/cli browser run scripts/check-share.mjs         # share links and voi
 node scripts/check-pwa.mjs http://localhost:4174/          # installable + offline (serve dist on 4174)
 ```
 
-The narrated mixed-reality demo video (emulator room, captions, music,
-narration) is rebuilt with the steps in `docs/SUBMISSION.md` (Demo video).
+The mixed-reality demo video (emulator room, captions, music, your own
+narration) is rebuilt with the steps in `docs/SUBMISSION.md` (Demo video);
+`docs/RECORDING.md` has the 14 lines and how to record them, and
+`docs/NEWCOMER-TEST.md` a 15-minute test with someone new to Atelier.
 Record the flat showcase as an MP4 (needs ffmpeg; output is git-ignored):
 
 ```sh

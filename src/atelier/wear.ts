@@ -68,14 +68,16 @@ function daysBetween(a: string, b: string): number {
 
 /**
  * The piece worn least recently: never-worn pieces first (oldest added first),
- * then by the longest time since last worn.
+ * then by the longest time since last worn. Ties go to a piece you are not
+ * already wearing (`onForm`).
  */
-export function leastWorn(items: WearInfo[], today: string): WearInfo | undefined {
+export function leastWorn(items: WearInfo[], today: string, onForm: string[] = []): WearInfo | undefined {
   let best: WearInfo | undefined;
   let bestKey = -Infinity;
   for (const item of items) {
     const last = item.worn?.[item.worn.length - 1];
-    const key = last ? daysBetween(last, today) : 10000 + (item.added ? daysBetween(item.added, today) : 0);
+    let key = last ? daysBetween(last, today) : 10000 + (item.added ? daysBetween(item.added, today) : 0);
+    if (onForm.includes(item.id)) key -= 0.5;
     if (key > bestKey) {
       bestKey = key;
       best = item;
