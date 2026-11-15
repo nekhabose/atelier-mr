@@ -28,12 +28,29 @@ not yet verified.
   (`wallPlan`, tested): 1.85 to 2.8 m away, the studio backs up against it; nearer
   (a small room), the compact layout stands just in front of it; farther or
   none, the studio is set in front of you.
-- **Furniture:** tables, sofas, beds, lamps and plants from both plane and
-  mesh detection are kept out of the footprint of the form, rail and board.
-  The studio slides sideways along the wall or toward you until clear, and
-  says why; if nothing is clear it says so instead of overlapping.
-  (`findClearance`, tested; in the emulator's living room: "Moved the studio
-  30 cm right and 30 cm toward you to clear your table and couch".)
+- **Furniture and walls:** tables, sofas, beds, desks, lamps and plants from
+  plane and mesh detection, and every wall, are obstacles. A placement search
+  (`searchPlacement`, tested) finds the smallest change that keeps the form,
+  rail and board clear and on your side of the walls: a shift sideways or
+  toward you, a turn of up to 40 degrees, then the compact and the small
+  layouts; if nothing fits in front, it sets the studio to your left or right
+  and says so. When nothing is clear anywhere it tells you to face a clearer
+  spot instead of overlapping.
+- **Eight rooms it was never designed around** (`scripts/check-rooms.sh`, the
+  emulator's built-in rooms, clean first visit each time):
+
+  | Room | Result |
+  |---|---|
+  | Sunlit living room | Clear: moved 25 cm right and 50 cm toward you (table, couch) |
+  | Home office | Clear: small layout, turned 40 degrees (desk, shelf, screen, wall) |
+  | Open office | Clear: small layout (desk, shelf) |
+  | Bedroom | Clear: small layout (bed) |
+  | Music studio | Clear: turned 20 degrees |
+  | Open studio | Clear as placed |
+  | Conference room | Blocked at the start spot (table on every side): asks you to face a clearer spot |
+  | Kitchen | Blocked at the start spot (table, lamp): asks you to face a clearer spot |
+
+  Before the search, only 3 of the 8 were clear. No errors in any room.
 - **Persistence:** the studio frame is stored relative to IWSDK's persistent
   world anchor and restored next session; a new room or cleared space falls
   back to placement.
@@ -93,6 +110,9 @@ not yet verified.
 - **Storage.** Every read of saved data is validated and falls back to
   defaults; writes that fail (private mode, full storage) keep working for the
   visit.
+- **Random input.** `scripts/check-monkey.sh` fires 80 random looks, selects
+  and drags at the 68 interactable targets in XR: no errors, nothing caught
+  by the safety nets, and the studio responds normally afterwards.
 - **No leaks.** `scripts/check-soak.mjs` makes 300 outfit changes, fabric
   swaps, tailoring steps, undos and turns, collecting garbage before each
   sample: GPU geometries and textures stay level (140-160, 52-63) and the
@@ -124,13 +144,15 @@ not yet verified.
 
 | Check | What it proves | How |
 |---|---|---|
-| 76 unit tests | Garment maths, measurements, stylist planning and refinement, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
+| 81 unit tests | Garment maths, measurements, stylist planning and refinement, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
 | Typecheck and build | Types across the app and the API | `npm run typecheck`, `npm run build` (CI) |
 | 46-step journey | The whole product, driven with emulated controllers in XR | `scripts/e2e-emulator.sh` |
 | Hand pinches | Marking hem, sleeve and neckline on the body; a pinch held out in front is ignored | Emulated hands, see `docs/SUBMISSION.md` |
 | Gaze and pinch | Every rail look and panel button by gaze on the glasses profile; hand-ray fallback; every panel button inside the glasses' view | iwsdk-glasses-test procedure |
 | Guided tour | Every beat of the story puts the right thing on the form | `scripts/check-showcase.mjs` |
 | Soak | No GPU or memory leaks over 300 actions | `scripts/check-soak.mjs` |
+| Eight rooms | Placement in every emulator room from a clean first visit | `scripts/check-rooms.sh` |
+| Random input | 80 random interactions, no errors, still responsive | `scripts/check-monkey.sh` |
 | Installable and offline | Manifest, icons, service worker | `scripts/check-pwa.mjs` |
 
 ## Not yet verified

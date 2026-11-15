@@ -149,7 +149,10 @@ February 2027.
   headset view that does not start is explained. No leaks over a 300-action
   soak test (`scripts/check-soak.mjs`).
 - **Rooms of any size:** in a small room (a wall nearer than 1.85 m) the
-  studio switches to its compact layout in front of the wall.
+  studio switches to its compact layout in front of the wall; in a cluttered
+  one a placement search shifts, turns or compacts it until it is clear of
+  furniture and inside the walls. Tested in the emulator's eight rooms
+  (`scripts/check-rooms.sh`).
 - **Depth occlusion (Quest 3):** real hands and furniture hide the form,
   garments, pins, the rail and the fabric board behind them, so a hand reaching
   into the rail shows in front. Depth sensing is optional, so other devices

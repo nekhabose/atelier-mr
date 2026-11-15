@@ -41,7 +41,17 @@ import {
   XRMesh,
   XRPlane,
 } from '@iwsdk/core';
-import { Circle, Clearance, clearanceText, findClearance, Obstacle, wallPlan } from './atelier/clearance.js';
+import {
+  Circle,
+  Clearance,
+  FitLayout,
+  movedFrame,
+  Obstacle,
+  Placement,
+  placementText,
+  searchPlacement,
+  wallPlan,
+} from './atelier/clearance.js';
 import { RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
 import { AtelierSystem } from './atelier-system.js';
 import { sfx } from './atelier/sfx.js';
@@ -188,6 +198,10 @@ export class RoomPlacementSystem extends createSystem({
   compact = false;
   /** A wall is close (small room): the compact, seated-size layout is used. */
   snug = false;
+  /** Layout chosen to fit around furniture (full unless the room is cluttered). */
+  fit: FitLayout = 'full';
+  /** The last placement search (for scripted checks). */
+  lastSearch: Placement | null = null;
   /** Measured horizontal half field of view (degrees), 0 until known. */
   fovHalfDeg = 0;
   /** Why the compact layout was chosen ('none' when it was not). */
@@ -357,6 +371,8 @@ export class RoomPlacementSystem extends createSystem({
         } else {
           this.finishReveal();
           this.applyFrame(0, 0, 0, 0);
+          this.fit = 'full';
+          this.snug = false;
           this.useLayout(false);
           this.lastPlacement = 'authored';
         }
@@ -369,6 +385,11 @@ export class RoomPlacementSystem extends createSystem({
    * @param announce show feedback on the panel.
    */
   place(announce = false): PlacementResult {
+    if (this.fit !== 'full') {
+      this.fit = 'full';
+      this.applyFrame(0, 0, 0, 0);
+      this.useLayout(this.compact);
+    }
     const camera = this.world.camera;
     camera.getWorldPosition(this.head);
     camera.getWorldDirection(this.dir);
@@ -475,18 +496,31 @@ export class RoomPlacementSystem extends createSystem({
     return result;
   }
 
-  /** The studio's floor footprint in its own frame: form, rail and board. */
-  private footprint(): Circle[] {
+  /** A layout's floor footprint (form, rail, board) in the studio frame. */
+  private footprintFor(fit: FitLayout): Circle[] {
+    const record = fit === 'small' ? SEATED : fit === 'compact' ? COMPACT : undefined;
     const out: Circle[] = [];
     for (const node of this.nodes) {
-      const scale = node.baseScale.x;
-      // The node's turn within the studio frame.
-      this.n.set(1, 0, 0).applyQuaternion(node.obj.quaternion);
-      const yaw = Math.atan2(-this.n.z, this.n.x) - this.yaw;
+      const r = record?.[node.id];
+      let px: number;
+      let pz: number;
+      let yaw: number;
+      let scale: number;
+      if (r) {
+        px = r.pos[0];
+        pz = r.pos[2];
+        yaw = (r.rotDeg[1] * Math.PI) / 180;
+        scale = r.scale;
+      } else {
+        px = node.authoredPos.x;
+        pz = node.authoredPos.z;
+        this.n.set(1, 0, 0).applyQuaternion(node.authoredQuat);
+        yaw = Math.atan2(-this.n.z, this.n.x);
+        scale = node.authoredScale.x;
+      }
       const c = Math.cos(yaw);
       const sn = Math.sin(yaw);
-      const along = (x: number, r: number) =>
-        out.push({ x: node.basePos.x + x * c, z: node.basePos.z - x * sn, r });
+      const along = (x: number, rad: number) => out.push({ x: px + x * c, z: pz - x * sn, r: rad });
       if (node.id === 'dress-form') along(0, 0.36);
       else if (node.id === 'clothing-rack') {
         const half = (RACK.width / 2 - 0.25) * scale;
@@ -502,6 +536,33 @@ export class RoomPlacementSystem extends createSystem({
   /** Tables, sofas, beds and the like, as rectangles on the floor. */
   private furniture(floorY: number): Obstacle[] {
     const out: Obstacle[] = [];
+    // Walls (any vertical plane): thin rectangles along the wall, so the
+    // studio is neither placed into one nor slid through one.
+    for (const entity of this.queries.planes.entities) {
+      const plane = entity.getValue(XRPlane, '_plane') as DetectedPlane | undefined;
+      const obj = entity.object3D;
+      if (!plane || !obj || plane.orientation !== 'vertical' || !plane.polygon || plane.polygon.length < 2) continue;
+      obj.getWorldQuaternion(this.q);
+      this.n.copy(this.up).applyQuaternion(this.q);
+      this.n.y = 0;
+      if (this.n.lengthSq() < 1e-4) continue;
+      this.n.normalize();
+      const ax = -this.n.z;
+      const az = this.n.x;
+      obj.getWorldPosition(this.o);
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let i = 0; i < plane.polygon.length; i++) {
+        const pt = plane.polygon[i];
+        this.local.set(pt.x, 0, pt.z);
+        obj.localToWorld(this.local);
+        const t = (this.local.x - this.o.x) * ax + (this.local.z - this.o.z) * az;
+        lo = Math.min(lo, t);
+        hi = Math.max(hi, t);
+      }
+      const mid = (lo + hi) / 2;
+      out.push({ x: this.o.x + ax * mid, z: this.o.z + az * mid, hx: (hi - lo) / 2, hz: 0.06, yaw: Math.atan2(-az, ax), label: 'wall' });
+    }
     const add = (obj: Object3D, label: string, minX: number, maxX: number, minZ: number, maxZ: number, cy: number) => {
       this.local.set((minX + maxX) / 2, cy, (minZ + maxZ) / 2);
       obj.localToWorld(this.local);
@@ -553,25 +614,38 @@ export class RoomPlacementSystem extends createSystem({
   }
 
   /**
-   * Slide the studio clear of furniture. Returns what to tell the user, or
-   * null when the spot was already clear.
+   * Find a clear spot for the studio: the smallest shift or turn that keeps
+   * the form, rail and board off furniture and inside the walls, falling back
+   * to the compact and then the small layout in a cluttered room. Returns
+   * what to tell the user, or null when the spot was already clear.
    */
   private clearFurniture(floorY: number): string | null {
     const obstacles = this.furniture(floorY);
     this.lastObstacles = obstacles;
     if (obstacles.length === 0) {
       this.lastClearance = null;
+      this.lastSearch = null;
       return null;
     }
-    const { x, y, z, yaw } = this.frame;
-    const c = findClearance(this.footprint(), { x, z, yaw }, obstacles);
-    this.lastClearance = c;
-    if (c.dx !== 0 || c.dz !== 0) {
-      const cos = Math.cos(yaw);
-      const sin = Math.sin(yaw);
-      this.applyFrame(x + c.dx * cos + c.dz * sin, y, z - c.dx * sin + c.dz * cos, yaw);
+    const seated = access.settings.seated;
+    const order: FitLayout[] = seated || this.snug ? ['small'] : this.compact ? ['compact', 'small'] : ['full', 'compact', 'small'];
+    const base = { ...this.frame };
+    const me = { x: this.head.x, z: this.head.z };
+    const layouts = order.map((layout) => ({ layout, circles: this.footprintFor(layout) }));
+    const formZ = order[0] === 'small' ? SEATED['dress-form'].pos[2] : this.nodes.find((n) => n.id === 'dress-form')?.authoredPos.z ?? -1.55;
+    const p = searchPlacement(layouts, { x: base.x, z: base.z, yaw: base.yaw }, me, obstacles, { x: 0, z: formZ });
+    this.lastSearch = p;
+    this.lastClearance = { dx: p.dx, dz: p.dz, blockedBy: p.blockedBy, clear: p.clear };
+    if (p.clear && (p.dx !== 0 || p.dz !== 0 || p.dyaw !== 0 || p.layout !== order[0])) {
+      const f = movedFrame({ x: base.x, z: base.z, yaw: base.yaw }, me, p.dyaw, p.dx, p.dz);
+      if (p.layout !== order[0]) {
+        this.fit = p.layout;
+        this.applyFrame(0, 0, 0, 0);
+        this.useLayout(this.compact);
+      }
+      this.applyFrame(f.x, base.y, f.z, f.yaw);
     }
-    return clearanceText(c);
+    return placementText(p);
   }
 
   /** Is the hit point (this.hit) within the plane polygon's bounds? */
@@ -713,7 +787,8 @@ export class RoomPlacementSystem extends createSystem({
   /** Switch the studio's base layout (call while the frame yaw is 0). */
   private useLayout(compact: boolean): void {
     this.compact = compact;
-    const layout = this.inXR && (access.settings.seated || this.snug) ? SEATED : compact ? COMPACT : undefined;
+    const small = this.inXR && (access.settings.seated || this.snug || this.fit === 'small');
+    const layout = small ? SEATED : compact || (this.inXR && this.fit === 'compact') ? COMPACT : undefined;
     for (const node of this.nodes) {
       const c = layout?.[node.id];
       if (c) {

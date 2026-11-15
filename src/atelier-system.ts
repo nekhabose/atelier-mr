@@ -253,7 +253,13 @@ export class AtelierSystem extends createSystem({
           this.tailorCount++;
           this.saveState();
           this.emitOutfit();
-          this.setHint('Nice cut. Undo if you change your mind, or drop a fabric on the form.');
+          // After the first pull in the headset, point to marking on your own body.
+          const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
+          this.setHint(
+            this.tailorCount === 1 && inXR
+              ? 'Nice cut. Next, try Mark on me: pinch your own clothes where you want the hem.'
+              : 'Nice cut. Undo if you change your mind, or drop a fabric on the form.',
+          );
         }
         this.layoutPins();
       }),

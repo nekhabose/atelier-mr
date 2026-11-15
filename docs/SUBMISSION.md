@@ -74,10 +74,12 @@ frame rate in the headset and, below 85% of the refresh rate (61 fps at
 72 Hz), steps quality down (depth occlusion, shadow updates, garment detail)
 and back up when there is headroom, so the studio stays above the 60 fps
 floor. One failing system cannot freeze the view: every system's frame update
-is guarded, errors are recorded, and a graphics reset recovers on its own. In
-a small room the studio switches to its compact layout in front of the wall
-instead of standing inside it. A soak test of 300 actions shows no GPU or
-memory leaks. Typecheck, 76 unit tests and a production build run in CI on
+is guarded, errors are recorded, and a graphics reset recovers on its own. A
+placement search keeps the studio clear of furniture and inside the walls,
+shifting, turning or switching to a compact layout; tested in the emulator's
+eight rooms, it found a clear spot by itself in six, and in the other two it
+says to face a clearer spot. 80 random interactions caused no errors. A soak test of 300 actions shows no GPU or
+memory leaks. Typecheck, 81 unit tests and a production build run in CI on
 every push, and a 46-step journey drives the app in the IWSDK emulator with
 emulated controllers and hands. Details: `docs/ENGINEERING.md`.
 
@@ -163,7 +165,7 @@ and triangles above the studio panel. The stylist works without any API key
 | Works today (verified in the IWSDK emulator and production URL) | Future |
 |---|---|
 | Room-aware placement on floor/wall planes, manual re-place, persistent anchor restore (emulator-verified) | Multi-anchor layouts (panels on separate surfaces) |
-| Keeps clear of furniture: detected tables, sofas, lamps and plants (planes and meshes) are kept out of the studio's footprint; it slides and says why (emulator living room: "Moved the studio 30 cm right and 30 cm toward you to clear your table and couch") | Placement around room corners and doorways |
+| Keeps clear of furniture and inside the walls: a placement search shifts, turns or switches to a compact or small layout until the form, rail and board are clear, and says what it did; tested in the emulator's eight rooms from a clean first visit: clear automatically in 6, an honest "face a clearer spot" in the 2 where a table surrounds the start spot (3 of 8 before the search) | Placement around room corners and doorways |
 | Mark it on yourself: pinch at your knee, wrist or collarbone to set hem, sleeve or neckline, scaled to your height (emulated hand pinches) | Calibrating to a full body-tracking skeleton |
 | Seated layout around your chair, everything within reach (Access > Seated) | Automatic seated detection |
 | Gaze and pinch (Meta VR Glasses emulator profile): all 8 rail looks and the panel buttons select by looking and pinching with either hand; hand rays take over when gaze is off; every panel button sits inside the glasses' view, seated or standing | Tuning on real glasses |
@@ -245,8 +247,9 @@ Developer Hub can record or cast).
 
 ## Screenshots
 
-`docs/screenshots/`, stills from the story cut (Immersive Web Emulator,
-simulated living room), plus the start page: 01-a-real-morning,
+`docs/screenshots/`: put **00-thumbnail** first (Devpost uses the first image
+as the project card), then the stills from the story cut (Immersive Web
+Emulator, simulated living room) and the start page: 01-a-real-morning,
 02-room-becomes-studio, 03-dressed-for-today, 04-mark-on-yourself,
 05-start-page, 06-tape-measure, 07-lay-out-tomorrow, 08-wear-what-you-own,
 09-boutique-verdict, 10-seated, 11-accessibility, 12-get-dressed. Replace

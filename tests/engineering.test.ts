@@ -91,3 +91,59 @@ describe('safety nets', () => {
     warn.mockRestore();
   });
 });
+
+import { movedFrame, placementText, searchPlacement, blockers as hits, LayoutFootprint, Obstacle as Ob } from '../src/atelier/clearance';
+
+describe('placement search in cluttered rooms', () => {
+  // Studio frame at the viewer, facing -Z. Footprints: the form ahead, a rail left, a board right.
+  const full: LayoutFootprint = { layout: 'full', circles: [{ x: 0, z: -1.55, r: 0.36 }, { x: -1.1, z: -1.3, r: 0.3 }, { x: 1.1, z: -1.3, r: 0.3 }] };
+  const small: LayoutFootprint = { layout: 'small', circles: [{ x: 0, z: -0.95, r: 0.36 }, { x: -0.8, z: -0.6, r: 0.22 }, { x: 0.8, z: -0.6, r: 0.22 }] };
+  const frame = { x: 0, z: 0, yaw: 0 };
+  const me = { x: 0, z: 0 };
+
+  it('turns about you as three.js does', () => {
+    const f = movedFrame(frame, me, Math.PI / 2, 0, 0);
+    expect(f.yaw).toBeCloseTo(Math.PI / 2);
+    expect(f.x).toBeCloseTo(0);
+  });
+
+  it('slides or turns away from a table in front, keeping the full layout', () => {
+    const table: Ob = { x: 0, z: -1.7, hx: 0.4, hz: 0.3, yaw: 0, label: 'table' };
+    const p = searchPlacement([full, small], frame, me, [table]);
+    expect(p.clear).toBe(true);
+    expect(p.layout).toBe('full');
+    expect(hits(full.circles, movedFrame(frame, me, p.dyaw, p.dx, p.dz), [table])).toEqual([]);
+    expect(placementText(p)).toMatch(/^Moved the studio \(.+\) to clear your table\.$/);
+  });
+
+  it('falls back to the small layout when only it fits, and never into a wall', () => {
+    // A sofa across the back and walls 2.1 m apart: the full studio cannot fit at any turn.
+    const sofa: Ob = { x: 0, z: -2.1, hx: 2.5, hz: 0.6, yaw: 0, label: 'couch' };
+    const left: Ob = { x: -1.05, z: -1, hx: 0.05, hz: 3, yaw: 0, label: 'wall' };
+    const right: Ob = { x: 1.05, z: -1, hx: 0.05, hz: 3, yaw: 0, label: 'wall' };
+    const p = searchPlacement([full, small], frame, me, [sofa, left, right]);
+    expect(p.clear).toBe(true);
+    expect(p.layout).toBe('small');
+    expect(hits(small.circles, movedFrame(frame, me, p.dyaw, p.dx, p.dz), [sofa, left, right], me)).toEqual([]);
+    expect(placementText(p)).toContain('Switched to the small layout');
+  });
+
+  it('says so when nothing fits', () => {
+    const everywhere: Ob = { x: 0, z: -1, hx: 4, hz: 4, yaw: 0, label: 'bed' };
+    const p = searchPlacement([full, small], frame, me, [everywhere]);
+    expect(p.clear).toBe(false);
+    expect(placementText(p)).toBe('Your bed is in the way here. Face a clearer spot and tap Move studio.');
+  });
+});
+
+describe('placement search: nothing fits in front', () => {
+  const full: LayoutFootprint = { layout: 'full', circles: [{ x: 0, z: -1.55, r: 0.36 }, { x: -1.1, z: -1.3, r: 0.3 }, { x: 1.1, z: -1.3, r: 0.3 }] };
+  it('sets the studio to one side and says which', () => {
+    // A big table filling the space in front (2.4 m wide); room at both sides.
+    const table: Ob = { x: 0, z: -1.8, hx: 1.2, hz: 0.9, yaw: 0, label: 'table' };
+    const p = searchPlacement([full], { x: 0, z: 0, yaw: 0 }, { x: 0, z: 0 }, [table]);
+    expect(p.clear).toBe(true);
+    expect(Math.abs(p.dyaw)).toBeGreaterThanOrEqual(1.05);
+    expect(placementText(p)).toMatch(/^Nothing fits in front of you, so the studio is on your (left|right), clear of your table\.$/);
+  });
+});
