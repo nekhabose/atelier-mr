@@ -268,8 +268,10 @@ as the project card), then the stills from the story cut (Immersive Web
 Emulator, simulated living room) and the start page: 01-a-real-morning,
 02-room-becomes-studio, 03-dressed-for-today, 04-mark-on-yourself,
 05-start-page, 06-tape-measure, 07-lay-out-tomorrow, 08-wear-what-you-own,
-09-boutique-verdict, 10-seated, 11-accessibility, 12-get-dressed. Replace
-with on-device captures when a Quest is available. Use only your own
+09-boutique-verdict, 10-seated, 11-accessibility, 12-get-dressed. The
+emulator stills and the thumbnail carry the same small "Quest emulator ·
+simulated room" tag as the video; the start page is the desktop browser.
+Replace with on-device captures when a Quest is available. Use only your own
 full-length photo if you show the photo feature.
 
 ## Special awards
