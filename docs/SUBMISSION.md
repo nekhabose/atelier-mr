@@ -6,7 +6,7 @@ Deadline: **Nov 18, 2026, 12:00 PM PT**. Track: **Productivity**. Division: **Ne
 
 - Play: https://atelier-mr.vercel.app (mirror: https://nekhabose.github.io/atelier-mr/)
 - Code: https://github.com/nekhabose/atelier-mr
-- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (1:43, 1080p, narrated by you; kept out of git). See Demo video below.
+- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (1:42, 1080p, narrated by you; kept out of git). See Demo video below.
 - No headset? Open the link on a desktop and press **Watch the tour (under 2 min)**: it plays the real app with captions.
 
 ## Name and tagline
@@ -177,16 +177,19 @@ whether Quest Browser provides speech synthesis and recognition is not yet
 verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.
 
-## Demo video (1:43)
+## Demo video (1:42)
 
 `docs/video/atelier-story.mp4` is the picture: the real app recorded in the
 Immersive Web Emulator's simulated living room, with the emulated headset
 moving like a person's head while the guided tour drives the real systems.
-Captions are burned in. `docs/video/atelier-demo.mp4` adds your narration
+Captions are burned in and show the narration word for word.
+`docs/video/atelier-demo.mp4` adds your narration
 (recorded in one take, split into lines and lightly cleaned; long pauses inside
 a line shortened), an original music bed and UI sounds. There is no synthetic
-voice. The tour is timed to your recording, so each action lands on its words
-(the hem moves on "knee", the fabric on "satin" and "silk"). On Devpost,
+voice. The tour is timed to your recording, so each action lands on its word
+(the hem moves on "knee", the fabric on "satin" and "silk"): word times come
+from the rhythm of each recorded line, and the recording runs on the real
+clock. On Devpost,
 describe it as emulator footage narrated by you.
 
 It tells one story, a real morning, so the features arrive as reasons:

@@ -96,21 +96,28 @@ def decode(path):
 
 
 def assemble(audio, group, max_pause):
-    """One line: its pieces, with pauses inside it shortened to max_pause."""
+    """One line: its pieces, with pauses inside it shortened to max_pause.
+    Also returns where each piece's speech sits in the clip (seconds)."""
     fade = int(0.012 * SR)
     out = []
-    for i, (a, b) in enumerate(group):
-        a = max(0.0, a - (0.08 if i == 0 else 0.03))
-        b = b + (0.12 if i == len(group) - 1 else 0.03)
+    spans = []
+    pos = 0
+    for i, (s0, s1) in enumerate(group):
+        a = max(0.0, s0 - (0.08 if i == 0 else 0.03))
+        b = s1 + (0.12 if i == len(group) - 1 else 0.03)
         seg = audio[int(a * SR):int(b * SR)].copy()
         if len(seg) > 2 * fade:
             seg[:fade] *= np.linspace(0, 1, fade)
             seg[-fade:] *= np.linspace(1, 0, fade)
         if i > 0:
             gap = group[i][0] - group[i - 1][1]
-            out.append(np.zeros(int(min(gap, max_pause) * SR), dtype=np.float32))
+            silence = np.zeros(int(min(gap, max_pause) * SR), dtype=np.float32)
+            out.append(silence)
+            pos += len(silence)
+        spans.append([round((pos / SR) + (s0 - a), 3), round((pos / SR) + (s1 - a), 3)])
         out.append(seg)
-    return np.concatenate(out)
+        pos += len(seg)
+    return np.concatenate(out), spans
 
 
 def main():
@@ -138,8 +145,10 @@ def main():
     out_dir = os.path.join(ROOT, 'docs', 'video', 'vo')
     os.makedirs(out_dir, exist_ok=True)
     lengths = []
+    speech = []
     for i, (group, text) in enumerate(zip(groups, lines)):
-        line = assemble(audio, group, args.max_pause)
+        line, spans = assemble(audio, group, args.max_pause)
+        speech.append(spans)
         tmp = os.path.join(out_dir, f'_raw{i}.f32')
         line.astype(np.float32).tofile(tmp)
         dst = os.path.join(out_dir, f'l{i}.wav')
@@ -153,7 +162,7 @@ def main():
         lengths.append(round(length, 2))
         print(f'l{i:<2} {group[0][0]:6.2f}-{group[-1][1]:6.2f} s in the take -> {length:4.1f} s  {text}')
     with open(os.path.join(out_dir, 'lengths.json'), 'w') as f:
-        json.dump({'found_by': how, 'lengths': lengths}, f)
+        json.dump({'found_by': how, 'lengths': lengths, 'speech': speech}, f)
 
 
 if __name__ == '__main__':

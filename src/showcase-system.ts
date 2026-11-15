@@ -30,7 +30,7 @@ import { MorningSystem } from './morning-system.js';
 import { MarkSystem } from './mark-system.js';
 import { access } from './atelier/access.js';
 import { LOOKS } from './atelier/looks.js';
-import { LINE_LENGTH, LINE_START } from './atelier/tour-timing.js';
+import { LINE_LENGTH, LINE_START, LINE_TEXT, WORD_AT } from './atelier/tour-timing.js';
 
 interface Shot {
   pos: [number, number, number];
@@ -53,8 +53,17 @@ interface Step {
 
 /** Seconds into the tour: `f` of the way through narration line `i`. */
 const line = (i: number, f = 0) => LINE_START[i] + f * LINE_LENGTH[i];
-/** A scene's caption and camera move lead its line slightly. */
-const scene = (i: number) => Math.max(0, LINE_START[i] - 0.4);
+/**
+ * When word `w` of line `i` is spoken (from the recording, see
+ * scripts/tour-timing.py), a moment early so the change lands on the word;
+ * `f` of the way through the line when the word is not known.
+ */
+const word = (i: number, w: string, f: number) =>
+  LINE_START[i] + (WORD_AT[`${i}:${w}`] ?? f * LINE_LENGTH[i]) - 0.15;
+/** The camera arrives as a line starts. */
+const scene = (i: number) => Math.max(0, LINE_START[i] - 0.8);
+/** The caption (what is said, word for word) as the voice starts. */
+const said = (i: number, title: string) => ({ at: Math.max(0, LINE_START[i] - 0.3), title, sub: LINE_TEXT[i] });
 
 const MOVE = 1.6;
 /** Page-camera shots for the flat tour (authored layout: form at 0,0,-1.55). */
@@ -109,6 +118,8 @@ export class ShowcaseSystem extends createSystem({}) {
   playing = false;
   /** Seconds into the tour. */
   t = 0;
+  /** Recording: the tour runs on the real clock, so slow frames cannot drift it. */
+  private t0 = 0;
   private steps: Step[] = [];
   private next = 0;
   private record = false;
@@ -205,6 +216,7 @@ export class ShowcaseSystem extends createSystem({}) {
 
   private begin(): void {
     this.cues = [];
+    this.t0 = performance.now();
     this.curTarget.set(0, 1, -1.5);
     this.steps = this.script();
     this.next = 0;
@@ -267,90 +279,66 @@ export class ShowcaseSystem extends createSystem({}) {
     const room = () => this.world.getSystem(RoomPlacementSystem)!;
     const mr = this.mode === 'mr';
     const dress = Math.max(0, LOOKS.findIndex((l) => l.id === 'velvet-hour'));
-    // Scenes follow the narration (src/atelier/tour-timing.ts); each action
-    // lands on its words, e.g. the hem moves on "knee".
+    // Scenes follow the narration (src/atelier/tour-timing.ts): the camera
+    // arrives as a line starts, the caption shows what is said, and each
+    // action lands on its word (the hem moves on "knee").
     return [
       {
         at: 0,
         shot: 'intro',
-        title: '7:40 am',
-        sub: 'Rain later. An interview at ten. A closet full of clothes I hardly wear.',
         act: () => {
           accessSys().togglePanel(false);
           closet().backToBrowse();
         },
       },
+      said(0, '7:40 am'),
       {
         at: scene(1),
         shot: 'wide',
-        title: 'Your room becomes a studio',
-        sub: mr
-          ? 'Atelier stands on your real floor, clear of your furniture, and remembers the spot.'
-          : 'On Quest it stands on your real floor, clear of your furniture, and remembers the spot.',
         sfx: 'reveal',
         act: () => {
           if (mr) room().hold = false;
         },
       },
+      said(1, 'Your room becomes a studio'),
       {
         at: scene(2),
         shot: 'stylist',
-        title: 'Dressed for your real day',
-        sub: "Today's forecast and your calendar set the brief. The stylist dresses the form from your closet.",
         act: () => {
           morning().useSample();
           closet().backToBrowse();
         },
       },
-      // "...and dresses the form"
-      { at: line(2, 0.62), sfx: 'sparkle', act: () => morning().dressToday() },
-      { at: scene(3), title: 'Refine in plain words', sub: '"Dressier." Every change lands on the form.' },
-      // "I say dressier"
-      { at: line(3, 0.66), sfx: 'sparkle', act: () => void stylist().refine('dressier') },
+      said(2, 'Dressed for your real day'),
+      { at: word(2, 'dresses', 0.62), sfx: 'sparkle', act: () => morning().dressToday() },
+      said(3, 'Refine in plain words'),
+      { at: word(3, 'dressier', 0.66), sfx: 'sparkle', act: () => void stylist().refine('dressier') },
       {
         at: scene(4),
         shot: 'rack',
-        title: 'Tap a look',
-        sub: 'For tonight, a dress from the rail. The form wears it, life-size.',
         act: () => {
           stylist().keep();
           closet().setMode(false);
         },
       },
-      // "a dress from the rail"
-      { at: line(4, 0.6), sfx: 'swish', act: () => a().wearLook(dress) },
+      said(4, 'Tap a look'),
+      { at: word(4, 'dress', 0.6), sfx: 'swish', act: () => a().wearLook(dress) },
+      { at: scene(5), shot: 'hem' },
+      said(5, 'Mark it on yourself'),
+      { at: word(5, 'knee', 0.72), sfx: 'sparkle', act: () => this.world.getSystem(MarkSystem)?.demo('hem', 52) },
+      said(6, 'Or pull a pin'),
+      { at: word(6, 'pull', 0.12), sfx: 'pin', act: () => this.startHem() },
+      { at: scene(7), shot: 'board' },
+      said(7, 'Drop a fabric'),
+      { at: line(7, 0.38), shot: 'form' },
+      { at: word(7, 'satin', 0.78), sfx: 'settle', act: () => a().applyFabric('navy-satin') },
+      { at: word(7, 'silk', 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
+      { at: scene(8), shot: 'stylist' },
+      said(8, 'Lay out tomorrow'),
+      { at: word(8, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow() },
+      said(9, 'Wear what you own'),
       {
-        at: scene(5),
-        shot: 'hem',
-        title: 'Mark it on yourself',
-        sub: 'Too long? Pinch your own clothes at the knee, and the form takes the measurement.',
-      },
-      // "at the knee"
-      { at: line(5, 0.72), sfx: 'sparkle', act: () => this.world.getSystem(MarkSystem)?.demo('hem', 52) },
-      { at: scene(6), title: 'Or pull a pin', sub: 'The tape measure reads the length in centimetres as you go.' },
-      // "I pull a pin"
-      { at: line(6, 0.12), sfx: 'pin', act: () => this.startHem() },
-      { at: scene(7), shot: 'board', title: 'Drop a fabric', sub: 'Satin, silk, velvet, denim: swatches re-skin the garment.' },
-      { at: line(7, 0.42), shot: 'form' },
-      // "satin, then silk"
-      { at: line(7, 0.78), sfx: 'settle', act: () => a().applyFabric('navy-satin') },
-      { at: line(7, 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
-      {
-        at: scene(8),
-        shot: 'stylist',
-        title: 'Lay out tomorrow',
-        sub: "Pick tomorrow's outfit tonight. It is waiting on the form in the morning.",
-      },
-      // "I lay out tomorrow's outfit"
-      { at: line(8, 0.35), sfx: 'swish', act: () => morning().layOutTomorrow() },
-      {
-        at: scene(9),
-        title: 'Wear what you own',
-        sub: 'Your least worn piece, its cost per wear, and a look built around it.',
-      },
-      // "and builds a look around it"
-      {
-        at: line(9, 0.78),
+        at: word(9, 'builds', 0.78),
         sfx: 'sparkle',
         act: () => {
           const item = closet().leastWornItem();
@@ -360,25 +348,18 @@ export class ShowcaseSystem extends createSystem({}) {
       {
         at: scene(10),
         shot: 'boutique',
-        title: 'Shop against your closet',
-        sub: 'How many outfits a new piece adds, and an honest buy-or-skip verdict.',
         act: () => {
           stylist().keep();
           closet().openBoutique();
           boutique().open(1);
         },
       },
-      // "it counts the outfits it would add"
-      { at: line(10, 0.5), sfx: 'swish', act: () => boutique().tryOn(1) },
+      said(10, 'Shop against your closet'),
+      { at: word(10, 'counts', 0.5), sfx: 'swish', act: () => boutique().tryOn(1) },
+      { at: scene(11), act: () => boutique().close(true) },
+      said(11, 'Sit down, it comes to you'),
       {
-        at: scene(11),
-        title: 'Sit down, it comes to you',
-        sub: 'Seated, the form, the rail and the panels are all within reach.',
-        act: () => boutique().close(true),
-      },
-      // "when I sit down"
-      {
-        at: line(11, 0.3),
+        at: word(11, 'sit', 0.3),
         sfx: mr ? 'settle' : undefined,
         act: () => {
           if (mr && !access.settings.seated) {
@@ -387,11 +368,9 @@ export class ShowcaseSystem extends createSystem({}) {
           }
         },
       },
-      { at: line(11, 0.42), shot: 'seated' },
+      { at: word(11, 'sit', 0.3) + 0.15, shot: 'seated' },
       {
         at: scene(12),
-        title: 'Accessible by design',
-        sub: 'Large text, high contrast, calm motion, voice, and tailoring by tap.',
         sfx: mr ? 'settle' : undefined,
         act: () => {
           if (this.seatedByTour) {
@@ -401,21 +380,17 @@ export class ShowcaseSystem extends createSystem({}) {
           accessSys().togglePanel(true);
         },
       },
-      { at: scene(12) + 0.6, shot: 'access' },
+      { at: scene(12) + 0.3, shot: 'access' },
+      said(12, 'Accessible by design'),
       {
         at: scene(13),
         shot: 'end',
-        title: 'Get dressed for your real day',
-        sub: 'Open it in the Quest browser today. On the Meta Horizon Store in February 2027.',
-        sfx: 'settle',
-        act: () => {
-          accessSys().togglePanel(false);
-          a().turnForm(1);
-        },
+        act: () => accessSys().togglePanel(false),
       },
-      { at: line(13, 0.3), sfx: 'settle', act: () => a().turnForm(1) },
-      // "Open it in your Quest browser today"
-      { at: line(13, 0.45), sfx: 'sparkle', act: () => this.showEnd() },
+      said(13, 'Get dressed for your real day'),
+      { at: word(13, 'get', 0.2), sfx: 'settle', act: () => a().turnForm(1) },
+      // "Open it in your Quest browser today": the end card with the address.
+      { at: word(13, 'open', 0.45), sfx: 'sparkle', act: () => this.showEnd() },
     ];
   }
 
@@ -442,7 +417,8 @@ export class ShowcaseSystem extends createSystem({}) {
       return;
     }
     if (!this.playing) return;
-    this.t += Math.min(delta, 0.1);
+    if (this.mode === 'mr') this.t = (performance.now() - this.t0) / 1000;
+    else this.t += Math.min(delta, 0.1);
     while (this.next < this.steps.length && this.steps[this.next].at <= this.t) {
       const s = this.steps[this.next++];
       if (s.shot) this.moveTo(s.shot);

@@ -4,3 +4,22 @@
  */
 export const LINE_START = [0.6, 9.36, 15.16, 23.68, 31.98, 35.89, 44.12, 49.21, 55.91, 62.76, 69.78, 78.66, 83.56, 92.59];
 export const LINE_LENGTH = [8.26, 5.1, 8.02, 7.8, 3.41, 7.23, 4.59, 5.7, 6.35, 6.52, 8.08, 4.4, 8.53, 7.24];
+/** Seconds into a line when a word the tour acts on is spoken ("line:word"). */
+export const WORD_AT: Record<string, number> = {"2:dresses": 5.48, "3:dressier": 5.07, "4:dress": 1.92, "5:knee": 5.5, "6:pull": 0.54, "7:satin": 3.92, "7:silk": 5.2, "8:lay": 1.27, "9:builds": 4.71, "10:counts": 2.76, "11:sit": 0.82, "13:get": 1.42, "13:open": 3.65};
+/** What is said: the captions show these words. */
+export const LINE_TEXT = [
+  "Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear.",
+  "So I put on my headset, and my own room becomes a fitting studio.",
+  "Atelier checks today's forecast and my calendar, and dresses the form from my own closet.",
+  "It's an interview, so I want it sharper. I say dressier, and the outfit changes.",
+  "For tonight, I take a dress from the rail.",
+  "It's too long for me, so I pinch my own leg at the knee, and the hem moves there.",
+  "Or I pull a pin, and the tape measure reads the length as I go.",
+  "A different fabric? I drop a swatch on it: satin, then silk.",
+  "Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.",
+  "It shows me what I never wear, what it costs per wear, and builds a look around it.",
+  "Before I buy something new, it counts the outfits it would add, and gives me an honest verdict.",
+  "And when I sit down, the whole studio comes within reach.",
+  "Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.",
+  "Atelier. Get dressed for your real day. Open it in your Quest browser today."
+];
