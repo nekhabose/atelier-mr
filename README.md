@@ -141,6 +141,15 @@ February 2027.
   moves or changes (0 redraws a second while the studio is still, instead of
   60); `?perf` shows frame rate, draw calls, triangles and shadow redraws on the
   page and above the studio panel. Fixed foveation is at the maximum (1.0).
+- **Quality governor:** in the headset, below 85% of the refresh rate (61 fps
+  at 72 Hz) quality steps down (depth occlusion, then shadow updates, then
+  garment detail) and back up when there is headroom; `?perf` shows the tier.
+- **Safety nets:** every system's frame update is guarded so one failure
+  cannot freeze the view; errors are recorded; a graphics reset recovers; a
+  headset view that does not start is explained. No leaks over a 300-action
+  soak test (`scripts/check-soak.mjs`).
+- **Rooms of any size:** in a small room (a wall nearer than 1.85 m) the
+  studio switches to its compact layout in front of the wall.
 - **Depth occlusion (Quest 3):** real hands and furniture hide the form,
   garments, pins, the rail and the fabric board behind them, so a hand reaching
   into the rail shows in front. Depth sensing is optional, so other devices
@@ -185,6 +194,9 @@ The mixed-reality demo video (emulator room, captions, music, your own
 narration) is rebuilt with the steps in `docs/SUBMISSION.md` (Demo video);
 `docs/RECORDING.md` has the 14 lines and how to record them, and
 `docs/NEWCOMER-TEST.md` a 15-minute test with someone new to Atelier.
+
+How it stays fast and reliable (quality governor, safety nets, rooms of any
+size, soak test, privacy, scaling): `docs/ENGINEERING.md`.
 Record the flat showcase as an MP4 (needs ffmpeg; output is git-ignored):
 
 ```sh

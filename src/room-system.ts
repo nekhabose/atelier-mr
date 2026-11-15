@@ -41,7 +41,7 @@ import {
   XRMesh,
   XRPlane,
 } from '@iwsdk/core';
-import { Circle, Clearance, clearanceText, findClearance, Obstacle } from './atelier/clearance.js';
+import { Circle, Clearance, clearanceText, findClearance, Obstacle, wallPlan } from './atelier/clearance.js';
 import { RACK, SWATCH_BOARD } from './scene-assets/atelier.scene-asset.js';
 import { AtelierSystem } from './atelier-system.js';
 import { sfx } from './atelier/sfx.js';
@@ -52,8 +52,7 @@ import { makeLabel } from './atelier/labels.js';
 const STUDIO_NODES = ['dress-form', 'clothing-rack', 'swatch-board', 'atelier-panel', 'closet-panel', 'shadow-catcher'];
 /** Distance from the studio frame origin to the wall (deepest authored point + clearance). */
 const STUDIO_DEPTH = 2.05;
-/** Only walls in this range (metres along your gaze) are used for snapping. */
-const WALL_MIN = 1.85;
+/** Walls up to this far (metres along your gaze) are used for snapping (see wallPlan). */
 const WALL_MAX = 2.8; // farther walls tend to have furniture in between
 /** Wait this long for planes before falling back to "in front of you". */
 const PLANE_WAIT = 2.5;
@@ -101,10 +100,13 @@ interface StudioNode {
  */
 const NARROW_FOV_DEG = 45;
 const COMPACT: Record<string, { pos: [number, number, number]; rotDeg: [number, number, number]; scale: number }> = {
-  'clothing-rack': { pos: [-0.75, 0, -2.05], rotDeg: [0, 28, 0], scale: 0.85 },
-  'swatch-board': { pos: [0.75, 0, -2.05], rotDeg: [0, -28, 0], scale: 0.85 },
-  'atelier-panel': { pos: [0.32, 0.92, -0.74], rotDeg: [-20, -23, 0], scale: 0.08 },
-  'closet-panel': { pos: [-0.32, 0.92, -0.74], rotDeg: [-20, 23, 0], scale: 0.08 },
+  // Deep and wide enough that every hanger has a clear line past the form
+  // (gaze and rays must reach each look), with the outer ends within about
+  // 30 degrees of straight ahead.
+  'clothing-rack': { pos: [-1.2, 0, -2.25], rotDeg: [0, 35, 0], scale: 0.85 },
+  'swatch-board': { pos: [1.2, 0, -2.25], rotDeg: [0, -35, 0], scale: 0.85 },
+  'atelier-panel': { pos: [0.27, 0.92, -0.74], rotDeg: [-20, -20, 0], scale: 0.08 },
+  'closet-panel': { pos: [-0.27, 0.92, -0.74], rotDeg: [-20, 20, 0], scale: 0.08 },
 };
 
 /**
@@ -157,7 +159,9 @@ interface DetectedPlane {
   polygon?: ArrayLike<{ x: number; z: number }>;
 }
 
-export type PlacementResult = 'wall' | 'front' | 'restored' | 'authored';
+export type PlacementResult = 'wall' | 'snug' | 'front' | 'restored' | 'authored';
+/** In a small room, the compact studio's front edge this far out from the wall. */
+const SNUG_DEPTH = 1.4;
 
 export class RoomPlacementSystem extends createSystem({
   planes: { required: [XRPlane] },
@@ -182,6 +186,8 @@ export class RoomPlacementSystem extends createSystem({
   private revealedThisSession = false;
   /** The FoV-aware layout in use this session (for scripted checks). */
   compact = false;
+  /** A wall is close (small room): the compact, seated-size layout is used. */
+  snug = false;
   /** Measured horizontal half field of view (degrees), 0 until known. */
   fovHalfDeg = 0;
   /** Why the compact layout was chosen ('none' when it was not). */
@@ -252,6 +258,9 @@ export class RoomPlacementSystem extends createSystem({
     this.ring.visible = false;
     this.ring.raycast = () => {};
     ringGroup.add(this.ring);
+    // Decorative: must not widen the form's target for gaze (IWSDK counts
+    // every descendant, visible or not, unless it is marked runtime-only).
+    ringGroup.userData.iwsdkRuntimeOnly = true;
     this.world.createTransformEntity(ringGroup, {
       parent: this.world.requireSceneEntity('dress-form'),
     });
@@ -300,6 +309,7 @@ export class RoomPlacementSystem extends createSystem({
       m.raycast = () => {};
     }
     this.title.visible = false;
+    this.title.userData.iwsdkRuntimeOnly = true;
     this.world.createTransformEntity(this.title, {
       parent: this.world.requireSceneEntity('dress-form'),
     });
@@ -393,7 +403,7 @@ export class RoomPlacementSystem extends createSystem({
       const denom = this.dir.dot(this.n);
       if (Math.abs(denom) < 0.35) continue; // grazing wall
       const t = this.local.copy(this.o).sub(this.head).dot(this.n) / denom;
-      if (t < WALL_MIN || t > WALL_MAX || t >= bestT) continue;
+      if (t < 0.4 || t > WALL_MAX || t >= bestT) continue;
       this.hit.copy(this.dir).multiplyScalar(t).add(this.head);
       if (!this.insidePolygon(obj, plane)) continue;
       bestT = t;
@@ -405,7 +415,27 @@ export class RoomPlacementSystem extends createSystem({
 
     let result: PlacementResult;
     const seated = access.settings.seated;
-    if (bestT < Infinity && !seated) {
+    const plan = wallPlan(bestT, seated);
+    // Narrow views (Meta VR Glasses): the panels follow your eye height, so
+    // their buttons stay within the glasses' view seated or standing.
+    if (this.compact && !seated && plan !== 'snug') {
+      const y = Math.min(1.35, Math.max(0.85, this.head.y - floorY - 0.35));
+      for (const node of this.nodes) if (PANEL_IDS.has(node.id)) node.basePos.y = y;
+    }
+    // A small room: switch to the compact layout before placing (and back).
+    if ((plan === 'snug') !== this.snug) {
+      this.snug = plan === 'snug';
+      this.applyFrame(0, 0, 0, 0);
+      this.useLayout(this.compact);
+    }
+    if (plan === 'snug') {
+      // The compact studio's front edge SNUG_DEPTH out from the near wall.
+      const yaw = Math.atan2(this.bestN.x, this.bestN.z);
+      this.origin.copy(this.bestN).multiplyScalar(SNUG_DEPTH).add(this.bestHit);
+      this.applyFrame(this.origin.x, floorY, this.origin.z, yaw);
+      result = 'snug';
+      this.wallDistance = bestT;
+    } else if (plan === 'snap') {
       // Studio frame: -Z points into the wall, origin STUDIO_DEPTH out from it.
       const yaw = Math.atan2(this.bestN.x, this.bestN.z);
       this.origin.copy(this.bestN).multiplyScalar(STUDIO_DEPTH + (this.compact ? 0.35 : 0)).add(this.bestHit);
@@ -431,6 +461,8 @@ export class RoomPlacementSystem extends createSystem({
     const atelier = this.world.getSystem(AtelierSystem);
     if (atelier && cleared) {
       atelier.setHint(cleared);
+    } else if (atelier && result === 'snug') {
+      atelier.setHint('A small space: the studio is laid out compact, in front of your wall. Step back and tap Move studio for the full layout.');
     } else if (atelier && (announce || result === 'wall')) {
       atelier.setHint(
         seated
@@ -681,7 +713,7 @@ export class RoomPlacementSystem extends createSystem({
   /** Switch the studio's base layout (call while the frame yaw is 0). */
   private useLayout(compact: boolean): void {
     this.compact = compact;
-    const layout = this.inXR && access.settings.seated ? SEATED : compact ? COMPACT : undefined;
+    const layout = this.inXR && (access.settings.seated || this.snug) ? SEATED : compact ? COMPACT : undefined;
     for (const node of this.nodes) {
       const c = layout?.[node.id];
       if (c) {

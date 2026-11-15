@@ -1,4 +1,5 @@
-import { DepthSensingSystem, World } from '@iwsdk/core';
+import { DepthSensingSystem, VisibilityState, World } from '@iwsdk/core';
+import { guardSystems, installGlobalHandlers, setNotice, toast, watchContext } from './atelier/safety.js';
 import projectOptions from 'virtual:iwsdk-project';
 import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
@@ -51,6 +52,19 @@ World.create(
   world.registerSystem(DepthSensingSystem, {
     configData: { enableDepthTexture: true, enableOcclusion: true, useFloat32: true, blurRadius: 20 },
   });
+  // Safety nets (src/atelier/safety.ts): no single failure can freeze the
+  // view, errors are recorded, a graphics reset recovers, and you are told
+  // in plain words (in the headset, on the studio panel).
+  installGlobalHandlers();
+  watchContext(world.renderer.domElement);
+  setNotice((text) => {
+    if (world.visibilityState.peek() === VisibilityState.NonImmersive) toast(text);
+    else world.getSystem(AtelierSystem)?.setHint(text);
+  });
+  guardSystems(world.getSystems());
+  // Some engine systems start with the session: guard those too.
+  world.visibilityState.subscribe(() => guardSystems(world.getSystems()));
+
   // Handy for debugging in the browser console / IWSDK CLI eval.
   const g = globalThis as unknown as Record<string, unknown>;
   g.atelier = world.getSystem(AtelierSystem);

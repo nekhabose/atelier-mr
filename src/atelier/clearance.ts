@@ -100,11 +100,29 @@ export function findClearance(footprint: Circle[], frame: Frame, obstacles: Obst
   return { dx: 0, dz: 0, blockedBy, clear: false };
 }
 
+/** Walls nearer than this cannot hold the full studio in front of them. */
+export const SNUG_BELOW = 1.85;
+/** Farther walls tend to have furniture in between. */
+export const SNAP_ABOVE = 2.8;
+
+/**
+ * What to do with the wall straight ahead at distance `t` (metres; Infinity
+ * when there is none): back the studio up against it, fit the compact studio
+ * in front of it (a small room), or ignore it.
+ */
+export function wallPlan(t: number, seated: boolean): 'snap' | 'snug' | 'none' {
+  if (seated || !Number.isFinite(t) || t < 0.4) return 'none';
+  if (t < SNUG_BELOW) return 'snug';
+  return t <= SNAP_ABOVE ? 'snap' : 'none';
+}
+
 /** "Moved 30 cm left to clear your table." */
 export function clearanceText(c: Clearance): string | null {
   if (c.blockedBy.length === 0) return null;
   const what = c.blockedBy.slice(0, 2).join(' and ');
-  if (!c.clear) return `Your ${what} is in the way here. Face a clearer spot and tap Move studio.`;
+  if (!c.clear) {
+    return `Your ${what} ${c.blockedBy.length > 1 ? 'are' : 'is'} in the way here. Face a clearer spot and tap Move studio.`;
+  }
   const parts: string[] = [];
   if (c.dx !== 0) parts.push(`${Math.round(Math.abs(c.dx) * 100)} cm ${c.dx < 0 ? 'left' : 'right'}`);
   if (c.dz !== 0) parts.push(`${Math.round(c.dz * 100)} cm toward you`);

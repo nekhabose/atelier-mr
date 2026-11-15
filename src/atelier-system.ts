@@ -57,9 +57,11 @@ import {
   TailorParam,
   DRAG_DETAIL,
   Detail,
+  LIGHT_DETAIL,
 } from './atelier/garments.js';
 import { makeLabel, makeTextSheet } from './atelier/labels.js';
 import { TailorTools } from './atelier/tailor-tools.js';
+import { expectSession } from './atelier/safety.js';
 import { sfx } from './atelier/sfx.js';
 import { access } from './atelier/access.js';
 import { say } from './atelier/voice.js';
@@ -158,6 +160,8 @@ export class AtelierSystem extends createSystem({
   private pieces: GarmentPiece[] = [];
   private pieceGroups: Group[] = [];
   private tools = new TailorTools();
+  /** Detail of the worn garments (the quality governor can lighten it). */
+  private heroDetail: Detail = HERO_DETAIL;
   /** Seconds the tape stays up after a measurement set without a pin. */
   private toolsHold = 0;
   /** Body proportions from your photo: width (x/z) and height scale. */
@@ -186,7 +190,9 @@ export class AtelierSystem extends createSystem({
     this.outfit = new Group();
     this.outfit.name = 'outfit';
     formObject.add(this.outfit);
-    // Tape measure, chalk mark and readout while a pin is pulled.
+    // Tape measure, chalk mark and readout while a pin is pulled. Decorative:
+    // marked so it does not widen the form's target for gaze.
+    this.tools.root.userData.iwsdkRuntimeOnly = true;
     formObject.add(this.tools.root);
 
     // A warm studio backdrop for the flat page (judges' first look in the
@@ -500,7 +506,10 @@ export class AtelierSystem extends createSystem({
         exitButton.setProperties({ display: 'none' });
         return;
       }
-      const launchXR = () => this.world.launchXR();
+      const launchXR = () => {
+        this.world.launchXR();
+        expectSession(() => this.world.visibilityState.peek() !== VisibilityState.NonImmersive);
+      };
       const exitXR = () => this.world.exitXR();
       xrButton.addEventListener('click', launchXR);
       exitButton.addEventListener('click', exitXR);
@@ -623,7 +632,7 @@ export class AtelierSystem extends createSystem({
   private rebuildAll(): void {
     for (const g of this.pieceGroups) this.disposeGroup(g);
     this.pieceGroups = this.pieces.map((p) => {
-      const g = buildPieceGroup(p, fabricMaterial(p.fabric), HERO_DETAIL);
+      const g = buildPieceGroup(p, fabricMaterial(p.fabric), this.heroDetail);
       this.outfit.add(g);
       return g;
     });
@@ -631,7 +640,7 @@ export class AtelierSystem extends createSystem({
     this.ensureOcclusion();
   }
 
-  private rebuildPiece(index: number, detail: Detail = HERO_DETAIL): void {
+  private rebuildPiece(index: number, detail: Detail = this.heroDetail): void {
     const old = this.pieceGroups[index];
     if (old) this.disposeGroup(old);
     const p = this.pieces[index];
@@ -639,7 +648,15 @@ export class AtelierSystem extends createSystem({
     this.outfit.add(g);
     this.pieceGroups[index] = g;
     // A new fabric (the only thing that brings a new material) needs patching.
-    if (detail === HERO_DETAIL) this.ensureOcclusion();
+    if (detail !== DRAG_DETAIL) this.ensureOcclusion();
+  }
+
+  /** Lighter worn garments when the headset is short of frame time. */
+  setGarmentDetail(light: boolean): void {
+    const next = light ? LIGHT_DETAIL : HERO_DETAIL;
+    if (next === this.heroDetail) return;
+    this.heroDetail = next;
+    this.rebuildAll();
   }
 
   /** Place every pin on its garment edge (skips pins being dragged). */

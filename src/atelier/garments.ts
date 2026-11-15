@@ -105,6 +105,8 @@ export interface Detail {
 }
 
 export const HERO_DETAIL: Detail = { segments: 56, ringDensity: 70 };
+/** The quality governor's lighter worn garments (about half the triangles). */
+export const LIGHT_DETAIL: Detail = { segments: 40, ringDensity: 48 };
 /** Used while a tailoring pin is being dragged: same shape, far less work. */
 export const DRAG_DETAIL: Detail = { segments: 30, ringDensity: 34 };
 export const MINI_DETAIL: Detail = { segments: 20, ringDensity: 24 };

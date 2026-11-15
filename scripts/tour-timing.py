@@ -90,10 +90,14 @@ header = [r for r in rows if r.startswith('#') or not r.strip()]
 lines = [r.split('|', 1) for r in rows if r.strip() and not r.startswith('#')]
 
 lengths_path = os.path.join(ROOT, 'docs', 'video', 'vo', 'lengths.json')
+known_words = {}
 if os.path.exists(lengths_path):
     with open(lengths_path) as f:
-        lengths = json.load(f)['lengths']
-    source = 'your recorded lines'
+        meta = json.load(f)
+    lengths = meta['lengths']
+    # Lines spoken phrase by phrase (the cloned voice) come with exact word times.
+    known_words = meta.get('words', {})
+    source = 'the cloned narration' if meta.get('found_by') == 'clone' else 'your recorded lines'
 else:
     starts = [float(t) for t, _ in lines]
     lengths = [round(b - a - 0.6, 2) for a, b in zip(starts, starts[1:])] + [5.5]
@@ -111,8 +115,10 @@ with open(narration, 'w', encoding='utf-8') as f:
     for s, (_, text) in zip(starts, lines):
         f.write(f'{s}|{text}\n')
 
-word_at = {}
+word_at = dict(known_words)
 for i, ws in TARGETS.items():
+    if all(f'{i}:{w.lower()}' in word_at for w in ws):
+        continue
     found = word_times(lines[i][1], os.path.join(ROOT, 'docs', 'video', 'vo', f'l{i}.wav'), lengths[i])
     for w in ws:
         if w.lower() in found:

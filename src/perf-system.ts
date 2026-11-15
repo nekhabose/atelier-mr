@@ -7,12 +7,23 @@
  * was rebuilt (a cheap fingerprint of the casters' world matrices, checked
  * once per frame without allocating).
  *
- * Meter (?perf): frames per second, frame time, draw calls, triangles and
- * shadow-map redraws per second, on the flat page and inside the headset.
- * The same numbers are on `globalThis.perfStats` for scripted checks.
+ * Quality governor (in the headset): the judging floor is 60 fps on Quest.
+ * When the frame rate stays under 85% of the display's refresh rate (61 fps
+ * on a 72 Hz Quest) for 1.5 s, quality steps down
+ * one tier, and steps back up after 10 s at the device's refresh rate:
+ *   tier 0  everything on;
+ *   tier 1  depth occlusion off, shadows redrawn at most 4 times a second;
+ *   tier 2  also lighter worn garments (about half the triangles).
+ * The studio stays fully usable at every tier.
+ *
+ * Meter (?perf): frames per second, frame time, draw calls, triangles,
+ * shadow-map redraws per second and the quality tier, on the flat page and
+ * inside the headset. The same numbers are on `globalThis.perfStats`.
  */
-import { createSystem, Mesh, MeshBasicMaterial, Object3D, VisibilityState } from '@iwsdk/core';
+import { createSystem, DepthSensingSystem, Mesh, MeshBasicMaterial, Object3D, VisibilityState } from '@iwsdk/core';
+import { AtelierSystem } from './atelier-system.js';
 import { makeLabel } from './atelier/labels.js';
+import { govern, MAX_TIER, newGovernor } from './atelier/quality.js';
 
 const METER_INTERVAL = 0.5;
 
@@ -25,6 +36,8 @@ export interface PerfStats {
   shadowRedrawsPerSec: number;
   shadowSkipRatio: number;
   foveation: number | null;
+  /** Quality tier set by the governor (0 = full). */
+  tier: number;
 }
 
 export class PerfSystem extends createSystem({}) {
@@ -37,7 +50,15 @@ export class PerfSystem extends createSystem({}) {
     shadowRedrawsPerSec: 0,
     shadowSkipRatio: 0,
     foveation: null,
+    tier: 0,
   };
+  /** Set false to hold the current quality tier (tests, comparisons). */
+  governor = true;
+  private gov = newGovernor();
+  private clock = 0;
+  private lastShadow = -Infinity;
+  private shadowGap = 0;
+  private shadowDirty = false;
   /** Set false to compare with three.js's default (redraw every frame). */
   shadowsOnDemand = true;
   private fingerprint = 0;
@@ -67,6 +88,9 @@ export class PerfSystem extends createSystem({}) {
     this.cleanupFuncs.push(
       this.world.visibilityState.subscribe((state) => {
         renderer.shadowMap.needsUpdate = true;
+        // Each session finds its own level.
+        this.gov = newGovernor();
+        if (state === VisibilityState.NonImmersive && this.stats.tier !== 0) this.setTier(0);
         if (this.dom) this.dom.style.display = state === VisibilityState.NonImmersive ? 'block' : 'none';
         if (this.label) this.label.visible = state !== VisibilityState.NonImmersive;
       }),
@@ -79,8 +103,29 @@ export class PerfSystem extends createSystem({}) {
     this.world.renderer.shadowMap.needsUpdate = true;
   }
 
+  /** Set the quality tier (0 = full). */
+  setTier(tier: number): void {
+    const t = Math.max(0, Math.min(MAX_TIER, Math.round(tier)));
+    this.stats.tier = t;
+    const depth = this.world.getSystem(DepthSensingSystem);
+    if (depth) depth.config.enableOcclusion.value = t < 1;
+    this.shadowGap = t >= 1 ? 0.25 : 0;
+    this.world.getSystem(AtelierSystem)?.setGarmentDetail(t >= 2);
+    this.gov.tier = t;
+    this.gov.lowT = 0;
+    this.gov.highT = 0;
+  }
+
+  /** Called twice a second in the headset with the measured frame rate. */
+  private govern(fps: number, window: number): void {
+    const session = this.world.renderer.xr.getSession() as (XRSession & { frameRate?: number }) | null;
+    const tier = govern(this.gov, fps, window, session?.frameRate);
+    if (tier !== this.stats.tier) this.setTier(tier);
+  }
+
   update(delta: number): void {
     const renderer = this.world.renderer;
+    this.clock += delta;
     if (!this.shadowsOnDemand) {
       renderer.shadowMap.needsUpdate = true;
       this.redraws++;
@@ -89,6 +134,12 @@ export class PerfSystem extends createSystem({}) {
       this.world.scene.traverseVisible(this.visit);
       if (this.acc !== this.fingerprint) {
         this.fingerprint = this.acc;
+        this.shadowDirty = true;
+      }
+      // At lower tiers moving shadows are redrawn a few times a second.
+      if (this.shadowDirty && this.clock - this.lastShadow >= this.shadowGap) {
+        this.shadowDirty = false;
+        this.lastShadow = this.clock;
         renderer.shadowMap.needsUpdate = true;
         this.redraws++;
       }
@@ -109,6 +160,7 @@ export class PerfSystem extends createSystem({}) {
       s.shadowSkipRatio = Math.round((1 - this.redraws / this.frames) * 100) / 100;
       const xr = renderer.xr as unknown as { isPresenting: boolean; getFoveation?: () => number | undefined };
       s.foveation = xr.isPresenting ? xr.getFoveation?.() ?? null : null;
+      if (this.governor && xr.isPresenting) this.govern(s.fps, this.windowT);
       this.frames = 0;
       this.windowT = 0;
       this.worst = 0;
@@ -119,7 +171,7 @@ export class PerfSystem extends createSystem({}) {
 
   private text(): string {
     const s = this.stats;
-    return `${s.fps} fps  ${s.frameMs} ms (worst ${s.worstFrameMs})  |  ${s.drawCalls} calls  ${Math.round(s.triangles / 1000)}k tris  |  shadows ${s.shadowRedrawsPerSec}/s`;
+    return `${s.fps} fps  ${s.frameMs} ms (worst ${s.worstFrameMs})  |  ${s.drawCalls} calls  ${Math.round(s.triangles / 1000)}k tris  |  shadows ${s.shadowRedrawsPerSec}/s  |  quality ${['full', 'reduced', 'light'][s.tier]}`;
   }
 
   private buildDom(): void {

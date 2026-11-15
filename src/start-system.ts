@@ -9,6 +9,7 @@
  */
 import { createSystem, VisibilityState } from '@iwsdk/core';
 import { sidePanel, sidePanelInset, sideSection } from './atelier/side-panel.js';
+import { expectSession } from './atelier/safety.js';
 
 export class StartSystem extends createSystem({}) {
   private flat = true;
@@ -30,7 +31,12 @@ export class StartSystem extends createSystem({}) {
         xr ? 'Put your controllers down: everything works with a pinch.' : 'On this screen you can explore the studio and play the tour.'
       }</div>`;
     const enter = card.querySelector<HTMLButtonElement>('[data-enter]')!;
-    if (xr) enter.addEventListener('click', () => this.world.launchXR());
+    if (xr) {
+      enter.addEventListener('click', () => {
+        this.world.launchXR();
+        expectSession(() => this.world.visibilityState.peek() !== VisibilityState.NonImmersive);
+      });
+    }
     else enter.disabled = true;
     card.querySelector('[data-tour]')!.addEventListener('click', () => {
       (globalThis as unknown as { showcase?: { start(): void } }).showcase?.start();
