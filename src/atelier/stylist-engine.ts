@@ -102,7 +102,7 @@ export function score(outfit: StylistItem[], occasion: Occasion, weather: Weathe
   const delicate = outfit.some((i) => ['satin', 'silk', 'velvet', 'sequin', 'lace', 'tulle', 'lame'].includes(fabricKey(i)));
   const sparkle = outfit.some((i) => SPARKLE.has(fabricKey(i)));
   // What each occasion calls for, beyond formality.
-  if (occasion === 'party') s += sparkle ? 0.6 : outfit.some((i) => ['velvet', 'satin', 'tulle'].includes(fabricKey(i))) ? 0.3 : 0;
+  if (occasion === 'party') s += sparkle ? 0.9 : outfit.some((i) => ['velvet', 'satin', 'tulle'].includes(fabricKey(i))) ? 0.3 : 0;
   if (occasion === 'date') s += outfit.some((i) => ['satin', 'lace', 'silk', 'velvet'].includes(fabricKey(i))) ? 0.3 : 0;
   if (occasion === 'interview' || occasion === 'work') {
     s -= sparkle ? 0.9 : 0;

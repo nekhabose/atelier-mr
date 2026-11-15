@@ -263,7 +263,7 @@ export class MorningSystem extends createSystem({}) {
   }
 
   /** Pick tomorrow's outfit tonight; it is waiting on the form in the morning. */
-  layOutTomorrow(opts: { instant?: boolean } = {}): void {
+  layOutTomorrow(opts: { instant?: boolean; seed?: number } = {}): void {
     if (!opts.instant && this.runAgent) {
       this.runAgent('tomorrow');
       return;
@@ -274,7 +274,7 @@ export class MorningSystem extends createSystem({}) {
     const weather = day.forecast?.weather ?? this.stylist.weather;
     // Something other than what is on the form today, where the closet allows.
     const today = new Set(itemsOnForm(this.closet.items, this.atelier.currentPieces));
-    const options = planOffline(items, day.occasion, weather, this.stylist.mood, 3).options;
+    const options = planOffline(items, day.occasion, weather, this.stylist.mood, 3, opts.seed ?? Date.now()).options;
     const best = options.find((o) => o.itemIds.some((id) => !today.has(id))) ?? options[0];
     if (!best) {
       this.closet.backToBrowse('Your closet needs a top and a bottom, or a dress, to lay out an outfit.');

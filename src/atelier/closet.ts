@@ -100,7 +100,14 @@ export function mixIn(outfit: GarmentPiece[], p: GarmentPiece): GarmentPiece[] {
   return [...outfit.filter((o) => !replaced.includes(o.kind)), { ...p }];
 }
 
-function makeItem(p: GarmentPiece, price?: number): ClosetItem {
+/** A local date `n` days before today (YYYY-MM-DD). */
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function makeItem(p: GarmentPiece, price?: number, wornDaysAgo: number[] = []): ClosetItem {
   const item: ClosetItem = {
     id: Math.random().toString(36).slice(2, 10),
     name: pieceName(p),
@@ -108,22 +115,24 @@ function makeItem(p: GarmentPiece, price?: number): ClosetItem {
     added: localDate(),
   };
   if (price) item.price = price;
+  if (wornDaysAgo.length) item.worn = [...wornDaysAgo].sort((a, b) => b - a).map(daysAgo);
   return item;
 }
 
 /**
  * A small, current wardrobe so the closet is not empty on first visit, with
- * typical prices (edit a piece to set what yours cost). One hanger is left
- * free for a new piece.
+ * typical prices and a believable wear history (the blazer is a favourite;
+ * the corset mini has never been out), so cost per wear and "least worn"
+ * mean something from the start. One hanger is left free for a new piece.
  */
 function starterCloset(): ClosetItem[] {
   return [
-    makeItem(piece({ kind: 'dress', fabric: closetFabricId('satin', 'brown'), hem: 0.26, neck: 0.07, neckline: 'cowl', fit: 0.82, flare: 0.08, straps: 'slip', back: 0.12 }), 70),
-    makeItem(piece({ kind: 'dress', fabric: closetFabricId('lace', 'black'), hem: 0.22, neck: 0.04, neckline: 'square', fit: 0.88, flare: 0.06, straps: 'slip' }), 100),
-    makeItem(piece({ kind: 'dress', fabric: closetFabricId('satin', 'cream'), hem: 0.58, neck: 0.15, neckline: 'v', sleeve: 0.56, fit: 0.92, flare: 0.05, buttons: 6, shoulders: 0.7 }), 130),
-    makeItem(piece({ kind: 'dress', fabric: closetFabricId('sequin', 'silver'), hem: 0.66, neck: 0.03, fit: 0.92, flare: 0.05, straps: 'halter', back: 0.14, fringe: 0.1 }), 100),
+    makeItem(piece({ kind: 'dress', fabric: closetFabricId('satin', 'brown'), hem: 0.26, neck: 0.07, neckline: 'cowl', fit: 0.82, flare: 0.08, straps: 'slip', back: 0.12 }), 70, [6, 19, 33, 52]),
+    makeItem(piece({ kind: 'dress', fabric: closetFabricId('lace', 'black'), hem: 0.22, neck: 0.04, neckline: 'square', fit: 0.88, flare: 0.06, straps: 'slip' }), 100, [21, 64]),
+    makeItem(piece({ kind: 'dress', fabric: closetFabricId('satin', 'cream'), hem: 0.58, neck: 0.15, neckline: 'v', sleeve: 0.56, fit: 0.92, flare: 0.05, buttons: 6, shoulders: 0.7 }), 130, [10, 24, 45]),
+    makeItem(piece({ kind: 'dress', fabric: closetFabricId('sequin', 'silver'), hem: 0.66, neck: 0.03, fit: 0.92, flare: 0.05, straps: 'halter', back: 0.14, fringe: 0.1 }), 100, [47]),
     makeItem(piece({ kind: 'dress', fabric: closetFabricId('satin', 'burgundy'), hem: 0.64, neck: 0.04, neckline: 'sweetheart', fit: 1, flare: 0.06, strapless: true, corset: true }), 80),
-    makeItem(piece({ kind: 'jacket', fabric: closetFabricId('wool', 'black'), hem: 0.84, neck: 0.2, sleeve: 0.56, fit: 0.75, buttons: 6, shoulders: 0.6 }), 200),
+    makeItem(piece({ kind: 'jacket', fabric: closetFabricId('wool', 'black'), hem: 0.84, neck: 0.2, sleeve: 0.56, fit: 0.75, buttons: 6, shoulders: 0.6 }), 200, [3, 8, 12, 17, 26, 31, 40, 58]),
   ];
 }
 

@@ -331,7 +331,8 @@ export class ShowcaseSystem extends createSystem({}) {
       { at: word(2, 'calendar', 0.43) + 0.45, act: () => agent().advanceTo('recall_preferences') },
       { at: word(2, 'dresses', 0.62) - 0.35, act: () => agent().advanceTo('search_closet') },
       { at: word(2, 'dresses', 0.62), sfx: 'sparkle', act: () => agent().advanceTo('put_on_form') },
-      { at: word(2, 'closet', 0.84), sfx: 'pin', act: () => agent().advanceTo('tailor') },
+      // Tailoring only when the plan has it (the agent plays its own tick then).
+      { at: word(2, 'closet', 0.84), act: () => agent().advanceTo('tailor') },
       { at: line(2, 1) - 0.3, act: () => agent().advanceTo('finish') },
       said(3, 'Refine in plain words'),
       { at: word(3, 'dressier', 0.66) - MOVE - 0.1, act: () => this.frameCard(1.05, 0.34, 0.32) },
@@ -360,7 +361,7 @@ export class ShowcaseSystem extends createSystem({}) {
       { at: word(7, 'silk', 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
       { at: scene(8), shot: 'stylist' },
       said(8, 'Lay out tomorrow'),
-      { at: word(8, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow({ instant: true }) },
+      { at: word(8, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow({ instant: true, seed: 7 }) },
       said(9, 'Wear what you own'),
       {
         at: word(9, 'builds', 0.78),
