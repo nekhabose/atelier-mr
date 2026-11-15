@@ -5,7 +5,7 @@
  */
 import type { ClosetItem } from './closet.js';
 import { fabricById, parseClosetFabric, CLOSET_COLORS, CLOSET_MATERIALS } from './fabrics.js';
-import type { GarmentPiece } from './garments.js';
+import { bareShoulders, type GarmentPiece } from './garments.js';
 import {
   isWearable,
   LENGTHS,
@@ -32,7 +32,7 @@ function lengthOf(p: GarmentPiece): (typeof LENGTHS)[number] {
 }
 
 function sleevesOf(p: GarmentPiece): (typeof SLEEVES)[number] {
-  if (p.kind === 'trousers' || p.kind === 'skirt' || p.strapless || p.sleeve <= 0.01) return 'none';
+  if (p.kind === 'trousers' || p.kind === 'skirt' || bareShoulders(p) || p.sleeve <= 0.01) return 'none';
   if (p.sleeve < 0.2) return 'short';
   if (p.sleeve < 0.4) return 'elbow';
   return 'long';
@@ -69,12 +69,15 @@ export function describeItem(item: ClosetItem): StylistItem {
 
 // ------------------------------------------------------------------ score
 
-const NEUTRAL = new Set(['white', 'cream', 'camel', 'navy', 'grey', 'black', 'ivory', 'charcoal', 'noir', 'onyx', 'cloud', 'chalk']);
+const NEUTRAL = new Set(['white', 'cream', 'camel', 'navy', 'grey', 'black', 'ivory', 'charcoal', 'noir', 'onyx', 'cloud', 'chalk', 'brown', 'cocoa', 'chocolate']);
+/** Fabrics that sparkle: the statement on a bold or party day, wrong for an interview. */
+const SPARKLE = new Set(['sequin', 'lame']);
 const PATTERNED = new Set(['stripe', 'check', 'plaid', 'dots', 'floral', 'pinstripe', 'gingham', 'polka', 'herringbone']);
 const FORMALITY: Record<string, number> = {
   satin: 0.8, silk: 0.8, velvet: 0.85, wool: 0.85, pinstripe: 0.9, herringbone: 0.85,
   cotton: 0.45, linen: 0.4, knit: 0.4, denim: 0.2, stripe: 0.35, check: 0.35,
   plaid: 0.5, dots: 0.45, floral: 0.35, gingham: 0.35, polka: 0.45,
+  crepe: 0.85, lace: 0.75, sequin: 0.7, lame: 0.7, tulle: 0.55, leather: 0.5,
 };
 const TARGET: Record<Occasion, number> = {
   interview: 0.85, work: 0.65, date: 0.6, party: 0.6, travel: 0.35, weekend: 0.25,
@@ -90,11 +93,22 @@ export function score(outfit: StylistItem[], occasion: Occasion, weather: Weathe
   let formality = outfit.reduce((s, i) => s + (FORMALITY[fabricKey(i)] ?? 0.5), 0) / outfit.length;
   if (jacket) formality += 0.15;
   let s = -Math.abs(formality - TARGET[occasion]) * 3;
+  // No jacket over a dress that already has long sleeves (a blazer dress).
+  if (jacket && outfit.some((i) => i.kind === 'dress' && i.sleeves === 'long')) s -= 1.2;
 
   const longSleeve = outfit.some((i) => i.sleeves === 'long');
   const covered = outfit.some((i) => i.kind === 'trousers' || ['midi', 'ankle', 'floor'].includes(i.length));
   const mini = outfit.some((i) => i.length === 'mini');
-  const delicate = outfit.some((i) => ['satin', 'silk', 'velvet'].includes(fabricKey(i)));
+  const delicate = outfit.some((i) => ['satin', 'silk', 'velvet', 'sequin', 'lace', 'tulle', 'lame'].includes(fabricKey(i)));
+  const sparkle = outfit.some((i) => SPARKLE.has(fabricKey(i)));
+  // What each occasion calls for, beyond formality.
+  if (occasion === 'party') s += sparkle ? 0.6 : outfit.some((i) => ['velvet', 'satin', 'tulle'].includes(fabricKey(i))) ? 0.3 : 0;
+  if (occasion === 'date') s += outfit.some((i) => ['satin', 'lace', 'silk', 'velvet'].includes(fabricKey(i))) ? 0.3 : 0;
+  if (occasion === 'interview' || occasion === 'work') {
+    s -= sparkle ? 0.9 : 0;
+    s -= outfit.some((i) => fabricKey(i) === 'tulle') ? 0.5 : 0;
+    s += outfit.some((i) => ['crepe', 'wool'].includes(fabricKey(i))) ? 0.2 : 0;
+  }
   switch (weather) {
     case 'cold':
       s += (jacket ? 1 : 0) + (longSleeve ? 0.5 : 0) + (covered ? 0.5 : 0) - (mini ? 0.8 : 0);
@@ -113,7 +127,7 @@ export function score(outfit: StylistItem[], occasion: Occasion, weather: Weathe
       break;
   }
 
-  const bold = outfit.filter((i) => !isNeutral(i) || isPattern(i)).length;
+  const bold = outfit.filter((i) => !isNeutral(i) || isPattern(i) || SPARKLE.has(fabricKey(i))).length;
   const neutrals = outfit.filter(isNeutral).length;
   const patterns = outfit.filter(isPattern).length;
   if (mood === 'bold') s += Math.min(1.2, bold * 0.6);

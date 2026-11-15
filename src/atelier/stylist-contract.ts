@@ -72,8 +72,8 @@ export const REFINES = ['warmer', 'dressier', 'colour'] as const;
 export type Refine = (typeof REFINES)[number];
 
 /** Closet fabric vocabulary (mirrors CLOSET_MATERIALS / CLOSET_COLORS keys). */
-export const MATERIAL_KEYS = ['cotton', 'satin', 'knit', 'wool', 'denim', 'stripe', 'check', 'plaid', 'dots', 'floral'] as const;
-export const COLOR_KEYS = ['white', 'cream', 'camel', 'pink', 'red', 'green', 'blue', 'navy', 'grey', 'black'] as const;
+export const MATERIAL_KEYS = ['cotton', 'satin', 'knit', 'wool', 'denim', 'stripe', 'check', 'plaid', 'dots', 'floral', 'sequin', 'lace', 'velvet', 'leather', 'tulle'] as const;
+export const COLOR_KEYS = ['white', 'cream', 'camel', 'pink', 'red', 'green', 'blue', 'navy', 'grey', 'black', 'brown', 'burgundy', 'gold', 'silver'] as const;
 export const KEEP = 'keep';
 
 /** One change to a piece on the form; KEEP leaves that attribute alone. */

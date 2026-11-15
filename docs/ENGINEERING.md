@@ -33,7 +33,7 @@ not yet verified.
   geometry and measurements, the offline stylist, calendar parsing, weather
   mapping, wear statistics, furniture clearance, the body-mark maths, the
   quality governor), so it is unit-tested without a browser.
-- **Procedural content.** Garments, the form and twelve fabrics are generated
+- **Procedural content.** Garments, the form and 36 fabrics are generated
   from measurements; tailoring changes real geometry. No downloaded models.
 - **Scene composition** is IWSDK scene JSON (`public/scenes`), panels are
   UIKitML (`public/ui`), and the asset manifest is shared by the runtime and

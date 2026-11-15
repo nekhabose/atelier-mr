@@ -34,6 +34,43 @@ export interface GarmentPiece {
   flare: number;
   /** Dress / top bodice ends under the arms (bare shoulders). */
   strapless?: boolean;
+  // Modern details. All optional, so older pieces and shared links keep
+  // their shape.
+  /** Thin slip straps, or a halter that ties at the neck (no sleeves). */
+  straps?: 'slip' | 'halter';
+  /** Shape of the front neckline (its depth is `neck`); scoop when unset. */
+  neckline?: 'v' | 'sweetheart' | 'square' | 'cowl';
+  /** Open back: how far the back is cut down from the top edge (m). */
+  back?: number;
+  /** Thigh slit on the left front: its height above the hem (m). */
+  slit?: number;
+  /** Tiered ruffles down the skirt (2 or 3). */
+  tiers?: number;
+  /** Gathered drape sweeping across the body, 0..1. */
+  drape?: number;
+  /** Boned corset bodice. */
+  corset?: boolean;
+  /** Double-breasted buttons down the front (4 or 6). */
+  buttons?: number;
+  /** Puffed, padded shoulders, 0..1. */
+  shoulders?: number;
+  /** Fringe falling below the hem (m). */
+  fringe?: number;
+}
+
+/** No sleeves can be added: strapless, slip straps or a halter. */
+export function bareShoulders(p: GarmentPiece): boolean {
+  return !!p.strapless || !!p.straps;
+}
+
+/** The neckline cannot be tailored: strapless or slip (the top edge is straight across). */
+export function fixedNeckline(p: GarmentPiece): boolean {
+  return !!p.strapless || p.straps === 'slip';
+}
+
+/** This measurement does not exist on this piece (no sleeves to lengthen, no neckline to move). */
+export function cannotTailor(p: GarmentPiece, param: TailorParam): boolean {
+  return (param === 'sleeve' && bareShoulders(p)) || (param === 'neck' && fixedNeckline(p));
 }
 
 export type TailorParam = 'hem' | 'neck' | 'sleeve' | 'fit';
@@ -97,6 +134,12 @@ const SKIRT_TOP = 1.12;
 const TROUSER_TOP = 1.1;
 const COLLAR_Y = 1.432;
 const STRAPLESS_TOP = 1.3;
+/** A slip's top edge, just above the bust. */
+const SLIP_TOP = 1.31;
+/** Where a halter's armholes and bare sides come down to. */
+const HALTER_SIDE = 1.265;
+/** The wearer's left front, where a slit opens (theta 0 = front, +X = their left). */
+const SLIT_THETA = 0.5;
 
 export interface Detail {
   segments: number;
@@ -243,6 +286,237 @@ function neckOffset(depth: number, top: number) {
   };
 }
 
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = clamp((x - a) / (b - a), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+/** Angle in -PI..PI (0 = front). */
+const wrap = (theta: number) => (theta > Math.PI ? theta - Math.PI * 2 : theta);
+
+/** The bodice's top edge height: under the arms, at the slip line, or at the collar. */
+function bodiceTop(piece: GarmentPiece): number {
+  if (piece.strapless) return STRAPLESS_TOP;
+  if (piece.straps === 'slip') return SLIP_TOP;
+  return COLLAR_Y;
+}
+
+/**
+ * How far the top edge is cut down at each angle: the neckline at the front,
+ * a halter's bare sides, an open back. Positive = lower.
+ */
+function edgeDrop(piece: GarmentPiece, top: number): { drop: (theta: number) => number; max: number } {
+  const shape = piece.neckline ?? 'scoop';
+  // Strapless: only a sweetheart shapes the straight top edge.
+  const depth = piece.strapless && shape !== 'sweetheart' ? 0 : piece.neck;
+  const halter = piece.straps === 'halter' ? top - HALTER_SIDE : 0;
+  const back = piece.back ?? 0;
+  const front = (a: number) => {
+    const t = Math.abs(a);
+    switch (shape) {
+      case 'v':
+        return depth * Math.max(0, 1 - t / 0.55);
+      case 'square':
+        return depth * (1 - smoothstep(0.55, 0.78, t));
+      case 'sweetheart':
+        // A dip at the centre between two cups, falling away to the sides.
+        return depth * (0.6 * Math.exp(-((a / 0.13) ** 2)) + 0.55 * smoothstep(0.55, 1.15, t) * (t < Math.PI / 2 ? 1 : 0));
+      case 'cowl':
+        return depth * Math.pow(Math.max(0, Math.cos(a)), 1.4);
+      default:
+        return depth * Math.pow(Math.max(0, Math.cos(a)), 2.2);
+    }
+  };
+  const drop = (theta: number) => {
+    const a = wrap(theta);
+    const t = Math.abs(a);
+    const sides = halter * smoothstep(0.3, 0.85, t);
+    let d = Math.max(front(a), sides);
+    if (back > 0) d = Math.max(d, sides + back * smoothstep(Math.PI - 1.15, Math.PI - 0.35, t));
+    return d;
+  };
+  const max = Math.max(depth, halter + back, halter);
+  return { drop, max };
+}
+
+/** Lower the top edge by `drop`, easing in over a window deep enough not to fold. */
+function topEdgeOffset(top: number, e: { drop: (theta: number) => number; max: number }) {
+  if (e.max <= 0) return undefined;
+  const win = Math.max(0.22, 2.2 * e.max);
+  return (y: number, theta: number) => {
+    const w = clamp((y - (top - win)) / win, 0, 1);
+    return -e.drop(theta) * w * w;
+  };
+}
+
+/** A cowl: soft swags of fabric hanging forward under the neckline. */
+function cowlFolds(piece: GarmentPiece, top: number) {
+  if (piece.neckline !== 'cowl' || piece.strapless) return undefined;
+  const depth = Math.max(0.04, piece.neck);
+  return (y: number, theta: number) => {
+    const front = Math.pow(Math.max(0, Math.cos(theta)), 3);
+    const w = clamp((y - (top - depth - 0.14)) / (depth + 0.14), 0, 1);
+    return front * w * (0.012 + 0.008 * Math.sin(((top - y) / 0.045) * Math.PI));
+  };
+}
+
+/** Corset boning: fine vertical ridges around the bodice. */
+function corsetRidges(piece: GarmentPiece) {
+  if (!piece.corset) return undefined;
+  return (_y: number, theta: number) => 0.0035 * Math.pow(Math.abs(Math.cos(4 * theta)), 18);
+}
+
+/** Gathers twisting across the hips, as in a draped dress. */
+function drapeFolds(piece: GarmentPiece) {
+  const k = piece.drape ?? 0;
+  if (k <= 0) return undefined;
+  return (y: number, theta: number) =>
+    k * 0.007 * Math.sin(7 * theta + (y - BODY.waistY) * 30) * Math.exp(-(((y - 1.0) / 0.26) ** 2));
+}
+
+/** Tiered ruffles: each tier flares out, gathered, and the next starts above it. */
+function tierRadius(piece: GarmentPiece, top: number, base: ReturnType<typeof skirtRadius>) {
+  const n = Math.round(piece.tiers ?? 0);
+  if (n < 2) return base;
+  const span = Math.max(0.01, top - piece.hem);
+  return (y: number) => {
+    const r = base(y);
+    const t = clamp((top - y) / span, 0, 1);
+    const k = Math.min(n - 1, Math.floor(t * n));
+    const frac = t * n - k;
+    const boost = 0.012 * k + 0.03 * Math.pow(frac, 0.8);
+    return { rx: r.rx + boost, rz: r.rz + boost * 0.85 };
+  };
+}
+
+function tierFolds(piece: GarmentPiece, top: number) {
+  const n = Math.round(piece.tiers ?? 0);
+  if (n < 2) return undefined;
+  const span = Math.max(0.01, top - piece.hem);
+  return (y: number, theta: number) => {
+    const t = clamp((top - y) / span, 0, 1);
+    const k = Math.min(n - 1, Math.floor(t * n));
+    const frac = t * n - k;
+    return 0.006 * frac * Math.sin(26 * theta + k * 1.7);
+  };
+}
+
+/** The hem rises into a slit on the left front, and dips on one side when draped. */
+function hemCut(piece: GarmentPiece, hem: number) {
+  const slit = piece.slit ?? 0;
+  const drape = piece.drape ?? 0;
+  if (slit <= 0 && drape <= 0) return undefined;
+  const win = Math.max(0.06, 2.2 * slit);
+  return (y: number, theta: number) => {
+    let v = 0;
+    if (slit > 0) {
+      const w = clamp(1 - (y - hem) / win, 0, 1);
+      v += slit * Math.exp(-(((wrap(theta) - SLIT_THETA) / 0.1) ** 2)) * w * w;
+    }
+    if (drape > 0) {
+      const w = clamp(1 - (y - hem) / 0.12, 0, 1);
+      v -= drape * 0.05 * (0.5 + 0.5 * Math.cos(theta - 2.2)) * w;
+    }
+    return v;
+  };
+}
+
+/** Depth of the torso's surface at (x, y), front (+) or back (-) of centre. */
+function surfaceZ(x: number, y: number): number {
+  const r = torsoAt(y);
+  return r.rz * Math.sqrt(Math.max(0, 1 - (x / r.rx) ** 2));
+}
+
+/** Two thin slip straps, front to back over the shoulders, lying on the body. */
+function slipStraps(piece: GarmentPiece, ease: number, top: number, detail: Detail): BufferGeometry[] {
+  const out: BufferGeometry[] = [];
+  const x = 0.085;
+  // The top of the shoulder at this width: where the torso narrows to x.
+  let lo = 1.36;
+  let hi = 1.445;
+  for (let k = 0; k < 20; k++) {
+    const mid = (lo + hi) / 2;
+    if (torsoAt(mid).rx > x) lo = mid;
+    else hi = mid;
+  }
+  const peak = lo + 0.004;
+  const backTop = top - Math.min(piece.back ?? 0, 0.16);
+  const L = 0.3;
+  const lift = ease + 0.0045;
+  for (const side of [1, -1] as const) {
+    out.push(
+      buildTube(
+        [side * x, 0, 0],
+        [0, 0, -1],
+        L,
+        () => 0.0036,
+        { rings: Math.max(14, Math.round(detail.ringDensity * 0.3)), segments: 6 },
+        (sAlong) => {
+          const u = sAlong / L;
+          const front = u < 0.5;
+          const from = front ? top : backTop;
+          const y = from + (peak - from) * Math.sin(Math.PI * u);
+          const z = (front ? 1 : -1) * (surfaceZ(x, y) + lift);
+          return [0, y, z + sAlong];
+        },
+      ),
+    );
+  }
+  return out;
+}
+
+/** A halter's band around the neck. */
+function halterBand(ease: number, detail: Detail): BufferGeometry {
+  return buildShell(
+    COLLAR_Y - 0.004,
+    COLLAR_Y + 0.028,
+    (y) => {
+      const r = torsoAt(y);
+      return { rx: r.rx + ease + 0.004, rz: r.rz + ease + 0.004 };
+    },
+    { rings: 4, segments: Math.max(16, Math.round(detail.segments * 0.5)) },
+  );
+}
+
+/** Double-breasted buttons: two columns down the front, from the waist up. */
+function frontButtons(piece: GarmentPiece, ease: number): BufferGeometry[] {
+  const n = Math.round(piece.buttons ?? 0);
+  if (n < 2) return [];
+  const rows = Math.ceil(n / 2);
+  const out: BufferGeometry[] = [];
+  const radius = bodiceRadius(piece.fit, ease);
+  // Below the neckline's lowest point, so no button floats in the opening.
+  const highest = bodiceTop(piece) - piece.neck - 0.035;
+  const step = Math.min(0.075, (highest - (BODY.waistY - 0.05)) / Math.max(1, rows - 1));
+  for (let r = 0; r < rows; r++) {
+    const y = BODY.waistY - 0.05 + r * step;
+    const z = radius(y).rz;
+    for (const x of [-0.048, 0.048]) {
+      const L = 0.008;
+      out.push(
+        buildTube([x, y, z - 0.002], [0, 0, 1], L, (s) => 0.0095 * Math.sqrt(Math.max(0, 1 - (2 * s / L - 1) ** 2)) + 0.0005, {
+          rings: 5,
+          segments: 10,
+        }),
+      );
+    }
+  }
+  return out;
+}
+
+/** Fringe hanging below the hem: a band the fringe material cuts into strands. */
+function fringeBand(piece: GarmentPiece, top: number, ease: number, detail: Detail): BufferGeometry[] {
+  const len = piece.fringe ?? 0;
+  if (len <= 0) return [];
+  const base = skirtRadius(top, piece.hem, piece.fit, piece.flare, ease);
+  const r = base(piece.hem);
+  return [
+    buildShell(piece.hem - len, piece.hem + 0.012, (y) => {
+      const t = clamp((piece.hem - y) / len, 0, 1);
+      return { rx: r.rx + 0.004 + t * 0.012, rz: r.rz + 0.004 + t * 0.01 };
+    }, { rings: 3, segments: detail.segments }),
+  ];
+}
+
 function sleeveTube(side: 1 | -1, piece: GarmentPiece, ease: number, detail: Detail) {
   const dir = armDirection(side);
   const joint = shoulderJoint(side);
@@ -258,7 +532,9 @@ function sleeveTube(side: 1 | -1, piece: GarmentPiece, ease: number, detail: Det
     start,
     dir,
     len,
-    (s) => armRadiusAt(Math.max(0, s - back)) + ease + 0.004 + relaxed * (s / len),
+    (s) =>
+      armRadiusAt(Math.max(0, s - back)) + ease + 0.004 + relaxed * (s / len) +
+      (piece.shoulders ?? 0) * 0.028 * Math.exp(-s / 0.07),
     {
       rings: rings(len, detail),
       segments: Math.max(12, Math.round(detail.segments * 0.4)),
@@ -267,67 +543,75 @@ function sleeveTube(side: 1 | -1, piece: GarmentPiece, ease: number, detail: Det
   );
 }
 
-/** Build the geometry list for one garment piece (in mannequin space). */
-export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): BufferGeometry[] {
+/** A garment's geometry: the cloth, small trims (buttons) and fringe. */
+export interface PieceParts {
+  main: BufferGeometry[];
+  trim: BufferGeometry[];
+  fringe: BufferGeometry[];
+}
+
+/** Build one garment piece (in mannequin space), split by material. */
+export function buildPieceParts(piece: GarmentPiece, detail: Detail): PieceParts {
   const ease = EASE[piece.kind];
-  const out: BufferGeometry[] = [];
+  const main: BufferGeometry[] = [];
+  const trim: BufferGeometry[] = [];
+  const fringe: BufferGeometry[] = [];
   const shellOpts = (len: number) => ({
     rings: rings(len, detail),
     segments: detail.segments,
   });
+  const fit = piece.corset ? Math.max(piece.fit, 0.9) : piece.fit;
 
   switch (piece.kind) {
     case 'top':
     case 'jacket':
     case 'dress': {
-      const top = piece.strapless ? STRAPLESS_TOP : COLLAR_Y;
+      const top = bodiceTop(piece);
       const bodiceBottom = piece.kind === 'dress' ? BODY.waistY : piece.hem;
-      out.push(
-        buildShell(bodiceBottom, top, bodiceRadius(piece.fit, ease), {
+      main.push(
+        buildShell(bodiceBottom, top, bodiceRadius(fit, ease), {
           ...shellOpts(top - bodiceBottom),
           yOffset: combineY(
-            piece.strapless ? undefined : neckOffset(piece.neck, top),
+            topEdgeOffset(top, edgeDrop(piece, top)),
             piece.kind === 'dress' ? undefined : hemWave(bodiceBottom, piece),
+            piece.kind === 'dress' ? undefined : hemCut(piece, bodiceBottom),
           ),
-          fold: bodiceFolds(piece),
+          fold: combineY(bodiceFolds(piece), cowlFolds(piece, top), corsetRidges(piece), drapeFolds(piece)),
         }),
       );
       if (piece.kind === 'dress') {
-        out.push(
-          buildShell(
-            piece.hem,
-            BODY.waistY + 0.002,
-            skirtRadius(BODY.waistY, piece.hem, piece.fit, piece.flare, ease),
-            {
-              ...shellOpts(BODY.waistY - piece.hem),
-              fold: hangingFolds(BODY.waistY, piece.hem, piece),
-              yOffset: hemWave(piece.hem, piece),
-            },
-          ),
+        const skirt = tierRadius(piece, BODY.waistY, skirtRadius(BODY.waistY, piece.hem, fit, piece.flare, ease));
+        main.push(
+          buildShell(piece.hem, BODY.waistY + 0.002, skirt, {
+            ...shellOpts(BODY.waistY - piece.hem),
+            fold: combineY(hangingFolds(BODY.waistY, piece.hem, piece), drapeFolds(piece), tierFolds(piece, BODY.waistY)),
+            yOffset: combineY(hemWave(piece.hem, piece), hemCut(piece, piece.hem)),
+          }),
         );
+        fringe.push(...fringeBand(piece, BODY.waistY, ease, detail));
       }
-      if (piece.sleeve > 0.005 && !piece.strapless) {
-        out.push(sleeveTube(1, piece, ease, detail), sleeveTube(-1, piece, ease, detail));
+      if (piece.straps === 'slip') main.push(...slipStraps(piece, ease, top, detail));
+      if (piece.straps === 'halter') main.push(halterBand(ease, detail));
+      if (piece.sleeve > 0.005 && !bareShoulders(piece)) {
+        main.push(sleeveTube(1, piece, ease, detail), sleeveTube(-1, piece, ease, detail));
       }
+      trim.push(...frontButtons(piece, ease));
       break;
     }
     case 'skirt': {
-      out.push(
-        buildShell(
-          piece.hem,
-          SKIRT_TOP,
-          skirtRadius(SKIRT_TOP, piece.hem, piece.fit, piece.flare, ease),
-          {
-            ...shellOpts(SKIRT_TOP - piece.hem),
-            fold: hangingFolds(SKIRT_TOP, piece.hem, piece),
-            yOffset: hemWave(piece.hem, piece),
-          },
-        ),
+      const skirt = tierRadius(piece, SKIRT_TOP, skirtRadius(SKIRT_TOP, piece.hem, fit, piece.flare, ease));
+      main.push(
+        buildShell(piece.hem, SKIRT_TOP, skirt, {
+          ...shellOpts(SKIRT_TOP - piece.hem),
+          fold: combineY(hangingFolds(SKIRT_TOP, piece.hem, piece), drapeFolds(piece), tierFolds(piece, SKIRT_TOP)),
+          yOffset: combineY(hemWave(piece.hem, piece), hemCut(piece, piece.hem)),
+        }),
       );
+      fringe.push(...fringeBand(piece, SKIRT_TOP, ease, detail));
       break;
     }
     case 'trousers': {
-      out.push(
+      main.push(
         buildShell(BODY.crotchY - 0.02, TROUSER_TOP, bodiceRadius(1, ease), {
           ...shellOpts(TROUSER_TOP - BODY.crotchY),
         }),
@@ -336,7 +620,7 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
       const len = top - piece.hem;
       const relaxed = (1 - piece.fit) * 0.014;
       for (const side of [1, -1] as const) {
-        out.push(
+        main.push(
           buildTube(
             [side * legCenterXAt(top), top, 0],
             [0, -1, 0],
@@ -354,19 +638,48 @@ export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): Buffe
       break;
     }
   }
-  return out;
+  return { main, trim, fringe };
 }
 
-/** Build a Group of meshes for a piece using the given material. */
-export function buildPieceGroup(piece: GarmentPiece, material: Material, detail: Detail): Group {
+/** Every geometry of one garment piece (in mannequin space). */
+export function buildPieceGeometries(piece: GarmentPiece, detail: Detail): BufferGeometry[] {
+  const parts = buildPieceParts(piece, detail);
+  return [...parts.main, ...parts.trim, ...parts.fringe];
+}
+
+/**
+ * Build a Group of meshes for a piece. The cloth is one mesh (one draw call);
+ * buttons and fringe get their own when materials are given for them (the
+ * worn garment), and otherwise join the cloth (the miniatures on the rail).
+ */
+export function buildPieceGroup(
+  piece: GarmentPiece,
+  material: Material,
+  detail: Detail,
+  extras: { trim?: Material; fringe?: Material } = {},
+): Group {
   const group = new Group();
   group.name = `garment-${piece.kind}`;
-  // One mesh per garment (one draw call), whatever its parts.
-  const mesh = new Mesh(mergeGeometries(buildPieceGeometries(piece, detail)), material);
+  const parts = buildPieceParts(piece, detail);
+  const cloth = [...parts.main];
+  if (!extras.trim) cloth.push(...parts.trim);
+  const mesh = new Mesh(mergeGeometries(cloth), material);
   mesh.castShadow = detail === HERO_DETAIL;
   mesh.receiveShadow = false;
   mesh.renderOrder = LAYER[piece.kind];
   group.add(mesh);
+  if (extras.trim && parts.trim.length) {
+    const trim = new Mesh(mergeGeometries(parts.trim), extras.trim);
+    trim.name = 'garment-trim';
+    trim.renderOrder = LAYER[piece.kind] + 0.5;
+    group.add(trim);
+  }
+  if (extras.fringe && parts.fringe.length) {
+    const fr = new Mesh(mergeGeometries(parts.fringe), extras.fringe);
+    fr.name = 'garment-fringe';
+    fr.renderOrder = LAYER[piece.kind] + 0.25;
+    group.add(fr);
+  }
   return group;
 }
 
@@ -389,8 +702,9 @@ export function pinPosition(piece: GarmentPiece, param: TailorParam): [number, n
       return [0, piece.hem + 0.01, r.rz + 0.035];
     }
     case 'neck': {
-      const r = torsoAt(COLLAR_Y - piece.neck);
-      return [0, COLLAR_Y - piece.neck - 0.01, r.rz + ease + 0.04];
+      const top = bodiceTop(piece);
+      const r = torsoAt(top - piece.neck);
+      return [0, top - piece.neck - 0.01, r.rz + ease + 0.04];
     }
     case 'sleeve': {
       const dir = armDirection(1);

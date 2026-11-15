@@ -447,6 +447,12 @@
         <div id="col-grey" class="dot" style="background-color: #8b8d93"></div>
         <div id="col-black" class="dot" style="background-color: #1a1a1d"></div>
       </div>
+      <div class="row">
+        <div id="col-brown" class="dot" style="background-color: #4e3226"></div>
+        <div id="col-burgundy" class="dot" style="background-color: #6e1626"></div>
+        <div id="col-gold" class="dot" style="background-color: #b08a3e"></div>
+        <div id="col-silver" class="dot" style="background-color: #b9bdc5"></div>
+      </div>
       <div class="row-label">Fabric</div>
       <div class="row">
         <div id="mat-cotton" class="chip">Cotton</div>
@@ -461,6 +467,13 @@
         <div id="mat-plaid" class="chip">Plaid</div>
         <div id="mat-dots" class="chip">Dots</div>
         <div id="mat-floral" class="chip">Floral</div>
+      </div>
+      <div class="row">
+        <div id="mat-sequin" class="chip">Sequin</div>
+        <div id="mat-lace" class="chip">Lace</div>
+        <div id="mat-velvet" class="chip">Velvet</div>
+        <div id="mat-leather" class="chip">Leather</div>
+        <div id="mat-tulle" class="chip">Tulle</div>
       </div>
       <div class="row-label">What it cost (for cost per wear)</div>
       <div class="row">

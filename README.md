@@ -68,12 +68,20 @@ February 2027.
 - **Live tailoring:** garments are generated from measurements, so dragging a
   pin rebuilds the cloth every frame. **Undo / Redo / Reset look** cover every
   tailoring, fabric and outfit change.
-- **Fabric library:** 12 swatches (satin, velvet, silk, denim, linen, plaid,
-  pinstripe, floral...). Tap one to re-skin the selected garment, or drop it on
-  one layer of the outfit to change only that piece.
+- **Fabric library:** 12 swatches on the board from 36 fabrics (satins,
+  sequins that catch the light one by one, sheer lace and tulle, velvet,
+  leather-look, metallic lame, crepe, plus denim, wool and prints). Tap one to
+  re-skin the selected garment, or drop it on one layer of the outfit to
+  change only that piece.
+- **Current cuts:** garments are built from their cut: slip straps, halters,
+  open backs, thigh slits, cowl, sweetheart and square necklines, corsets,
+  tiered ruffles, drape, puff shoulders, gold buttons and fringe. The rail's
+  eight looks and the starter closet are current eveningwear and workwear
+  (original designs, no brands).
 - **Turntable:** grab the form and twist, or tap **Turn** (no reaching needed).
-- **Digital Closet:** recreate your own clothes from 5 templates, 10 colours and
-  10 fabrics, tailor them to match, then mix them on the form. Edit and remove.
+- **Digital Closet:** recreate your own clothes from 5 templates, 14 colours and
+  15 fabrics (including sequin, lace, velvet, leather and tulle), tailor them
+  to match, then mix them on the form. Edit and remove.
 - **Agentic stylist:** pick occasion, weather and mood. The stylist weighs every
   wearable combination in your closet, previews its best idea on the form, and
   waits: **Keep**, **Next idea** or **Undo**. Change a chip and it re-plans.

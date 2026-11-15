@@ -178,10 +178,10 @@ check that ends with a results card. The stylist works without any API key
 | Seated layout around your chair, everything within reach (Access > Seated) | Automatic seated detection |
 | Gaze and pinch (Meta VR Glasses emulator profile): all 8 rail looks and the panel buttons select by looking and pinching with either hand; hand rays take over when gaze is off; every panel button sits inside the glasses' view, seated or standing | Tuning on real glasses |
 | Quality governor (holds the 60 fps floor by stepping occlusion, shadow updates and garment detail down and back up), guarded frame loop, graphics-reset recovery, small-room layout, no leaks in a 300-action soak | Measured on a physical Quest |
-| 8 looks, live tailoring of 4 regions (ray or direct pinch), undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
+| 8 current designer looks (satin halter and slip maxis, a lace midi, a blazer dress with gold buttons, a sequin fringe mini, double-breasted suiting); garments are built from their cut, including slip straps, halters, open backs, thigh slits, cowl, sweetheart and square necklines, corsets, tiered ruffles, drape, puff shoulders, buttons and fringe; live tailoring of 4 regions (ray or direct pinch), undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
 | Depth occlusion of form, garments, pins, the rail and the fabric board (Quest 3 depth API; emulator-verified that depth is granted and occlusion is live) | Occlusion quality tuning on device |
 | Installable app (manifest, icons, offline service worker), shadows on demand, `?perf` meter, unit tests in CI | Horizon Store packaging (bubblewrap APK) |
-| 12 fabrics applied per garment | Photo-to-garment closet entry |
+| 36 fabrics including satins, sequins (each catches the light), sheer lace and tulle, velvet, leather-look, metallic lame and crepe; 12 on the swatch board, applied per garment | Fabric scans from real swatches |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
 | Stylist agent: chooses its own calls to 7 tools (weather, calendar, preferences, closet search, put on form, tailor, finish), each validated and run in the headset; live plan card; Keep or Undo the whole run; learns from both (on the device); on-device planner with the same tools; Keep and Undo by controller ray and by gaze and pinch (glasses emulator profile) | Multi-day plans in one run |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints |
@@ -230,15 +230,15 @@ It tells one story, a real morning, so the features arrive as reasons:
 |---|---|---|
 | 0:00 | The empty living room, "7:40 am" | Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear. |
 | 0:08 | The studio settles into the room, clear of the furniture | So I put on my headset, and my own room becomes a fitting studio. |
-| 0:13 | The stylist agent's plan card beside the form ticks off each step: the weather (9°C, rain likely), the interview on the calendar, what you like, the closet; it dresses the form and lets the hem down 8 cm for the rain, then offers Keep or Undo | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
-| 0:20 | "Dressier" recuts the outfit in satin; the card adds the step, then Keep | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
-| 0:27 | A dress from the rail | For tonight, I take a dress from the rail. |
+| 0:13 | The stylist agent's plan card beside the form ticks off each step: the weather (9°C, rain likely), the interview on the calendar, what you like, the closet; it dresses the form in the black lace midi slip dress with a double-breasted black blazer, then offers Keep or Undo | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
+| 0:20 | "Dressier" recuts the blazer in black satin, tuxedo style; the card adds the step, then Keep | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
+| 0:27 | A chocolate velvet slip maxi from the rail | For tonight, I take a dress from the rail. |
 | 0:30 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
 | 0:36 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |
 | 0:42 | Satin, then silk | A different fabric? I drop a swatch on it: satin, then silk. |
-| 0:48 | Tomorrow laid out | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
+| 0:48 | Tomorrow (a party) laid out: the silver sequin halter mini | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
 | 0:53 | Least worn piece, a look built around it | It shows me what I never wear, what it costs per wear, and builds a look around it. |
-| 1:00 | Boutique try-on with a verdict | Before I buy something new, it counts the outfits it would add, and gives me an honest verdict. |
+| 1:00 | Boutique try-on: an emerald satin halter maxi, with a verdict | Before I buy something new, it counts the outfits it would add, and gives me an honest verdict. |
 | 1:07 | Seated: the studio comes to the chair | And when I sit down, the whole studio comes within reach. |
 | 1:12 | The Access panel | Large text, high contrast, calm motion, voice, and tailoring by tap are all built in. |
 | 1:19 | The form turns; end card with the URL and launch date | Atelier. Get dressed for your real day. Open it in your Quest browser today. |

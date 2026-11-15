@@ -7,6 +7,7 @@ import {
   Color,
   DoubleSide,
   FrontSide,
+  Material,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   NoColorSpace,
@@ -15,7 +16,21 @@ import {
   Vector2,
 } from '@iwsdk/core';
 
-export type Finish = 'satin' | 'silk' | 'cotton' | 'denim' | 'wool' | 'velvet' | 'linen' | 'knit';
+export type Finish =
+  | 'satin'
+  | 'silk'
+  | 'cotton'
+  | 'denim'
+  | 'wool'
+  | 'velvet'
+  | 'linen'
+  | 'knit'
+  | 'sequin'
+  | 'lace'
+  | 'tulle'
+  | 'leather'
+  | 'metallic'
+  | 'crepe';
 export type PatternKind =
   | 'solid'
   | 'stripe'
@@ -25,7 +40,12 @@ export type PatternKind =
   | 'polka'
   | 'floral'
   | 'denim'
-  | 'herringbone';
+  | 'herringbone'
+  | 'sequin'
+  | 'lace'
+  | 'net'
+  | 'grain'
+  | 'lame';
 
 export interface Fabric {
   id: string;
@@ -55,22 +75,43 @@ export const FABRICS: Fabric[] = [
   { id: 'charcoal-wool', name: 'Charcoal Wool', finish: 'wool', pattern: 'herringbone', colors: ['#3d3f45', '#4b4e55'], tile: 0.05 },
   { id: 'onyx-knit', name: 'Onyx Knit', finish: 'knit', pattern: 'solid', colors: ['#18181b'], tile: 0.2 },
   { id: 'blush-satin', name: 'Blush Satin', finish: 'satin', pattern: 'solid', colors: ['#e8b4b0'], tile: 0.2 },
+  // Modern evening and occasion fabrics.
+  { id: 'cocoa-satin', name: 'Cocoa Satin', finish: 'satin', pattern: 'solid', colors: ['#5a3a2a'], tile: 0.2 },
+  { id: 'garnet-satin', name: 'Garnet Satin', finish: 'satin', pattern: 'solid', colors: ['#7a1422'], tile: 0.2 },
+  { id: 'onyx-satin', name: 'Onyx Satin', finish: 'satin', pattern: 'solid', colors: ['#17171b'], tile: 0.2 },
+  { id: 'ivory-satin', name: 'Ivory Satin', finish: 'satin', pattern: 'solid', colors: ['#efe6d4'], tile: 0.2 },
+  { id: 'plum-satin', name: 'Plum Satin', finish: 'satin', pattern: 'solid', colors: ['#4a1f3a'], tile: 0.2 },
+  { id: 'emerald-satin', name: 'Emerald Satin', finish: 'satin', pattern: 'solid', colors: ['#1f5a44'], tile: 0.2 },
+  { id: 'gilded-satin', name: 'Gilded Satin', finish: 'satin', pattern: 'solid', colors: ['#a8823a'], tile: 0.2 },
+  { id: 'silver-sequin', name: 'Silver Sequin', finish: 'sequin', pattern: 'sequin', colors: ['#bfc3cb', '#f6f8fc', '#7f848e'], tile: 0.03 },
+  { id: 'noir-sequin', name: 'Noir Sequin', finish: 'sequin', pattern: 'sequin', colors: ['#1b1b20', '#6a6d78', '#0a0a0c'], tile: 0.03 },
+  { id: 'champagne-sequin', name: 'Champagne Sequin', finish: 'sequin', pattern: 'sequin', colors: ['#d6bf95', '#fff2d2', '#957c50'], tile: 0.03 },
+  { id: 'noir-lace', name: 'Noir Lace', finish: 'lace', pattern: 'lace', colors: ['#141416', '#2b2b30'], tile: 0.09 },
+  { id: 'ivory-lace', name: 'Ivory Lace', finish: 'lace', pattern: 'lace', colors: ['#f1eadb', '#ffffff'], tile: 0.09 },
+  { id: 'noir-tulle', name: 'Noir Tulle', finish: 'tulle', pattern: 'net', colors: ['#18181c'], tile: 0.02 },
+  { id: 'blush-tulle', name: 'Blush Tulle', finish: 'tulle', pattern: 'net', colors: ['#e6b9b4'], tile: 0.02 },
+  { id: 'chocolate-velvet', name: 'Chocolate Velvet', finish: 'velvet', pattern: 'solid', colors: ['#3b2219'], tile: 0.2 },
+  { id: 'cocoa-leather', name: 'Cocoa Leather', finish: 'leather', pattern: 'grain', colors: ['#4c2f23', '#5c3b2c'], tile: 0.08 },
+  { id: 'noir-leather', name: 'Noir Leather', finish: 'leather', pattern: 'grain', colors: ['#151517', '#232327'], tile: 0.08 },
+  { id: 'silver-lame', name: 'Silver Lame', finish: 'metallic', pattern: 'lame', colors: ['#bcc0c8', '#eef1f6', '#868b95'], tile: 0.06 },
+  { id: 'noir-crepe', name: 'Noir Crepe', finish: 'crepe', pattern: 'solid', colors: ['#151518'], tile: 0.2 },
+  { id: 'ivory-crepe', name: 'Ivory Crepe', finish: 'crepe', pattern: 'solid', colors: ['#ece5d8'], tile: 0.2 },
 ];
 
 /** The 12 fabrics pinned to the swatch wall (the rest are used by looks). */
 export const SWATCH_WALL: string[] = [
   'navy-satin',
-  'bordeaux-velvet',
-  'blush-satin',
+  'garnet-satin',
+  'cocoa-satin',
   'ivory-silk',
-  'garden-floral',
-  'rose-gingham',
-  'breton-stripe',
-  'noir-polka',
-  'indigo-denim',
-  'mustard-plaid',
-  'chalk-pinstripe',
-  'olive-linen',
+  'emerald-satin',
+  'silver-sequin',
+  'noir-lace',
+  'blush-tulle',
+  'chocolate-velvet',
+  'bordeaux-velvet',
+  'cocoa-leather',
+  'noir-crepe',
 ];
 
 // ------------------------------------------------------------ closet fabrics
@@ -87,6 +128,10 @@ export const CLOSET_COLORS = [
   { key: 'navy', name: 'Navy', hex: '#1f2d52' },
   { key: 'grey', name: 'Grey', hex: '#8b8d93' },
   { key: 'black', name: 'Black', hex: '#1a1a1d' },
+  { key: 'brown', name: 'Brown', hex: '#4e3226' },
+  { key: 'burgundy', name: 'Burgundy', hex: '#6e1626' },
+  { key: 'gold', name: 'Gold', hex: '#b08a3e' },
+  { key: 'silver', name: 'Silver', hex: '#b9bdc5' },
 ] as const;
 export type ClosetColor = (typeof CLOSET_COLORS)[number]['key'];
 
@@ -102,6 +147,11 @@ export const CLOSET_MATERIALS = [
   { key: 'plaid', name: 'Plaid', adj: 'plaid' },
   { key: 'dots', name: 'Dots', adj: 'polka-dot' },
   { key: 'floral', name: 'Floral', adj: 'floral' },
+  { key: 'sequin', name: 'Sequin', adj: 'sequin' },
+  { key: 'lace', name: 'Lace', adj: 'lace' },
+  { key: 'velvet', name: 'Velvet', adj: 'velvet' },
+  { key: 'leather', name: 'Leather', adj: 'leather-look' },
+  { key: 'tulle', name: 'Tulle', adj: 'tulle' },
 ] as const;
 export type ClosetMaterial = (typeof CLOSET_MATERIALS)[number]['key'];
 
@@ -171,6 +221,21 @@ function synthesizeClosetFabric(id: string): Fabric | undefined {
     case 'floral':
       fabric = { ...base, finish: 'cotton', pattern: 'floral', colors: [c, isLight(c) ? '#d4567a' : '#f4ead8', '#5c8a5a'], tile: 0.14 };
       break;
+    case 'sequin':
+      fabric = { ...base, finish: 'sequin', pattern: 'sequin', colors: [c, shade(c, 0.6), shade(c, -0.45)], tile: 0.03 };
+      break;
+    case 'lace':
+      fabric = { ...base, finish: 'lace', pattern: 'lace', colors: [c, shade(c, isLight(c) ? 0.3 : 0.12)], tile: 0.09 };
+      break;
+    case 'velvet':
+      fabric = { ...base, finish: 'velvet', pattern: 'solid', colors: [shade(c, -0.12)] };
+      break;
+    case 'leather':
+      fabric = { ...base, finish: 'leather', pattern: 'grain', colors: [shade(c, -0.08), shade(c, 0.06)], tile: 0.08 };
+      break;
+    case 'tulle':
+      fabric = { ...base, finish: 'tulle', pattern: 'net', colors: [c], tile: 0.02 };
+      break;
   }
   closetCache.set(id, fabric);
   return fabric;
@@ -182,7 +247,16 @@ export function fabricById(id: string): Fabric {
 
 const FINISH: Record<
   Finish,
-  { roughness: number; sheen: number; sheenRoughness: number; clearcoat: number; bump: number }
+  {
+    roughness: number;
+    sheen: number;
+    sheenRoughness: number;
+    clearcoat: number;
+    bump: number;
+    metalness?: number;
+    /** 'cut': lace holes (alpha test); 'sheer': see-through tulle. */
+    alpha?: 'cut' | 'sheer';
+  }
 > = {
   satin: { roughness: 0.32, sheen: 0.6, sheenRoughness: 0.25, clearcoat: 0.15, bump: 0 },
   silk: { roughness: 0.4, sheen: 0.55, sheenRoughness: 0.3, clearcoat: 0.05, bump: 0 },
@@ -192,6 +266,12 @@ const FINISH: Record<
   velvet: { roughness: 0.8, sheen: 1.0, sheenRoughness: 0.45, clearcoat: 0, bump: 0 },
   linen: { roughness: 0.9, sheen: 0.15, sheenRoughness: 0.85, clearcoat: 0, bump: 0.2 },
   knit: { roughness: 0.9, sheen: 0.3, sheenRoughness: 0.75, clearcoat: 0, bump: 0.12 },
+  sequin: { roughness: 0.26, sheen: 0.3, sheenRoughness: 0.3, clearcoat: 0.3, bump: 0, metalness: 0.6 },
+  lace: { roughness: 0.78, sheen: 0.45, sheenRoughness: 0.6, clearcoat: 0, bump: 0, alpha: 'sheer' },
+  tulle: { roughness: 0.72, sheen: 0.35, sheenRoughness: 0.6, clearcoat: 0, bump: 0, alpha: 'sheer' },
+  leather: { roughness: 0.4, sheen: 0.1, sheenRoughness: 0.5, clearcoat: 0.45, bump: 0 },
+  metallic: { roughness: 0.3, sheen: 0.2, sheenRoughness: 0.4, clearcoat: 0.2, bump: 0, metalness: 0.8 },
+  crepe: { roughness: 0.86, sheen: 0.25, sheenRoughness: 0.7, clearcoat: 0, bump: 0.04 },
 };
 
 const SIZE = 256;
@@ -371,6 +451,130 @@ function drawPattern(ctx: CanvasRenderingContext2D, fabric: Fabric): void {
     }
   }
 
+  switch (fabric.pattern) {
+    case 'sequin': {
+      // Overlapping round sequins in offset rows, each catching light a little differently.
+      const R = 9;
+      for (let row = -1; row * R * 1.5 < S + R; row++) {
+        for (let x = -R; x < S + R; x += R * 1.8) {
+          const cx = x + (row % 2 ? R * 0.9 : 0);
+          const cy = row * R * 1.5;
+          const v = rand();
+          ctx.fillStyle = v > 0.82 ? a : v < 0.2 ? b : base;
+          for (const dx of [0, S, -S]) {
+            for (const dy of [0, S, -S]) {
+              ctx.beginPath();
+              ctx.arc(cx + dx, cy + dy, R, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+      break;
+    }
+    case 'lace': {
+      // A sheer ground (skin or lining shows through, darkened), a fine net,
+      // then opaque flowers and scallops.
+      ctx.clearRect(0, 0, S, S);
+      ctx.fillStyle = base;
+      ctx.globalAlpha = 0.62;
+      ctx.fillRect(0, 0, S, S);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = base;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.9;
+      for (let k = -S; k < S * 2; k += 16) {
+        ctx.beginPath();
+        ctx.moveTo(k, 0);
+        ctx.lineTo(k + S, S);
+        ctx.moveTo(k, S);
+        ctx.lineTo(k + S, 0);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = base;
+      const flower = (fx: number, fy: number, r: number) => {
+        for (let k = 0; k < 6; k++) {
+          const ang = (k / 6) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.ellipse(fx + Math.cos(ang) * r, fy + Math.sin(ang) * r, r * 0.75, r * 0.45, ang, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = a;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = base;
+      };
+      for (const [fx, fy, r] of [
+        [64, 64, 22],
+        [192, 192, 22],
+        [192, 60, 13],
+        [60, 196, 13],
+        [128, 128, 9],
+      ] as const) {
+        for (const dx of [0, S, -S]) for (const dy of [0, S, -S]) flower(fx + dx, fy + dy, r);
+      }
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = base;
+      for (let x = 0; x < S; x += 32) {
+        ctx.beginPath();
+        ctx.arc(x + 16, S * 0.5, 16, 0, Math.PI);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'net': {
+      // Tulle: a fine hexagonal net, mostly air.
+      ctx.clearRect(0, 0, S, S);
+      ctx.fillStyle = base;
+      ctx.globalAlpha = 0.32;
+      ctx.fillRect(0, 0, S, S);
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = base;
+      ctx.lineWidth = 2;
+      for (let y = 0; y <= S; y += 16) {
+        for (let x = 0; x <= S; x += 16) {
+          ctx.beginPath();
+          ctx.arc(x + (y % 32 ? 8 : 0), y, 8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 'grain': {
+      // Leather: pebbled grain, mottled light and dark.
+      for (let k = 0; k < 900; k++) {
+        ctx.fillStyle = rand() > 0.5 ? a : shade(base, -0.12);
+        ctx.globalAlpha = 0.25 + rand() * 0.25;
+        ctx.beginPath();
+        ctx.arc(rand() * S, rand() * S, 2 + rand() * 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 'lame': {
+      // Metallic lame: crinkled light streaks.
+      for (let k = 0; k < 140; k++) {
+        ctx.strokeStyle = rand() > 0.55 ? a : b;
+        ctx.globalAlpha = 0.25 + rand() * 0.45;
+        ctx.lineWidth = 1 + rand() * 3;
+        const x = rand() * S;
+        const y = rand() * S;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + 18 - rand() * 36, y + 20, x + 10 - rand() * 20, y + 40 + rand() * 30);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      break;
+    }
+    default:
+      break;
+  }
+
   // Woven micro texture on everything for a fabric feel.
   const finish = FINISH[fabric.finish];
   if (finish.bump > 0) {
@@ -401,6 +605,10 @@ const WEAVE: Partial<Record<Finish, { tile: number; strength: number; normalScal
   wool: { tile: 0.04, strength: 2.4, normalScale: 0.5 },
   knit: { tile: 0.04, strength: 3.0, normalScale: 0.7 },
   velvet: { tile: 0.02, strength: 1.4, normalScale: 0.22 },
+  sequin: { tile: 0.03, strength: 4.0, normalScale: 1.0 },
+  leather: { tile: 0.06, strength: 1.8, normalScale: 0.35 },
+  metallic: { tile: 0.06, strength: 2.2, normalScale: 0.55 },
+  crepe: { tile: 0.02, strength: 1.6, normalScale: 0.28 },
 };
 
 function weaveHeight(finish: Finish, x: number, y: number, rnd: number): number {
@@ -423,6 +631,21 @@ function weaveHeight(finish: Finish, x: number, y: number, rnd: number): number 
     }
     case 'velvet':
       return rnd;
+    case 'sequin': {
+      // Each sequin a small disc tilted its own way, so they glint one by one.
+      const row = Math.floor(y / 6);
+      const cx = Math.floor((x + (row % 2) * 3) / 6);
+      const h = Math.abs(Math.sin(cx * 12.9898 + row * 78.233) * 43758.5453) % 1;
+      const lx = ((x + (row % 2) * 3) % 6) / 6 - 0.5;
+      const ly = (y % 6) / 6 - 0.5;
+      return 0.5 + (h - 0.5) * 1.6 * lx + (0.5 - h) * 1.2 * ly - 0.6 * (lx * lx + ly * ly);
+    }
+    case 'leather':
+      return 0.5 + 0.35 * Math.sin(x * 0.9 + Math.sin(y * 0.7) * 2) * Math.sin(y * 0.8 + Math.sin(x * 0.6) * 2) + 0.2 * rnd;
+    case 'metallic':
+      return 0.5 + 0.4 * Math.sin(x * 0.25 + Math.sin(y * 0.18) * 3) + 0.15 * rnd;
+    case 'crepe':
+      return 0.5 + 0.5 * rnd;
     default:
       return 0.5;
   }
@@ -486,6 +709,12 @@ const YARN: Record<Finish, number> = {
   velvet: 0.08,
   satin: 0.025,
   silk: 0.03,
+  sequin: 0.05,
+  lace: 0.02,
+  tulle: 0.02,
+  leather: 0.05,
+  metallic: 0.06,
+  crepe: 0.03,
 };
 
 /**
@@ -579,7 +808,7 @@ export function fabricMaterial(fabricId: string): MeshPhysicalMaterial {
   mat = new MeshPhysicalMaterial({
     map: fabricTexture(fabric),
     roughness: f.roughness,
-    metalness: 0,
+    metalness: f.metalness ?? 0,
     sheen: f.sheen,
     sheenRoughness: f.sheenRoughness,
     sheenColor: base.clone().lerp(new Color('#ffffff'), 0.35),
@@ -590,8 +819,60 @@ export function fabricMaterial(fabricId: string): MeshPhysicalMaterial {
     normalScale: new Vector2(1, 1).multiplyScalar(WEAVE[fabric.finish]?.normalScale ?? 0),
     side: DoubleSide,
   });
+  applyAlpha(mat, f.alpha);
   mat.name = `fabric-${fabric.id}`;
   materialCache.set(fabricId, mat);
+  return mat;
+}
+
+/** Lace keeps its holes (alpha test); tulle is see-through and sorts after the form. */
+function applyAlpha(mat: MeshPhysicalMaterial | MeshStandardMaterial, alpha?: 'cut' | 'sheer'): void {
+  if (alpha === 'cut') {
+    mat.alphaTest = 0.45;
+  } else if (alpha === 'sheer') {
+    mat.transparent = true;
+    mat.depthWrite = false;
+    mat.alphaTest = 0.05;
+  }
+}
+
+let trim: MeshStandardMaterial | undefined;
+/** Polished gold for buttons and jewelled trims. */
+export function trimMaterial(): Material {
+  trim ??= new MeshStandardMaterial({ color: '#c9a35a', metalness: 1, roughness: 0.28 });
+  return trim;
+}
+
+const fringeCache = new Map<string, MeshPhysicalMaterial>();
+/** Fringe: the fabric's colour and finish, cut into fine hanging strands. */
+export function fringeMaterial(fabricId: string): Material {
+  let mat = fringeCache.get(fabricId);
+  if (mat) return mat;
+  const fabric = fabricById(fabricId);
+  const f = FINISH[fabric.finish];
+  const { canvas, ctx } = makeCanvas();
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  const rand = rng(fabricId.length * 31 + 7);
+  const [base, a = base] = fabric.colors;
+  for (let x = 0; x < SIZE; x += 6) {
+    ctx.fillStyle = rand() > 0.7 ? a : base;
+    ctx.fillRect(x + rand() * 2, 0, 2.5, SIZE);
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.wrapT = RepeatWrapping;
+  tex.repeat.set(1 / 0.03, 1);
+  mat = new MeshPhysicalMaterial({
+    map: tex,
+    roughness: f.roughness,
+    metalness: f.metalness ?? 0,
+    sheen: f.sheen,
+    alphaTest: 0.5,
+    side: DoubleSide,
+  });
+  mat.name = `fringe-${fabricId}`;
+  fringeCache.set(fabricId, mat);
   return mat;
 }
 
@@ -611,11 +892,12 @@ export function swatchMaterial(fabricId: string): MeshStandardMaterial {
   mat = new MeshStandardMaterial({
     map: tex,
     roughness: Math.min(1, f.roughness + (f.sheen > 0.5 ? -0.12 : 0)),
-    metalness: 0,
+    metalness: f.metalness ?? 0,
     normalMap: weaveNormalMap(fabric.finish),
     normalScale: new Vector2(1, 1).multiplyScalar(WEAVE[fabric.finish]?.normalScale ?? 0),
     side: FrontSide,
   });
+  applyAlpha(mat, f.alpha);
   standardCache.set(key, mat);
   return mat;
 }
@@ -633,9 +915,10 @@ export function miniMaterial(fabricId: string): MeshStandardMaterial {
   mat = new MeshStandardMaterial({
     map: fabricTexture(fabric),
     roughness: f.roughness,
-    metalness: 0,
+    metalness: f.metalness ?? 0,
     side: DoubleSide,
   });
+  applyAlpha(mat, f.alpha);
   standardCache.set(key, mat);
   return mat;
 }

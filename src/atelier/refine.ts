@@ -10,7 +10,7 @@
 import type { ClosetItem } from './closet.js';
 import { pieceName } from './closet.js';
 import { closetFabricId, ClosetColor, ClosetMaterial, parseClosetFabric } from './fabrics.js';
-import { GarmentPiece, RANGES } from './garments.js';
+import { bareShoulders, GarmentPiece, RANGES } from './garments.js';
 import {
   KEEP,
   LENGTHS,
@@ -111,6 +111,19 @@ export function planRefineOffline(
       addItemId = j.id;
       said.push(`added your ${lower(j.name)} for structure`);
     }
+    // Already formal (lace, satin, a wool blazer): sharpen it further.
+    if (said.length === 0) {
+      const jacket = outfit.find((i) => i.kind === 'jacket' && fabricWord(i) !== 'satin');
+      const base = outfit.find((i) => (i.kind === 'dress' || i.kind === 'skirt') && (i.length === 'knee' || i.length === 'midi'));
+      if (jacket) {
+        get(jacket.id).material = 'satin';
+        said.push('recut the jacket in satin, tuxedo style');
+      } else if (base) {
+        const to = base.length === 'knee' ? 'midi' : 'ankle';
+        get(base.id).length = to;
+        said.push(`let the ${base.kind} down to ${to} for a longer line`);
+      }
+    }
   } else {
     const colourful = outfit.filter((i) => !NEUTRAL.has(lower(i.color)));
     const canvas = outfit.find((i) => i.kind !== 'jacket' && NEUTRAL.has(lower(i.color)));
@@ -177,7 +190,7 @@ export function applyRefine(
         changed = true;
       }
     }
-    if (e.sleeves !== KEEP && RANGES[p.kind].sleeve && !p.strapless) {
+    if (e.sleeves !== KEEP && RANGES[p.kind].sleeve && !bareShoulders(p)) {
       p.sleeve = clampParam(p, 'sleeve', SLEEVE[e.sleeves]);
       changed = true;
     }

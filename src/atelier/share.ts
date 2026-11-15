@@ -36,12 +36,47 @@ function fromBase64Url(data: string): string {
 
 const round = (v: number) => Math.round(v * 1000) / 1000;
 
+/** The modern details of a piece, compact (only those set). */
+function styleOf(p: GarmentPiece): Record<string, string | number | boolean> | undefined {
+  const st: Record<string, string | number | boolean> = {};
+  if (p.straps) st.s = p.straps;
+  if (p.neckline) st.n = p.neckline;
+  for (const [k, v] of [['b', p.back], ['l', p.slit], ['t', p.tiers], ['d', p.drape], ['u', p.buttons], ['h', p.shoulders], ['f', p.fringe]] as const) {
+    if (typeof v === 'number' && v > 0) st[k] = round(v);
+  }
+  if (p.corset) st.c = true;
+  return Object.keys(st).length ? st : undefined;
+}
+
+const num = (v: unknown, max: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : undefined);
+
+/** Read the modern details back, keeping only known values in range. */
+function applyStyle(piece: GarmentPiece, raw: unknown): void {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+  const st = raw as Record<string, unknown>;
+  if (st.s === 'slip' || st.s === 'halter') piece.straps = st.s;
+  if (st.n === 'v' || st.n === 'sweetheart' || st.n === 'square' || st.n === 'cowl') piece.neckline = st.n;
+  const set = <K extends 'back' | 'slit' | 'tiers' | 'drape' | 'buttons' | 'shoulders' | 'fringe'>(key: K, v: unknown, max: number) => {
+    const n = num(v, max);
+    if (n) piece[key] = n as GarmentPiece[K];
+  };
+  set('back', st.b, 0.4);
+  set('slit', st.l, 0.5);
+  set('tiers', st.t, 3);
+  set('drape', st.d, 1);
+  set('buttons', st.u, 8);
+  set('shoulders', st.h, 1);
+  set('fringe', st.f, 0.2);
+  if (st.c === true) piece.corset = true;
+}
+
 export function encodeLook(name: string, pieces: GarmentPiece[]): string {
   const p = pieces.slice(0, MAX_PIECES).map((piece) => [
     KINDS.indexOf(piece.kind),
     piece.fabric,
     ...NUMS.map((k) => round(piece[k] ?? 0)),
     piece.strapless ? 1 : 0,
+    ...(styleOf(piece) ? [styleOf(piece)] : []),
   ]);
   return toBase64Url(JSON.stringify({ v: 1, n: name.slice(0, MAX_NAME), p }));
 }
@@ -76,6 +111,7 @@ export function decodeLook(data: string): SharedLook | null {
     });
     if (!ok) continue;
     if (row[7] === 1) piece.strapless = true;
+    applyStyle(piece, row[8]);
     pieces.push(piece);
   }
   if (pieces.length === 0) return null;

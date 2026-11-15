@@ -58,7 +58,7 @@ click stylist-back; sleep 1
 click rack-tab-boutique; sleep 1;   check $CP closet-eyebrow "Boutique" "open the boutique"
                                     check $CP closet-note "start with the" "boutique stylist recommends a piece"
 click shop-1; sleep 1;              check $CP closet-eyebrow "Studio Nord" "switch boutique"
-click boutique-sn-blouse; sleep 2;  check $AP look-name "Ivory Silk Blouse" "try a boutique piece on the form"
+click boutique-sn-blazer; sleep 2;  check $AP look-name "Jewel Button Blazer Dress" "try a boutique piece on the form"
                                     check $CP verdict-stat "outfits" "verdict counts new outfits"
                                     check $CP verdict-sub "per outfit" "verdict shows cost per outfit"
 click boutique-back; sleep 1;       check $CP closet-eyebrow "My closet" "leave the boutique"

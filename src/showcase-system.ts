@@ -376,11 +376,12 @@ export class ShowcaseSystem extends createSystem({}) {
         act: () => {
           stylist().keep();
           closet().openBoutique();
-          boutique().open(1);
+          // Maison Lune: the emerald satin halter maxi, tried with your closet.
+          boutique().open(0);
         },
       },
       said(10, 'Shop against your closet'),
-      { at: word(10, 'counts', 0.5), sfx: 'swish', act: () => boutique().tryOn(1) },
+      { at: word(10, 'counts', 0.5), sfx: 'swish', act: () => boutique().tryOn(2) },
       { at: scene(11), act: () => boutique().close(true) },
       said(11, 'Sit down, it comes to you'),
       {

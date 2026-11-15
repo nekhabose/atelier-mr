@@ -42,7 +42,7 @@ import {
   TailorParams,
   TailorPin,
 } from './atelier-components.js';
-import { fabricById, fabricMaterial, miniMaterial, SWATCH_WALL, swatchMaterial } from './atelier/fabrics.js';
+import { fabricById, fabricMaterial, fringeMaterial, miniMaterial, SWATCH_WALL, swatchMaterial, trimMaterial } from './atelier/fabrics.js';
 import {
   buildPieceGroup,
   GarmentPiece,
@@ -58,6 +58,9 @@ import {
   DRAG_DETAIL,
   Detail,
   LIGHT_DETAIL,
+  bareShoulders,
+  cannotTailor,
+  fixedNeckline,
 } from './atelier/garments.js';
 import { makeLabel, makeTextSheet } from './atelier/labels.js';
 import { TailorTools } from './atelier/tailor-tools.js';
@@ -627,6 +630,14 @@ export class AtelierSystem extends createSystem({
     return best;
   }
 
+  /** Gold buttons and fabric fringe on the worn garment. */
+  private extras(p: GarmentPiece): { trim?: Material; fringe?: Material } {
+    return {
+      trim: p.buttons ? trimMaterial() : undefined,
+      fringe: p.fringe ? fringeMaterial(p.fabric) : undefined,
+    };
+  }
+
   private disposeGroup(group: Group): void {
     group.traverse((o) => {
       const m = o as Mesh;
@@ -638,7 +649,7 @@ export class AtelierSystem extends createSystem({
   private rebuildAll(): void {
     for (const g of this.pieceGroups) this.disposeGroup(g);
     this.pieceGroups = this.pieces.map((p) => {
-      const g = buildPieceGroup(p, fabricMaterial(p.fabric), this.heroDetail);
+      const g = buildPieceGroup(p, fabricMaterial(p.fabric), this.heroDetail, this.extras(p));
       this.outfit.add(g);
       return g;
     });
@@ -650,7 +661,7 @@ export class AtelierSystem extends createSystem({
     const old = this.pieceGroups[index];
     if (old) this.disposeGroup(old);
     const p = this.pieces[index];
-    const g = buildPieceGroup(p, fabricMaterial(p.fabric), detail);
+    const g = buildPieceGroup(p, fabricMaterial(p.fabric), detail, this.extras(p));
     this.outfit.add(g);
     this.pieceGroups[index] = g;
     // A new fabric (the only thing that brings a new material) needs patching.
@@ -670,8 +681,8 @@ export class AtelierSystem extends createSystem({
     for (const pin of this.pins) {
       const obj = pin.entity.object3D!;
       const piece = pieceForParam(this.pieces, pin.param);
-      const hidden = !piece || (pin.param === 'neck' && piece.strapless) ||
-        (pin.param === 'sleeve' && piece.strapless);
+      const hidden = !piece || (pin.param === 'neck' && fixedNeckline(piece)) ||
+        (pin.param === 'sleeve' && bareShoulders(piece));
       const touchObj = pin.touch.object3D!;
       obj.visible = !hidden;
       touchObj.visible = !hidden;
@@ -907,7 +918,7 @@ export class AtelierSystem extends createSystem({
     }
     const piece = pieceForParam(this.pieces, param);
     const range = piece ? RANGES[piece.kind][param] : undefined;
-    if (!piece || !range || ((param === 'sleeve' || param === 'neck') && piece.strapless)) {
+    if (!piece || !range || cannotTailor(piece, param)) {
       this.setHint(`This look has no ${name} to tailor.`);
       return false;
     }
@@ -952,12 +963,12 @@ export class AtelierSystem extends createSystem({
     if (this.pieces.length === 0) return null;
     const fits = (p: GarmentPiece) => {
       const r = RANGES[p.kind][param];
-      return !!r && value >= r.min - 0.01 && value <= r.max + 0.01 && !((param === 'sleeve' || param === 'neck') && p.strapless);
+      return !!r && value >= r.min - 0.01 && value <= r.max + 0.01 && !cannotTailor(p, param);
     };
     const usual = pieceForParam(this.pieces, param);
     const piece = usual && fits(usual) ? usual : this.pieces.find(fits) ?? usual;
     const range = piece ? RANGES[piece.kind][param] : undefined;
-    if (!piece || !range || ((param === 'sleeve' || param === 'neck') && piece.strapless)) return null;
+    if (!piece || !range || cannotTailor(piece, param)) return null;
     const next = Math.min(range.max, Math.max(range.min, value));
     this.checkpoint();
     piece[param] = next;
