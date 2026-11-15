@@ -59,7 +59,8 @@ February 2027.
   **Keep** it, or **Undo** puts back exactly what was on the form; both teach
   it what you like (kept on the device; **What your stylist remembers** on the
   start page shows it and forgets it). Claude decides when the server has a key;
-  an on-device planner makes the same calls otherwise. Voice: "get me ready",
+  an on-device planner makes the same calls otherwise. While the card is up,
+  "warmer", "dressier" or "more colour" edits the outfit and adds a step. Voice: "get me ready",
   "lay out tomorrow", "keep", "undo".
 - **Wear what you own:** **Wear today** logs a wear for each closet piece on
   the form. Pieces keep what they cost, so the closet shows cost per wear and

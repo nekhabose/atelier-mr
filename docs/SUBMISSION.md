@@ -215,7 +215,10 @@ read the script in that voice, so every line is word-perfect and each phrase's
 timing is exact. Its output carries Resemble's imperceptible watermark. My own
 recording is kept (`docs/video/vo-own/`) and can be mixed back in with
 `scripts/split-voice.py`. Each action lands on its word (the hem moves on
-"knee", the fabric on "satin" and "silk"). On Devpost, describe it as emulator
+"knee", the fabric on "satin" and "silk", and each of the stylist agent's
+steps ticks off as it is named). In the video the agent runs on the device
+(its card says "On-device agent"), so the tour is the same every time; with
+the server key, the live Claude agent makes the same tool calls. On Devpost, describe it as emulator
 footage of the real app, narrated by an AI clone of the creator's voice. The
 video says so on screen too: an opening note ("Recorded in the Meta Quest
 emulator's simulated living room. On your headset, Atelier appears in your own
@@ -227,8 +230,8 @@ It tells one story, a real morning, so the features arrive as reasons:
 |---|---|---|
 | 0:00 | The empty living room, "7:40 am" | Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear. |
 | 0:08 | The studio settles into the room, clear of the furniture | So I put on my headset, and my own room becomes a fitting studio. |
-| 0:13 | "This morning: 9°C, rain likely. An interview", the stylist dresses the form | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
-| 0:20 | "Dressier" recuts the outfit in satin | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
+| 0:13 | The stylist agent's plan card beside the form ticks off each step: the weather (9°C, rain likely), the interview on the calendar, what you like, the closet; it dresses the form and lets the hem down 8 cm for the rain, then offers Keep or Undo | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
+| 0:20 | "Dressier" recuts the outfit in satin; the card adds the step, then Keep | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
 | 0:27 | A dress from the rail | For tonight, I take a dress from the rail. |
 | 0:30 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
 | 0:36 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |

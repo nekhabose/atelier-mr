@@ -28,6 +28,7 @@ import { OnboardingSystem } from './onboarding-system.js';
 import { RoomPlacementSystem } from './room-system.js';
 import { MorningSystem } from './morning-system.js';
 import { MarkSystem } from './mark-system.js';
+import { AgentSystem } from './agent-system.js';
 import { access } from './atelier/access.js';
 import { LOOKS } from './atelier/looks.js';
 import { LINE_LENGTH, LINE_START, LINE_TEXT, WORD_AT } from './atelier/tour-timing.js';
@@ -75,6 +76,7 @@ const SHOTS = {
   hem: { pos: [0.1, 0.95, -0.55], target: [0, 0.62, -1.55] },
   board: { pos: [0.3, 1.35, -0.3], target: [1.05, 1.15, -1.3] },
   stylist: { pos: [-0.05, 1.32, 0.05], target: [-0.3, 0.92, -1.2] },
+  agent: { pos: [-0.15, 1.5, 0.55], target: [-0.3, 1.14, -1.45] },
   boutique: { pos: [-0.2, 1.35, 0.1], target: [-0.75, 0.98, -1.2] },
   seated: { pos: [0, 1.5, 0.75], target: [0, 1.0, -1.45] },
   access: { pos: [0.2, 1.18, -0.12], target: [0.52, 0.8, -0.8] },
@@ -96,6 +98,7 @@ const MR_SHOTS: Record<ShotKey, Shot> = {
   form: { pos: [0.2, 1.5, -0.45], target: [0, 1.05, -1.55] },
   board: { pos: [0.35, 1.55, -0.35], target: [1.05, 1.2, -1.3] },
   stylist: { pos: [-0.1, 1.5, 0.05], target: [-0.35, 0.95, -1.15] },
+  agent: { pos: [-0.15, 1.6, 0.2], target: [-0.25, 1.22, -1.45] },
   boutique: { pos: [-0.25, 1.52, 0.05], target: [-0.75, 1.0, -1.2] },
   seated: { pos: [0, 1.17, 0.05], target: [0, 0.85, -0.95] },
   access: { pos: [0.25, 1.4, -0.12], target: [0.52, 0.85, -0.8] },
@@ -133,6 +136,11 @@ export class ShowcaseSystem extends createSystem({}) {
   private toPos = new Vector3();
   private toTarget = new Vector3();
   private curTarget = new Vector3(0, 1, -1.5);
+  private cardC = new Vector3();
+  private cardN = new Vector3();
+  private cardR = new Vector3();
+  private cardP = new Vector3();
+  private cardT = new Vector3();
   private moveT = MOVE;
   private hemFrom = 0;
   private hemT = -1;
@@ -253,6 +261,7 @@ export class ShowcaseSystem extends createSystem({}) {
       access.set('seated', false);
     }
     this.world.getSystem(MorningSystem)?.endSample();
+    this.world.getSystem(AgentSystem)?.cancel();
     if (this.mode === 'flat') {
       const cam = this.world.camera;
       cam.position.copy(this.savedPos);
@@ -276,6 +285,7 @@ export class ShowcaseSystem extends createSystem({}) {
     const boutique = () => this.world.getSystem(BoutiqueSystem)!;
     const accessSys = () => this.world.getSystem(AccessSystem)!;
     const morning = () => this.world.getSystem(MorningSystem)!;
+    const agent = () => this.world.getSystem(AgentSystem)!;
     const room = () => this.world.getSystem(RoomPlacementSystem)!;
     const mr = this.mode === 'mr';
     const dress = Math.max(0, LOOKS.findIndex((l) => l.id === 'velvet-hour'));
@@ -303,20 +313,35 @@ export class ShowcaseSystem extends createSystem({}) {
       said(1, 'Your room becomes a studio'),
       {
         at: scene(2),
-        shot: 'stylist',
+        shot: 'agent',
         act: () => {
           morning().useSample();
           closet().backToBrowse();
         },
       },
-      said(2, 'Dressed for your real day'),
-      { at: word(2, 'dresses', 0.62), sfx: 'sparkle', act: () => morning().dressToday({ instant: true }) },
+      said(2, 'Your stylist agent'),
+      // The agent's plan card appears once the camera has arrived; each tool
+      // call ticks off as its words are spoken.
+      { at: scene(2) + MOVE + 0.05, act: () => agent().begin('today') },
+      // Mixed-reality cut: push in so the card can be read, then ease back
+      // for "dressier" so the whole form is in frame.
+      { at: scene(2) + MOVE + 0.25, act: () => this.frameCard(0.6, 0.17, 0.12) },
+      { at: word(2, 'forecast', 0.26), act: () => agent().advanceTo('check_weather') },
+      { at: word(2, 'calendar', 0.43), act: () => agent().advanceTo('check_calendar') },
+      { at: word(2, 'calendar', 0.43) + 0.45, act: () => agent().advanceTo('recall_preferences') },
+      { at: word(2, 'dresses', 0.62) - 0.35, act: () => agent().advanceTo('search_closet') },
+      { at: word(2, 'dresses', 0.62), sfx: 'sparkle', act: () => agent().advanceTo('put_on_form') },
+      { at: word(2, 'closet', 0.84), sfx: 'pin', act: () => agent().advanceTo('tailor') },
+      { at: line(2, 1) - 0.3, act: () => agent().advanceTo('finish') },
       said(3, 'Refine in plain words'),
-      { at: word(3, 'dressier', 0.66), sfx: 'sparkle', act: () => void stylist().refine('dressier') },
+      { at: word(3, 'dressier', 0.66) - MOVE - 0.1, act: () => this.frameCard(1.05, 0.34, 0.32) },
+      { at: word(3, 'dressier', 0.66), sfx: 'sparkle', act: () => void agent().refine('dressier') },
+      { at: scene(4) - 0.45, act: () => agent().press(true) },
       {
         at: scene(4),
         shot: 'rack',
         act: () => {
+          agent().keep();
           stylist().keep();
           closet().setMode(false);
         },
@@ -547,6 +572,25 @@ export class ShowcaseSystem extends createSystem({}) {
     this.fromTarget.copy(this.curTarget);
     this.toPos.set(...shot.pos);
     this.toTarget.set(...shot.target);
+    this.moveT = 0;
+  }
+
+  /**
+   * Mixed-reality cut: frame the agent's plan card from `dist` metres in
+   * front, `side` to its right (where the form stands), looking `drop` lower.
+   */
+  private frameCard(dist: number, side: number, drop: number): void {
+    if (this.mode !== 'mr' || !this.world.getSystem(AgentSystem)?.cardPose(this.cardC, this.cardN)) return;
+    this.cardN.y = 0;
+    this.cardN.normalize();
+    this.cardR.set(-this.cardN.z, 0, this.cardN.x).negate();
+    this.cardP.copy(this.cardC).addScaledVector(this.cardN, dist).addScaledVector(this.cardR, side);
+    this.cardT.copy(this.cardC).addScaledVector(this.cardR, side * 1.15).addScaledVector(this.cardN, -0.2);
+    this.cardT.y -= drop;
+    this.fromPos.copy(this.headLocal);
+    this.fromTarget.copy(this.curTarget);
+    this.toLocal(this.cardP, this.toPos);
+    this.toLocal(this.cardT, this.toTarget);
     this.moveT = 0;
   }
 

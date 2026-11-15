@@ -49,8 +49,9 @@ import {
 } from './atelier/agent-contract.js';
 import { AgentMemory, emptyMemory, loadMemory, outfitTraits, preferenceNotes, remember, saveMemory, Tailoring } from './atelier/agent-memory.js';
 import { AgentPiece, planAgentOffline } from './atelier/agent-offline.js';
-import { isWearable, StylistItem } from './atelier/stylist-contract.js';
+import { isWearable, Refine, StylistItem } from './atelier/stylist-contract.js';
 import { describeItem } from './atelier/stylist-engine.js';
+import { applyRefine, describeOutfit, planRefineOffline } from './atelier/refine.js';
 import { itemsOnForm } from './atelier/wear.js';
 import { localDate } from './atelier/ootd.js';
 import { measureText, pieceForParam, TailorParam } from './atelier/garments.js';
@@ -125,6 +126,10 @@ export class AgentSystem extends createSystem({
   private onFormAtStart = new Set<string>();
   private liveDownUntil = 0;
   private fast = false;
+  /** The guided tour drives the run: planned up front, one call per cue. */
+  private scripted = false;
+  private script: AgentToolCall[] = [];
+  private scriptAt = 0;
 
   private cardEntity?: Entity;
   private card?: Mesh;
@@ -182,24 +187,9 @@ export class AgentSystem extends createSystem({
   async run(goal: AgentGoal, opts: { live?: boolean; fast?: boolean } = {}): Promise<void> {
     if (this.state === 'running') return;
     if (this.state === 'deciding') this.hide();
-    const gen = ++this.generation;
-    this.goal = goal;
-    this.fast = !!opts.fast;
-    this.state = 'running';
-    this.steps = [];
-    this.outcome = undefined;
-    this.dressed = [];
-    this.dressedIds = [];
-    this.tailoring = [];
-    this.before = this.atelier.snapshot();
-    this.onFormAtStart = new Set(itemsOnForm(this.closet.items, this.atelier.currentPieces));
     const live = opts.live !== false && Date.now() > this.liveDownUntil;
-    const record: AgentRunRecord = { goal, source: live ? 'live' : 'on-device', calls: [], steps: [] };
-    this.record = record;
-    this.last = record;
-    this.closet.backToBrowse('Your stylist is working beside the form.');
-    this.atelier.setBadge('Your stylist is planning');
-    this.show();
+    const { gen, record } = this.prepare(goal, live);
+    this.fast = !!opts.fast;
     try {
       let result: 'done' | 'failed' | 'cancelled' = 'failed';
       if (live) result = await this.runLive(gen);
@@ -218,6 +208,118 @@ export class AgentSystem extends createSystem({
         this.halt('Your stylist hit a problem, so nothing was changed.');
       }
     }
+  }
+
+  /** Reset for a new run and show the card. */
+  private prepare(goal: AgentGoal, live: boolean): { gen: number; record: AgentRunRecord } {
+    const gen = ++this.generation;
+    this.goal = goal;
+    this.scripted = false;
+    this.state = 'running';
+    this.steps = [];
+    this.outcome = undefined;
+    this.dressed = [];
+    this.dressedIds = [];
+    this.tailoring = [];
+    this.before = this.atelier.snapshot();
+    this.onFormAtStart = new Set(itemsOnForm(this.closet.items, this.atelier.currentPieces));
+    const record: AgentRunRecord = { goal, source: live ? 'live' : 'on-device', calls: [], steps: [] };
+    this.record = record;
+    this.last = record;
+    this.closet.backToBrowse('Your stylist is working beside the form.');
+    this.atelier.setBadge('Your stylist is planning');
+    this.show();
+    return { gen, record };
+  }
+
+  /**
+   * The guided tour: plan on the device now (a fixed seed, no memory, so the
+   * tour is the same every time), then advanceTo() runs each call on its cue.
+   */
+  begin(goal: AgentGoal, seed = 7): void {
+    this.cancel();
+    this.prepare(goal, false);
+    this.scripted = true;
+    const d = this.morning.day(goal);
+    this.script = planAgentOffline({
+      goal,
+      day: { occasion: d.occasion, cue: d.cue, weather: d.forecast?.weather },
+      mood: this.stylist.mood,
+      pieces: this.pieces(),
+      memory: emptyMemory(),
+      seed,
+    });
+    this.scriptAt = 0;
+    this.thinking = true;
+    this.draw();
+  }
+
+  /** Run the planned calls up to and including the next `name` (the tour's cue). */
+  advanceTo(name: AgentToolCall['name']): void {
+    if (!this.scripted || this.state !== 'running') return;
+    const idx = this.script.findIndex((c, i) => i >= this.scriptAt && c.name === name);
+    if (idx < 0) return;
+    while (this.scriptAt <= idx) {
+      const call = this.script[this.scriptAt++];
+      if (call.name === 'finish') {
+        const v = validateCall('finish', call.input);
+        this.record?.calls.push('finish');
+        if (!('error' in v) && v.name === 'finish') this.present(v);
+        return;
+      }
+      this.execute(call);
+    }
+    this.thinking = true;
+    this.draw();
+  }
+
+  /** End any run without deciding and without touching the form (the tour stopped). */
+  cancel(): void {
+    if (this.state === 'idle') return;
+    this.generation++;
+    this.finishRun();
+  }
+
+  /**
+   * "Warmer", "dressier", "more colour" while the run awaits Keep or Undo: the
+   * outfit on the form is edited on the device and the card gains a step.
+   * Undo still puts back what you had before the run.
+   */
+  refine(kind: Refine): boolean {
+    const o = this.outcome;
+    if (this.state !== 'deciding' || !o || this.dressedIds.length === 0) return false;
+    const d = this.morning.day(this.goal);
+    const items = this.closet.items.map(describeItem);
+    const reply = planRefineOffline(kind, describeOutfit(this.atelier.currentPieces), items, d.occasion, d.forecast?.weather ?? this.stylist.weather, this.stylist.mood);
+    const result = applyRefine(this.atelier.currentPieces, reply, this.closet.items);
+    const label = kind === 'colour' ? 'Added colour' : `Made it ${kind}`;
+    if (!result.changed) {
+      this.addStep({ label, detail: 'Nothing to change: it already is', state: 'failed' });
+      return false;
+    }
+    this.acting = true;
+    this.closet.wearPieces(result.pieces, o.title, reply.summary);
+    this.acting = false;
+    this.dressed = describeOutfit(this.atelier.currentPieces);
+    this.record?.calls.push(`refine:${kind}`);
+    sfx.sparkle();
+    this.addStep({ label, detail: reply.summary.replace(/^[A-Za-z]+: /, ''), state: 'done' });
+    this.atelier.setHint(`${label}. Keep it, or Undo puts back what you had.`);
+    return true;
+  }
+
+  /** The plan card's centre and the way it faces, in the room (the tour's camera frames it). */
+  cardPose(center: Vector3, facing: Vector3): boolean {
+    const g = this.cardEntity?.object3D;
+    if (!this.card || !g?.visible) return false;
+    this.card.getWorldPosition(center);
+    this.card.getWorldDirection(facing);
+    return true;
+  }
+
+  /** Show a button as pressed for a moment (the tour, before it keeps). */
+  press(keep: boolean): void {
+    (keep ? this.keepButton : this.undoButton)?.object3D?.scale.setScalar(1.1);
   }
 
   private async runLive(gen: number): Promise<'done' | 'failed' | 'cancelled'> {
@@ -452,7 +554,7 @@ export class AgentSystem extends createSystem({
   keep(): void {
     if (this.state !== 'deciding' || !this.outcome) return;
     const o = this.outcome;
-    if (o.itemIds.length > 0) {
+    if (o.itemIds.length > 0 && !this.scripted) {
       this.memory = remember(this.memory, outfitTraits(this.dressed, this.tailoring), true);
       saveMemory(this.memory);
       if (this.goal === 'tomorrow') this.morning.keepTomorrow(o.itemIds, o.title);
@@ -471,7 +573,7 @@ export class AgentSystem extends createSystem({
   /** Put back exactly what was on the form before the run. */
   undo(): void {
     if (this.state !== 'deciding') return;
-    if (this.outcome && this.outcome.itemIds.length > 0) {
+    if (this.outcome && this.outcome.itemIds.length > 0 && !this.scripted) {
       this.memory = remember(this.memory, outfitTraits(this.dressed, this.tailoring), false);
       saveMemory(this.memory);
     }
@@ -493,6 +595,7 @@ export class AgentSystem extends createSystem({
 
   private finishRun(): void {
     this.state = 'idle';
+    this.scripted = false;
     this.thinking = false;
     this.atelier.setBadge(null);
     this.hide();
@@ -603,7 +706,7 @@ export class AgentSystem extends createSystem({
     const flat = this.world.visibilityState.peek() === VisibilityState.NonImmersive;
     const width = flat ? 0.8 : Math.min(0.5, Math.max(0.26, 0.3 * d));
     const side = 0.27 + width / 2 + 0.04;
-    this.spot.set(this.formPos.x + fz * side, this.head.y - 0.06, this.formPos.z - fx * side);
+    this.spot.set(this.formPos.x + fz * side, this.head.y + (flat ? 0 : -0.06), this.formPos.z - fx * side);
     // Then a fifth of the way toward you, shrunk to look the same size, so the
     // rail and board (which stand nearer than the form) never cover it.
     const k = 0.78;
@@ -642,7 +745,8 @@ export class AgentSystem extends createSystem({
 
     const rows: Step[] = [...this.steps];
     if (this.thinking) rows.push({ label: 'Thinking', detail: this.steps.length ? 'Deciding the next step' : 'Reading your day', state: 'doing' });
-    const shown = rows.slice(-MAX_ROWS);
+    // One more row while there is no outcome below the steps.
+    const shown = rows.slice(-(this.state === 'deciding' ? MAX_ROWS : MAX_ROWS + 1));
     shown.forEach((s, i) => {
       const y = 246 + i * 94;
       this.marker(76, y - 12, s.state);

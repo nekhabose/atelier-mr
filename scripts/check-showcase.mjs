@@ -24,6 +24,7 @@ export default async function run({ frame, page }) {
         fabric: a.currentPieces.map((p) => p.fabric).join(','),
         cam: globalThis.atelier.world.camera.position.toArray().map((v) => Math.round(v * 100) / 100),
         caption: document.querySelector('.atelier-sc [data-title]')?.textContent,
+        agent: globalThis.agent ? `${globalThis.agent.state} ${globalThis.agent.last?.calls.join(',') ?? ''}` : '',
       });
     // Just before each scene changes, from the tour's own timing (dev server).
     const { LINE_START: L } = await import('/src/atelier/tour-timing.ts');

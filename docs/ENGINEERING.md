@@ -173,7 +173,7 @@ not yet verified.
 | 46-step journey | The whole product, driven with emulated controllers in XR | `scripts/e2e-emulator.sh` |
 | Hand pinches | Marking hem, sleeve and neckline on the body; a pinch held out in front is ignored | Emulated hands, see `docs/SUBMISSION.md` |
 | Gaze and pinch | Every rail look and panel button by gaze on the glasses profile; hand-ray fallback; every panel button inside the glasses' view | iwsdk-glasses-test procedure |
-| Guided tour | Every beat of the story puts the right thing on the form | `scripts/check-showcase.mjs` |
+| Guided tour | Every beat of the story puts the right thing on the form, and the stylist agent's steps run on their cues (checks weather, calendar, preferences, closet, dresses, tailors, finishes, then "dressier") | `scripts/check-showcase.mjs` |
 | Soak | No GPU or memory leaks over 300 actions | `scripts/check-soak.mjs` |
 | Eight rooms | Placement in every emulator room from a clean first visit | `scripts/check-rooms.sh` |
 | Random input | 80 random interactions, no errors, still responsive | `scripts/check-monkey.sh` |

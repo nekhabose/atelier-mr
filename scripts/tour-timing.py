@@ -27,7 +27,7 @@ BREATH = 0.5
 HOLD = {1: 0.7, 5: 1.0, 7: 1.0, 10: 0.8}
 # Words the tour acts on (0-based line: words). Each gets its time in the line.
 TARGETS = {
-    2: ['dresses'],
+    2: ['forecast', 'calendar', 'dresses', 'form', 'closet'],
     3: ['dressier'],
     4: ['dress'],
     5: ['knee'],

@@ -5,7 +5,7 @@
 export const LINE_START = [0.6, 8.53, 13.8, 20.76, 28.08, 31.16, 37.37, 42.53, 48.69, 54.16, 60.47, 68.09, 72.61, 80.27];
 export const LINE_LENGTH = [7.43, 4.57, 6.46, 6.82, 2.58, 5.21, 4.66, 5.16, 4.97, 5.81, 6.82, 4.02, 7.16, 5.7];
 /** Seconds into a line when a word the tour acts on is spoken ("line:word"). */
-export const WORD_AT: Record<string, number> = {"2:dresses": 3.92, "3:dressier": 4.12, "4:dress": 1.42, "5:knee": 3.41, "6:pull": 0.45, "7:satin": 3.34, "7:silk": 4.56, "8:lay": 0.78, "9:builds": 4.12, "10:counts": 2.07, "11:sit": 0.81, "13:get": 1.07, "13:open": 3.37};
+export const WORD_AT: Record<string, number> = {"2:dresses": 3.92, "3:dressier": 4.12, "4:dress": 1.42, "5:knee": 3.41, "6:pull": 0.45, "7:satin": 3.34, "7:silk": 4.56, "8:lay": 0.78, "9:builds": 4.12, "10:counts": 2.07, "11:sit": 0.81, "13:get": 1.07, "13:open": 3.37, "2:forecast": 1.66, "2:calendar": 2.79, "2:form": 4.24, "2:closet": 5.45};
 /** What is said: the captions show these words. */
 export const LINE_TEXT = [
   "Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear.",
