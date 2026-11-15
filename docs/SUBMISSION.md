@@ -208,7 +208,10 @@ timing is exact. Its output carries Resemble's imperceptible watermark. My own
 recording is kept (`docs/video/vo-own/`) and can be mixed back in with
 `scripts/split-voice.py`. Each action lands on its word (the hem moves on
 "knee", the fabric on "satin" and "silk"). On Devpost, describe it as emulator
-footage of the real app, narrated by an AI clone of the creator's voice.
+footage of the real app, narrated by an AI clone of the creator's voice. The
+video says so on screen too: an opening note ("Recorded in the Meta Quest
+emulator's simulated living room. On your headset, Atelier appears in your own
+room.") and a small "Quest emulator" tag in the corner throughout.
 
 It tells one story, a real morning, so the features arrive as reasons:
 
@@ -237,7 +240,8 @@ python3 scripts/tour-timing.py                              # time the tour to y
 npx @iwsdk/cli dev restart --ai-mode agent --allow-browser-automation   # hides emulator controls
 npx @iwsdk/cli browser run scripts/record-mr-frames.mjs --timeout 110000
 node scripts/frames-to-mp4.mjs docs/video/frames-mr docs/video/atelier-story.mp4 --crop-toolbar
-bash scripts/mix-video.sh docs/video/atelier-story.mp4 docs/video/atelier-demo.mp4
+bash scripts/mix-video.sh docs/video/atelier-story.mp4 docs/video/atelier-mixed.mp4
+python3 scripts/video-note.py docs/video/atelier-mixed.mp4 docs/video/atelier-demo.mp4   # emulator note and tag
 npx @iwsdk/cli dev restart --ai-mode collaborate --allow-browser-automation
 ```
 
