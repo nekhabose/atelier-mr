@@ -26,6 +26,7 @@ import {
   RayInteractable,
   SRGBColorSpace,
   Vector3,
+  VisibilityState,
 } from '@iwsdk/core';
 import { AgentButton } from './atelier-components.js';
 import { AtelierSystem, Snapshot } from './atelier-system.js';
@@ -597,10 +598,18 @@ export class AgentSystem extends createSystem({
     const d = Math.max(0.6, Math.hypot(dx, dz));
     const fx = dx / d;
     const fz = dz / d;
-    const width = Math.min(0.5, Math.max(0.26, 0.3 * d));
+    // In the headset about 17 degrees wide at any distance; larger on the
+    // flat page, where the camera stands farther back.
+    const flat = this.world.visibilityState.peek() === VisibilityState.NonImmersive;
+    const width = flat ? 0.8 : Math.min(0.5, Math.max(0.26, 0.3 * d));
     const side = 0.27 + width / 2 + 0.04;
     this.spot.set(this.formPos.x + fz * side, this.head.y - 0.06, this.formPos.z - fx * side);
-    group.scale.setScalar(width);
+    // Then a fifth of the way toward you, shrunk to look the same size, so the
+    // rail and board (which stand nearer than the form) never cover it.
+    const k = 0.78;
+    this.spot.x = this.head.x + (this.spot.x - this.head.x) * k;
+    this.spot.z = this.head.z + (this.spot.z - this.head.z) * k;
+    group.scale.setScalar(width * k);
     if (group.parent) {
       group.parent.updateMatrixWorld();
       group.parent.worldToLocal(this.spot);
