@@ -155,6 +155,16 @@ not yet verified.
 | Random input | 80 random interactions, no errors, still responsive | `scripts/check-monkey.sh` |
 | Installable and offline | Manifest, icons, service worker | `scripts/check-pwa.mjs` |
 
+## Device check (`?check`)
+
+Opening the app with `?check` runs a 30-second self-driving benchmark in the
+headset (looks, tailoring, fabrics, turntable, stylist, boutique) and shows a
+results card: average and 1%-low fps, worst frame, share of frames under
+60 fps, draw calls, triangles, quality tier, refresh rate and the features the
+headset granted. Any Quest can run it from the link; see `docs/DEVICE-CHECK.md`.
+Frame times go into a preallocated buffer, so the check adds no per-frame
+allocation.
+
 ## Not yet verified
 
 Frame rate, hand tracking (including marking on your own body), depth

@@ -18,6 +18,7 @@ import { WardrobeSystem } from './wardrobe-system.js';
 import { StartSystem } from './start-system.js';
 import { MarkSystem } from './mark-system.js';
 import { MorningSystem } from './morning-system.js';
+import { CheckSystem } from './check-system.js';
 
 // Offline after one visit (production only; the dev server injects the emulator).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -47,6 +48,8 @@ World.create(
   world.registerSystem(StartSystem);
   world.registerSystem(ShowcaseSystem);
   world.registerSystem(PerfSystem);
+  // ?check: a 30-second self-running device check (results card + start page).
+  world.registerSystem(CheckSystem);
   // Real hands and furniture hide the form and garments behind them (Quest 3
   // depth API). Depth is optional: without it the studio renders as before.
   world.registerSystem(DepthSensingSystem, {
@@ -83,6 +86,7 @@ World.create(
   g.planner = world.getSystem(PlannerSystem);
   g.mark = world.getSystem(MarkSystem);
   g.morning = world.getSystem(MorningSystem);
+  g.check = world.getSystem(CheckSystem);
 
   // Installed on Quest (Trusted Web Activity): there is no 2D page to tap, so
   // the app-icon tap enters the studio. Browser tabs keep the Enter button.

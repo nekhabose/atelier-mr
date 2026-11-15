@@ -199,7 +199,8 @@ narration) is rebuilt with the steps in `docs/SUBMISSION.md` (Demo video);
 `docs/NEWCOMER-TEST.md` a 15-minute test with someone new to Atelier.
 
 How it stays fast and reliable (quality governor, safety nets, rooms of any
-size, soak test, privacy, scaling): `docs/ENGINEERING.md`.
+size, soak test, privacy, scaling): `docs/ENGINEERING.md`. Measure any Quest
+in 30 seconds with `?check`: `docs/DEVICE-CHECK.md`.
 Record the flat showcase as an MP4 (needs ffmpeg; output is git-ignored):
 
 ```sh

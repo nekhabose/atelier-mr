@@ -157,7 +157,8 @@ No headset at hand: open the link on a desktop and press **Watch the tour
 (under 2 min)** for a captioned walk through the same story.
 
 Optional: **https://atelier-mr.vercel.app/?perf** shows frame rate, draw calls
-and triangles above the studio panel. The stylist works without any API key
+and triangles above the studio panel, and **?check** runs a 30-second device
+check that ends with a results card. The stylist works without any API key
 ("on-device"); with the server key it shows "live AI".
 
 ## Works today vs. future

@@ -147,3 +147,31 @@ describe('placement search: nothing fits in front', () => {
     expect(placementText(p)).toMatch(/^Nothing fits in front of you, so the studio is on your (left|right), clear of your table\.$/);
   });
 });
+
+import { resultLines, summarise } from '../src/atelier/device-check';
+
+describe('device check summary', () => {
+  it('reports average, 1% low, worst frame and the share below 60 fps', () => {
+    const times = new Float32Array(1000).fill(1 / 72);
+    for (let i = 0; i < 10; i++) times[i * 100] = 1 / 40; // 1% slow frames
+    times[550] = 0.05; // one 50 ms hitch
+    const s = summarise(times, 1000);
+    expect(s.frames).toBe(1000);
+    expect(s.avgFps).toBeGreaterThanOrEqual(70);
+    expect(s.avgFps).toBeLessThanOrEqual(72);
+    expect(s.worstMs).toBe(50);
+    expect(s.under60).toBe(1.1);
+    expect(s.lowFps).toBeGreaterThanOrEqual(40);
+    expect(summarise(times, 0).frames).toBe(0);
+  });
+
+  it('writes plain result lines', () => {
+    const lines = resultLines({
+      when: '2026-11-15 10:00', device: 'Meta Quest 3', refreshHz: 72, frames: 2150, avgFps: 71, lowFps: 64, worstMs: 31,
+      under60: 0.4, drawCalls: 190, triangles: 184000, tier: 0, features: ['hand-tracking', 'plane-detection'], planes: 9, meshes: 12, anchored: true, errors: 0,
+    });
+    expect(lines[0]).toBe('Meta Quest 3 at 72 Hz');
+    expect(lines[1]).toBe('71 fps average, 64 fps 1% low, worst frame 31 ms');
+    expect(lines[3]).toContain('quality full');
+  });
+});
