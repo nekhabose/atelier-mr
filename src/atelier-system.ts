@@ -42,7 +42,7 @@ import {
   TailorParams,
   TailorPin,
 } from './atelier-components.js';
-import { fabricById, fabricMaterial, fringeMaterial, miniMaterial, SWATCH_WALL, swatchMaterial, trimMaterial } from './atelier/fabrics.js';
+import { fabricById, fabricMaterial, fringeMaterial, leanFabricMaterial, miniMaterial, SWATCH_WALL, swatchMaterial, trimMaterial } from './atelier/fabrics.js';
 import {
   buildPieceGroup,
   GarmentPiece,
@@ -630,6 +630,11 @@ export class AtelierSystem extends createSystem({
     return best;
   }
 
+  /** Full fabric shading, or the lean version on the governor's lightest tier. */
+  private cloth(fabricId: string): Material {
+    return this.heroDetail === LIGHT_DETAIL ? leanFabricMaterial(fabricId) : fabricMaterial(fabricId);
+  }
+
   /** Gold buttons and fabric fringe on the worn garment. */
   private extras(p: GarmentPiece): { trim?: Material; fringe?: Material } {
     return {
@@ -649,7 +654,7 @@ export class AtelierSystem extends createSystem({
   private rebuildAll(): void {
     for (const g of this.pieceGroups) this.disposeGroup(g);
     this.pieceGroups = this.pieces.map((p) => {
-      const g = buildPieceGroup(p, fabricMaterial(p.fabric), this.heroDetail, this.extras(p));
+      const g = buildPieceGroup(p, this.cloth(p.fabric), this.heroDetail, this.extras(p));
       this.outfit.add(g);
       return g;
     });
@@ -661,7 +666,7 @@ export class AtelierSystem extends createSystem({
     const old = this.pieceGroups[index];
     if (old) this.disposeGroup(old);
     const p = this.pieces[index];
-    const g = buildPieceGroup(p, fabricMaterial(p.fabric), detail, this.extras(p));
+    const g = buildPieceGroup(p, this.cloth(p.fabric), detail, this.extras(p));
     this.outfit.add(g);
     this.pieceGroups[index] = g;
     // A new fabric (the only thing that brings a new material) needs patching.

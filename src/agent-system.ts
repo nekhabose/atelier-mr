@@ -40,7 +40,9 @@ import {
   AgentToolCall,
   AgentToolResult,
   AgentTurn,
+  cleanRequest,
   MAX_AGENT_TURNS,
+  MAX_REQUEST,
   MAX_RESULT_CHARS,
   MAX_TOOL_CALLS,
   plain,
@@ -49,6 +51,7 @@ import {
 } from './atelier/agent-contract.js';
 import { AgentMemory, emptyMemory, loadMemory, outfitTraits, preferenceNotes, remember, saveMemory, Tailoring } from './atelier/agent-memory.js';
 import { AgentPiece, planAgentOffline } from './atelier/agent-offline.js';
+import { ParsedRequest, parseRequest } from './atelier/agent-request.js';
 import { isWearable, Refine, StylistItem } from './atelier/stylist-contract.js';
 import { describeItem } from './atelier/stylist-engine.js';
 import { applyRefine, describeOutfit, planRefineOffline } from './atelier/refine.js';
@@ -77,6 +80,8 @@ interface Outcome {
 }
 export interface AgentRunRecord {
   goal: AgentGoal;
+  /** What you asked for in your own words, if you did. */
+  request?: string;
   source: 'live' | 'on-device';
   calls: string[];
   steps: string[];
@@ -126,6 +131,9 @@ export class AgentSystem extends createSystem({
   private onFormAtStart = new Set<string>();
   private liveDownUntil = 0;
   private fast = false;
+  /** This run's request in your own words (cleaned), and how the device read it. */
+  private request?: string;
+  private parsed?: ParsedRequest;
   /** The guided tour drives the run: planned up front, one call per cue. */
   private scripted = false;
   private script: AgentToolCall[] = [];
@@ -184,19 +192,27 @@ export class AgentSystem extends createSystem({
    * Start a run. `live: false` plans on the device only; `fast` skips the
    * pacing between steps (scripted checks).
    */
-  async run(goal: AgentGoal, opts: { live?: boolean; fast?: boolean } = {}): Promise<void> {
+  async run(goal: AgentGoal, opts: { live?: boolean; fast?: boolean; request?: string } = {}): Promise<void> {
     if (this.state === 'running') return;
     if (this.state === 'deciding') this.hide();
     const live = opts.live !== false && Date.now() > this.liveDownUntil;
+    this.request = cleanRequest(opts.request) ?? undefined;
+    this.parsed = this.request ? parseRequest(this.request) : undefined;
     const { gen, record } = this.prepare(goal, live);
     this.fast = !!opts.fast;
+    if (this.request) {
+      record.request = this.request;
+      this.addStep({ label: 'Listened to you', detail: `"${this.request}"`, state: 'done' });
+    }
     try {
       let result: 'done' | 'failed' | 'cancelled' = 'failed';
+      const stepsBefore = this.steps.length;
       if (live) result = await this.runLive(gen);
       if (result === 'failed' && gen === this.generation) {
         if (live) this.liveDownUntil = Date.now() + LIVE_RETRY_MS;
         if (this.changed()) this.putBack();
-        const started = this.steps.length > 0;
+        // Only say the live AI stopped if it had already done something.
+        const started = this.steps.length > stepsBefore;
         record.source = 'on-device';
         if (started) this.addStep({ label: 'Live AI stopped', detail: 'Finishing the plan on this device', state: 'failed' });
         await this.runOffline(gen);
@@ -233,6 +249,20 @@ export class AgentSystem extends createSystem({
   }
 
   /**
+   * A request in your own words, said or typed: "a dinner date tonight,
+   * something red". The agent dresses you for it (tomorrow if you say so).
+   */
+  ask(text: string): boolean {
+    const request = cleanRequest(text);
+    if (!request) {
+      this.atelier.setHint(`Tell your stylist in a few plain words (up to ${MAX_REQUEST} letters), like "a dinner date tonight, something red".`);
+      return false;
+    }
+    void this.run(parseRequest(request).goal, { request });
+    return true;
+  }
+
+  /**
    * The guided tour: plan on the device now (a fixed seed, no memory, so the
    * tour is the same every time), then advanceTo() runs each call on its cue.
    */
@@ -240,6 +270,8 @@ export class AgentSystem extends createSystem({
     this.cancel();
     this.prepare(goal, false);
     this.scripted = true;
+    this.request = undefined;
+    this.parsed = undefined;
     const d = this.morning.day(goal);
     this.script = planAgentOffline({
       goal,
@@ -329,7 +361,13 @@ export class AgentSystem extends createSystem({
     for (let t = 0; t < MAX_AGENT_TURNS; t++) {
       this.thinking = true;
       this.draw();
-      const reply = await postAgent<AgentReply>({ goal: this.goal, date: day.date, mood: this.stylist.mood, turns });
+      const reply = await postAgent<AgentReply>({
+        goal: this.goal,
+        date: day.date,
+        mood: this.stylist.mood,
+        ...(this.request ? { request: this.request } : {}),
+        turns,
+      });
       this.thinking = false;
       if (gen !== this.generation) return 'cancelled';
       if (!reply || !Array.isArray(reply.content)) {
@@ -383,6 +421,7 @@ export class AgentSystem extends createSystem({
       mood: this.stylist.mood,
       pieces: this.pieces(),
       memory: this.memory,
+      request: this.parsed,
     });
     for (const call of calls) {
       if (!this.fast) {
@@ -838,7 +877,19 @@ export class AgentSystem extends createSystem({
 
   /** What the agent learned, with a way to forget it. */
   private buildSideSection(): void {
-    const box = sideSection('stylist-memory', 5, 'What your stylist remembers', false, 'Learned only from Keep and Undo, kept on this device.');
+    const box = sideSection('stylist-memory', 5, 'Ask your stylist', false, 'Say it in your own words, or type it. It plans with your weather, calendar and closet.');
+    const form = document.createElement('form');
+    form.style.cssText = 'display:flex;gap:6px;margin-top:10px';
+    form.innerHTML = `<input type="text" maxlength="${MAX_REQUEST}" aria-label="What you need to wear" placeholder="a dinner date tonight, something red" style="flex:1;min-width:0"><button type="submit" class="as-btn as-btn-main">Ask</button>`;
+    const input = form.querySelector('input')!;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (this.ask(input.value)) input.value = '';
+    });
+    const remembers = document.createElement('div');
+    remembers.className = 'as-label';
+    remembers.textContent = 'What it remembers (from Keep and Undo, on this device)';
+    box.append(form, remembers);
     const notes = document.createElement('div');
     notes.className = 'as-note';
     const forget = document.createElement('button');

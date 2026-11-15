@@ -19,6 +19,7 @@ import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { StylistSystem } from './stylist-system.js';
 import { AgentSystem } from './agent-system.js';
+import { isStylingRequest, parseRequest } from './atelier/agent-request.js';
 import { access, ACCESS_LABELS, AccessKey } from './atelier/access.js';
 import { canListen, canSpeak, say, stopSpeaking, VoiceControl } from './atelier/voice.js';
 import { clearLookFromLocation, lookFromLocation, qrSvg, shareUrl } from './atelier/share.js';
@@ -74,9 +75,12 @@ export class AccessSystem extends createSystem({}) {
     this.atelier = this.world.getSystem(AtelierSystem)!;
     this.voice = new VoiceControl(this.commands(), (phrase, matched) => {
       if (matched) return;
-      // Not a command: maybe a tailoring request ("make it midi with long sleeves").
+      // Not a command: a request for an outfit ("a dinner date tonight,
+      // something red") goes to the stylist agent; a change to the clothes
+      // ("make it midi with long sleeves") goes to the tailor.
       const wardrobe = this.world.getSystem(WardrobeSystem);
-      if (wardrobe && phrase.split(' ').length >= 2) void wardrobe.tailor(phrase);
+      if (isStylingRequest(phrase)) this.world.getSystem(AgentSystem)?.ask(phrase);
+      else if (wardrobe && phrase.split(' ').length >= 2) void wardrobe.tailor(phrase);
       else this.atelier.setHint(`Heard "${phrase}". Try "style me", "undo", "shorter" or "turn".`);
     });
     this.wirePanel();
@@ -227,18 +231,40 @@ export class AccessSystem extends createSystem({}) {
     const stylist = () => this.world.getSystem(StylistSystem)!;
     const agent = () => this.world.getSystem(AgentSystem)!;
     const deciding = () => agent().state === 'deciding';
+    // "Dress me for a wedding tomorrow, something green": the whole sentence
+    // goes to the agent when it says more than the command itself.
+    const detailed = () => {
+      const heard = this.voice?.heard ?? '';
+      const p = parseRequest(heard);
+      return p.occasion || p.weather || p.mood || p.colors.length ? heard : '';
+    };
+    const dress = (goal: 'today' | 'tomorrow') => () => {
+      const heard = detailed();
+      if (heard) agent().ask(heard);
+      else void agent().run(goal);
+    };
     const closet = () => this.world.getSystem(ClosetSystem)!;
     const a = () => this.atelier;
     const look = (n: number) => () => a().wearLook(n - 1);
     const numbers = ['one', 'two', 'three', 'four', 'five', 'six'];
     return [
-      { phrases: ['style me', 'dress me', 'stylist'], run: () => { stylist().open(); void stylist().styleMe(); } },
+      {
+        phrases: ['style me', 'dress me', 'stylist'],
+        run: () => {
+          const heard = detailed();
+          if (heard) agent().ask(heard);
+          else {
+            stylist().open();
+            void stylist().styleMe();
+          }
+        },
+      },
       { phrases: ['next', 'next idea', 'another', 'something else'], run: () => stylist().nextIdea() },
       {
         phrases: ['get me ready', 'dress me for today', 'what should i wear', 'plan my outfit', 'dress me for my day'],
-        run: () => void agent().run('today'),
+        run: dress('today'),
       },
-      { phrases: ['lay out tomorrow', 'plan tomorrow', 'dress me for tomorrow', 'what should i wear tomorrow'], run: () => void agent().run('tomorrow') },
+      { phrases: ['lay out tomorrow', 'plan tomorrow', 'dress me for tomorrow', 'what should i wear tomorrow'], run: dress('tomorrow') },
       { phrases: ['keep', 'keep it', 'i like it', 'love it'], run: () => (deciding() ? agent().keep() : stylist().keep()) },
       { phrases: ['warmer', 'warm'], run: () => void (deciding() ? agent().refine('warmer') : stylist().refine('warmer')) },
       { phrases: ['dressier', 'fancier', 'more formal'], run: () => void (deciding() ? agent().refine('dressier') : stylist().refine('dressier')) },

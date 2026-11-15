@@ -44,8 +44,12 @@ to the stylist agent: it checks today's forecast and your calendar (an .ics
 file, read on the device), recalls what you kept and undid before, searches
 your closet, dresses the form and tailors it, and each step ticks off on a
 paper card beside the form. **Keep** it, or **Undo** puts back exactly what you
-had; both teach it what you like. At night, **Lay out tomorrow** does the same
-for tomorrow, and the outfit is waiting on the form in the morning. **Plan week** plans seven
+had; both teach it what you like. Or just say what you need, in your own
+words: "a dinner date tonight, something red", "a wedding tomorrow, it's
+freezing". The agent plans from your words, your weather, your calendar and
+your closet, and quotes you at the top of its plan. At night, **Lay out
+tomorrow** does the same for tomorrow, and the outfit is waiting on the form in
+the morning. **Plan week** plans seven
 days around your calendar and forecast; **Pack** finds the fewest pieces for a
 trip.
 
@@ -61,7 +65,7 @@ read aloud, voice commands, one-tap tailoring, and a seated layout that brings
 the form, rail and panels within reach of your chair.
 
 **How I built it.** From scratch with Meta's Immersive Web SDK (WebXR,
-Three.js, ECS) during the competition. The garments, the form and twelve
+Three.js, ECS) during the competition. The garments, the form and 36
 fabrics are procedural, so tailoring changes real geometry rather than
 swapping meshes. Scene understanding (planes and meshes) places the studio and
 keeps it off furniture, a persistent anchor brings it back, and the Quest 3
@@ -117,11 +121,66 @@ for Meta VR Glasses on the device.
 the Meta Quest Browser. Release on the Meta Horizon Store, as a packaged web
 app, in **February 2027**.
 
-**Performance (measured).** In the Immersive Web Emulator on a Mac: 58-60 fps
-(the emulator's 60 Hz cap), 192 draw calls and 185k triangles per stereo
-frame, and no shadow redraws while the studio is still. The quality governor
-keeps the headset above 60 fps by trading detail for frame time when needed.
-Not yet measured on a Quest headset.
+**Performance (measured).** In the Immersive Web Emulator on a Mac, at full
+quality, every rail look renders at 48-59 fps steady (the emulator caps at
+60), with 158-184 draw calls and 156k-215k triangles per stereo frame, and no
+shadow redraws while the studio is still. In the headset a quality governor
+holds the frame rate: below 85% of the refresh rate for 1.5 seconds it steps
+down (depth occlusion and shadow updates first, then lighter garments with
+simpler cloth shading) and steps back up when there is headroom. Not yet
+measured on a Quest headset; `?check` runs a 30-second device benchmark that
+anyone with a Quest can run from the link.
+
+## How Atelier meets the judging criteria
+
+**Innovation & Creativity.** Clothes are not photos in a grid: they are
+procedural garments on a life-size form that you tailor with your hands, cut
+by cut (hem, sleeve, neckline, waist), and you can mark a length on your own
+body. A tool-using stylist agent acts on the form with its plan in view, and
+you keep or undo the whole run. It uses what only a headset has: passthrough,
+scene understanding (planes and meshes), a persistent anchor, hand tracking,
+gaze, depth occlusion. Repeat use comes from the morning: your weather, your
+calendar, your closet, every day.
+
+**Experience Design.** Hands-first from start to finish, with no controller
+needed. Seated mode brings the form, rail and panels within reach of a chair.
+A three-step ghost-hand tour teaches pinch, pull and ask, and the form is
+already dressed on the first visit. Passthrough is purposeful: your room
+decides where and how big the studio is (walls, furniture, room size), and
+your body sets the measurements. FoV-aware: narrow views and gaze switch to a
+compact layout, and every panel button and the agent's plan card sit inside
+the Meta VR Glasses' view (37 degrees each side, 25 up, 43 down), measured on
+the glasses emulator profile. The habit: dress me for today, lay out
+tomorrow, wear today.
+
+**Technical Implementation.** IWSDK 1.1 with hand tracking (including pinches
+on your own body), gaze and pinch, plane and mesh detection, a persistent
+anchor and depth occlusion. A placement search keeps the studio clear of
+furniture and inside the walls in rooms it never saw (6 of the emulator's 8
+rooms clear on their own; the other 2 say why). A quality governor holds the
+frame rate; every system's update is guarded so one failure cannot freeze the
+view. Every agent tool call is validated on the server and in the headset.
+106 unit tests, a 46-step end-to-end journey with emulated hands and
+controllers, a 300-action soak test (no leaks) and 80 random interactions (no
+errors) back it. Not yet run on a physical Quest.
+
+**Polish & Presentation.** One art direction throughout: paper-and-ink
+panels, hang tags, pinned labels and the agent's card. Original music and UI
+sounds. The video is the real app, recorded in the Quest emulator and
+labelled as such, narrated in my own voice.
+
+**The four tests.** Hands-first: the whole experience works with hands, and a
+controller is optional. Airplane seat: Seated mode puts everything within
+reach. One bus stop: the studio opens dressed, and "Dress me for today" gives
+a complete outfit in seconds; the system menu pauses sound and saves the
+studio. Take it away: without the AI service, the on-device stylist and agent
+plan with the same tools, so nothing stops working.
+
+## Built with (Devpost tags)
+
+iwsdk, webxr, meta-quest, mixed-reality, passthrough, hand-tracking,
+eye-tracking, scene-understanding, three.js, typescript, vite, claude,
+anthropic, ai-agents, vercel, mediapipe, open-meteo, pwa
 
 ## Hand interactions (optional field)
 
@@ -149,7 +208,9 @@ speech recognition.
    moves to that height. Try your wrist for a sleeve.
 5. Closet panel, **This morning**: **Dress me for today**. Watch the card on
    the left of the form tick off each step, then **Keep** (or **Undo**). Then
-   **Lay out tomorrow**.
+   **Lay out tomorrow**. With voice on (Access panel), say what you need:
+   "a dinner date tonight, something red". On a desktop, type it in **Ask
+   your stylist** on the start page.
 6. Closet panel: **Wear today**, then **Style it** next to your least worn
    piece.
 7. Studio panel, **Access > Seated**: the studio comes to your chair. Turn it
@@ -183,6 +244,7 @@ check that ends with a results card. The stylist works without any API key
 | Installable app (manifest, icons, offline service worker), shadows on demand, `?perf` meter, unit tests in CI | Horizon Store packaging (bubblewrap APK) |
 | 36 fabrics including satins, sequins (each catches the light), sheer lace and tulle, velvet, leather-look, metallic lame and crepe; 12 on the swatch board, applied per garment | Fabric scans from real swatches |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
+| Ask the stylist in your own words, by voice or typed ("a dinner date tonight, something red"): the agent plans from your words with your weather, calendar and closet; colours you ask for are matched by family, and it says so when the closet has none; outfit requests go to the agent and clothing changes ("make it midi") to the tailor | Conversation across several turns |
 | Stylist agent: chooses its own calls to 7 tools (weather, calendar, preferences, closet search, put on form, tailor, finish), each validated and run in the headset; live plan card; Keep or Undo the whole run; learns from both (on the device); on-device planner with the same tools; Keep and Undo by controller ray and by gaze and pinch (glasses emulator profile) | Multi-day plans in one run |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints |
 | Your mornings: local forecast (Open-Meteo, location rounded to about 10 km), calendar import (.ics, read on the device, only day and kind of event kept), Dress me for today, Lay out tomorrow, week plan by each day's forecast and calendar | Live calendar sync (Google, Outlook) with consent |
@@ -277,9 +339,12 @@ full-length photo if you show the photo feature.
 
 ## Special awards
 
-Worth claiming: **Best Agentic Interaction** (the stylist agent chooses its
-own tool calls, acts on the form through the same actions as your hands, shows
-every step on a card, and you keep or undo the whole run; it learns from both), **Best Reason to Come Back** (the morning
+Worth claiming: **Best Agentic Interaction** (a spatial agent with
+voice-first, context-aware assistance: say what you need in your own words and
+it chooses its own tool calls over your weather, calendar, closet and
+preferences, acts on the form through the same actions as your hands, shows
+every step on a card beside the form, and you keep or undo the whole run; it
+learns from both), **Best Reason to Come Back** (the morning
 routine, Lay out tomorrow, wear log and streak, the anchored studio), **Best
 First Five Minutes** (ghost-hand tour, a dressed form on first visit),
 **Best Accessibility Forward Experience** (Access panel, tap-to-tailor, voice,

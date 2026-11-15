@@ -266,11 +266,13 @@ const FINISH: Record<
   velvet: { roughness: 0.8, sheen: 1.0, sheenRoughness: 0.45, clearcoat: 0, bump: 0 },
   linen: { roughness: 0.9, sheen: 0.15, sheenRoughness: 0.85, clearcoat: 0, bump: 0.2 },
   knit: { roughness: 0.9, sheen: 0.3, sheenRoughness: 0.75, clearcoat: 0, bump: 0.12 },
-  sequin: { roughness: 0.26, sheen: 0.3, sheenRoughness: 0.3, clearcoat: 0.3, bump: 0, metalness: 0.6 },
+  // The new finishes get their shine from metalness and low roughness, not
+  // the costly clearcoat layer (kept for satin alone).
+  sequin: { roughness: 0.24, sheen: 0.3, sheenRoughness: 0.3, clearcoat: 0, bump: 0, metalness: 0.6 },
   lace: { roughness: 0.78, sheen: 0.45, sheenRoughness: 0.6, clearcoat: 0, bump: 0, alpha: 'sheer' },
   tulle: { roughness: 0.72, sheen: 0.35, sheenRoughness: 0.6, clearcoat: 0, bump: 0, alpha: 'sheer' },
-  leather: { roughness: 0.4, sheen: 0.1, sheenRoughness: 0.5, clearcoat: 0.45, bump: 0 },
-  metallic: { roughness: 0.3, sheen: 0.2, sheenRoughness: 0.4, clearcoat: 0.2, bump: 0, metalness: 0.8 },
+  leather: { roughness: 0.3, sheen: 0.1, sheenRoughness: 0.5, clearcoat: 0, bump: 0 },
+  metallic: { roughness: 0.28, sheen: 0.2, sheenRoughness: 0.4, clearcoat: 0, bump: 0, metalness: 0.8 },
   crepe: { roughness: 0.86, sheen: 0.25, sheenRoughness: 0.7, clearcoat: 0, bump: 0.04 },
 };
 
@@ -834,6 +836,31 @@ function applyAlpha(mat: MeshPhysicalMaterial | MeshStandardMaterial, alpha?: 'c
     mat.depthWrite = false;
     mat.alphaTest = 0.05;
   }
+}
+
+/**
+ * The same fabric with standard shading (no sheen or clearcoat layers), and
+ * sheer fabrics cut out rather than blended: what the quality governor's
+ * lightest tier dresses the form in when the headset falls behind.
+ */
+export function leanFabricMaterial(fabricId: string): MeshStandardMaterial {
+  const key = `lean-${fabricId}`;
+  let mat = standardCache.get(key);
+  if (mat) return mat;
+  const fabric = fabricById(fabricId);
+  const f = FINISH[fabric.finish];
+  mat = new MeshStandardMaterial({
+    map: fabricTexture(fabric),
+    roughness: Math.min(1, f.roughness + (f.sheen > 0.5 ? -0.1 : 0)),
+    metalness: f.metalness ?? 0,
+    normalMap: weaveNormalMap(fabric.finish),
+    normalScale: new Vector2(1, 1).multiplyScalar(WEAVE[fabric.finish]?.normalScale ?? 0),
+    side: DoubleSide,
+  });
+  if (f.alpha) mat.alphaTest = 0.3;
+  mat.name = `lean-${fabric.id}`;
+  standardCache.set(key, mat);
+  return mat;
 }
 
 let trim: MeshStandardMaterial | undefined;

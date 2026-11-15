@@ -8,6 +8,7 @@
  */
 import type { AgentGoal, AgentToolCall } from './agent-contract.js';
 import { AgentMemory, outfitTraits, traitScore } from './agent-memory.js';
+import { ParsedRequest, requestWords } from './agent-request.js';
 import type { Mood, Occasion, StylistItem, Weather } from './stylist-contract.js';
 import { planOffline } from './stylist-engine.js';
 
@@ -32,6 +33,8 @@ export interface OfflineInput {
   mood: Mood;
   pieces: AgentPiece[];
   memory: AgentMemory;
+  /** What you asked for in your own words, read on the device. */
+  request?: ParsedRequest;
   seed?: number;
 }
 
@@ -49,6 +52,25 @@ const WEATHER_NOTE: Record<Weather, string> = {
   cold: 'the cold',
   rainy: 'the rain',
 };
+
+/** Colours close enough to count when you ask for one ("red" takes burgundy). */
+const FAMILY: Record<string, string[]> = {
+  red: ['red', 'burgundy', 'pink'],
+  burgundy: ['burgundy', 'red'],
+  pink: ['pink', 'red'],
+  brown: ['brown', 'camel'],
+  camel: ['camel', 'brown', 'cream'],
+  cream: ['cream', 'white'],
+  white: ['white', 'cream'],
+  blue: ['blue', 'navy'],
+  navy: ['navy', 'blue'],
+  grey: ['grey', 'silver'],
+  silver: ['silver', 'grey'],
+  gold: ['gold', 'camel'],
+  green: ['green'],
+  black: ['black'],
+};
+const matches = (asked: string[], color: string) => asked.some((a) => (FAMILY[a] ?? [a]).includes(color.toLowerCase()));
 
 /** Freshness: favour pieces you have not worn lately. */
 function freshness(outfit: AgentPiece[]): number {
@@ -76,8 +98,11 @@ export function planAgentOffline(input: OfflineInput): AgentToolCall[] {
     call('recall_preferences', {}),
     call('search_closet', { kinds: [] }),
   ];
-  const weather: Weather = day.weather ?? 'mild';
-  const plan = planOffline(pieces, day.occasion, weather, mood, 8, input.seed ?? Date.now());
+  // Your words come first: the occasion, weather and mood you named.
+  const req = input.request;
+  const occasion = req?.occasion ?? day.occasion;
+  const weather: Weather = req?.weather ?? day.weather ?? 'mild';
+  const plan = planOffline(pieces, occasion, weather, req?.mood ?? mood, req?.colors.length ? 16 : 8, input.seed ?? Date.now());
   if (plan.options.length === 0) {
     calls.push(
       call('finish', {
@@ -101,13 +126,16 @@ export function planAgentOffline(input: OfflineInput): AgentToolCall[] {
       const repeats = outfit.filter((p) => p.onForm).length;
       s -= 0.8 * repeats + (repeats === outfit.length ? 3 : 0);
     }
+    // A colour you asked for wins over almost everything else.
+    if (req?.colors.length && outfit.some((p) => matches(req.colors, p.color))) s += 2;
     if (s > bestScore) {
       bestScore = s;
       best = option;
     }
   });
   const outfit = best.itemIds.map((id) => byId.get(id)!);
-  const why = day.weather ? `For ${OCCASION_NOTE[day.occasion]} and ${WEATHER_NOTE[day.weather]}` : `For ${OCCASION_NOTE[day.occasion]}`;
+  const named = req?.weather ?? day.weather;
+  const why = named ? `For ${OCCASION_NOTE[occasion]} and ${WEATHER_NOTE[named]}` : `For ${OCCASION_NOTE[occasion]}`;
   calls.push(call('put_on_form', { item_ids: best.itemIds, title: best.title, note: why }));
 
   // Tailor where the day asks for it, or where you have kept that change before.
@@ -123,7 +151,10 @@ export function planAgentOffline(input: OfflineInput): AgentToolCall[] {
     calls.push(call('tailor', { measure: 'hem', change_cm: 5, note: 'You have kept longer hems before' }));
   }
 
-  const assumed = day.weather ? '' : 'No forecast on this device, so I assumed a mild day. ';
-  calls.push(call('finish', { title: best.title, reason: `${assumed}${best.reason}`, tip: best.tip }));
+  const asked = req ? requestWords(req) : '';
+  // Say so when the closet has nothing in the colour you asked for.
+  const missing = req?.colors.length && !pieces.some((p) => matches(req.colors, p.color)) ? `There is nothing ${req.colors.join(' or ')} in your closet yet, so I kept to what suits the day. ` : '';
+  const lead = asked ? `You asked for ${asked}. ${missing}` : named ? '' : 'No forecast on this device, so I assumed a mild day. ';
+  calls.push(call('finish', { title: best.title, reason: `${lead}${best.reason}`, tip: best.tip }));
   return calls;
 }

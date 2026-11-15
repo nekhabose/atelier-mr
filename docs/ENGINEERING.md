@@ -22,7 +22,10 @@ not yet verified.
   accepts the run so far only in known shapes (the model's own blocks echoed
   unchanged, so the history only grows; tool results as short strings, every
   call answered), adds the fixed system prompt and strict tool schemas, and
-  returns the next turn. At most 6 model calls and 16 tool calls per run. If
+  returns the next turn. What you ask for in your own words (said or typed,
+  up to 140 plain characters) travels in tags in that first message, and the
+  system prompt treats it only as a description of your day and what you want
+  to wear. At most 6 model calls and 16 tool calls per run. If
   the live agent is unavailable, slow (20 s per turn) or declines, the form is
   put back and an on-device planner makes the same calls, so the plan card,
   Keep and Undo behave the same. Undo restores the exact snapshot taken before
@@ -102,12 +105,19 @@ not yet verified.
   if the frame rate stays below 85% of the display's refresh rate (61 fps at
   72 Hz) for 1.5 s, quality steps down one tier: first depth occlusion off and
   shadows limited to 4 redraws a second, then lighter worn garments (about
-  half the triangles). It steps back up after 10 s on time. A short hitch
+  half the triangles) with standard cloth shading (no sheen or clearcoat
+  layers; sheer lace and tulle cut out rather than blended, so no overdraw).
+  It steps back up after 10 s on time. A short hitch
   changes nothing. Verified in the emulator by slowing the CPU: it stepped
   down to the lightest tier and switched occlusion off.
-- **Measured** (Immersive Web Emulator on a Mac, capped at 60 Hz): 58-60 fps,
-  192 draw calls and 185k triangles per stereo frame, no shadow redraws while
-  still. `?perf` shows these numbers and the quality tier inside the headset.
+- **Measured** (Immersive Web Emulator on a Mac, capped at 60 Hz, headless,
+  full quality held for the measurement): every rail look renders at 48-59 fps
+  steady, with 158-184 draw calls and 156k-215k triangles per stereo frame
+  (`scripts/check-frame-cost.mjs`); the heaviest are the three-piece suit and
+  the denim-and-halter look. No shadow redraws while still. The new sequin,
+  leather-look and lame finishes get their shine from metalness and low
+  roughness rather than the costly clearcoat layer. `?perf` shows these
+  numbers and the quality tier inside the headset.
 
 ## Reliability safety nets (`src/atelier/safety.ts`)
 
@@ -132,12 +142,13 @@ not yet verified.
   defaults; writes that fail (private mode, full storage) keep working for the
   visit.
 - **Random input.** `scripts/check-monkey.sh` fires 80 random looks, selects
-  and drags at the 68 interactable targets in XR: no errors, nothing caught
+  and drags at the 70 interactable targets in XR: no errors, nothing caught
   by the safety nets, and the studio responds normally afterwards.
 - **No leaks.** `scripts/check-soak.mjs` makes 300 outfit changes, fabric
   swaps, tailoring steps, undos and turns, collecting garbage before each
-  sample: GPU geometries and textures stay level (140-160, 52-63) and the
-  JavaScript heap stays flat (203 to 207 MB).
+  sample: GPU geometries and textures stay level (135-161, 52-68) and the
+  JavaScript heap settles (204 to 211 MB), with the new wardrobe's trims,
+  fringe and lean shading included.
 
 ## Privacy and security
 
@@ -148,7 +159,8 @@ not yet verified.
   for the forecast (Open-Meteo, no account), and closet descriptions or a
   garment photo to the stylist function. The stylist agent sends only what its
   tools return: the day's forecast summary, the kind of event (never titles or
-  people), the preference notes and the closet descriptions.
+  people), the preference notes and the closet descriptions, plus your own
+  words when you ask it something.
 - **The stylist function** validates every request against a schema, caps body
   and image sizes, rate-limits per address, keeps its API key on the server,
   validates the model's structured output, and times out cleanly.
@@ -167,8 +179,10 @@ not yet verified.
 
 | Check | What it proves | How |
 |---|---|---|
-| 96 unit tests | Garment maths, measurements, stylist planning and refinement, the agent's tool schemas and input checks, the on-device agent, agent memory, the agent function's request checks, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
+| 106 unit tests | Garment maths and the modern cuts, measurements, stylist planning and refinement, the agent's tool schemas and input checks, the on-device agent, agent memory, requests in your own words (reading, routing, colour families), the agent function's request checks, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
 | Stylist agent | Today then Keep, tomorrow then Undo (the form is restored exactly), tomorrow then Keep (the morning layout is saved), memory updated, no errors; Keep by controller ray; Undo by gaze and pinch on the glasses profile, with the card inside the glasses' view | `scripts/check-agent.mjs`, `scripts/agent-fov.mjs` |
+| Asking in your own words | Typed on the start page and spoken: the request reaches the agent and shapes the outfit (occasion, day, colour); a clothing change still reaches the tailor; the lean shading tier swaps and restores materials; no errors | `scripts/check-ask.mjs` |
+| Frame cost | Draw calls, triangles and steady frame rate for every rail look in XR at full quality | `scripts/check-frame-cost.mjs` |
 | Typecheck and build | Types across the app and the API | `npm run typecheck`, `npm run build` (CI) |
 | 46-step journey | The whole product, driven with emulated controllers in XR | `scripts/e2e-emulator.sh` |
 | Hand pinches | Marking hem, sleeve and neckline on the body; a pinch held out in front is ignored | Emulated hands, see `docs/SUBMISSION.md` |

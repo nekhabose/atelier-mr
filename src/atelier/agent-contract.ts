@@ -63,7 +63,21 @@ export interface AgentRequest {
   /** The day being dressed for, local date YYYY-MM-DD. */
   date: string;
   mood: Mood;
+  /** What you asked for, in your own words (said or typed), when you did. */
+  request?: string;
   turns: AgentTurn[];
+}
+
+/** A request in your own words: short plain text only. */
+export const MAX_REQUEST = 140;
+const REQUEST_PATTERN = /^[\p{L}\p{N} ,.'!?:-]+$/u;
+
+/** The request cleaned for sending, or null when it is empty or not plain words. */
+export function cleanRequest(text: unknown): string | null {
+  if (typeof text !== 'string') return null;
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (!t || t.length > MAX_REQUEST || !REQUEST_PATTERN.test(t)) return null;
+  return t;
 }
 
 /** What /api/agent returns: the model's content blocks for this turn. */

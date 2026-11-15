@@ -13,7 +13,9 @@
  * one tier, and steps back up after 10 s at the device's refresh rate:
  *   tier 0  everything on;
  *   tier 1  depth occlusion off, shadows redrawn at most 4 times a second;
- *   tier 2  also lighter worn garments (about half the triangles).
+ *   tier 2  also lighter worn garments (about half the triangles) with
+ *           standard shading (no sheen or clearcoat; sheer fabrics cut out
+ *           instead of blended).
  * The studio stays fully usable at every tier.
  *
  * Meter (?perf): frames per second, frame time, draw calls, triangles,
