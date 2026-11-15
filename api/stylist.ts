@@ -30,6 +30,7 @@
  *  - every option is validated (known ids, wearable combination).
  */
 import Anthropic from '@anthropic-ai/sdk';
+import { clientIp, cors, json, makeLimiter, originAllowed, preflight } from './_guard.js';
 import {
   ID_PATTERN,
   isWearable,
@@ -71,12 +72,6 @@ const MAX_BODY = 8_000;
 const MAX_PHOTO_BODY = MAX_IMAGE_CHARS + 1_000;
 const RATE_LIMIT = 40; // requests per window per IP (per warm instance)
 const RATE_WINDOW_MS = 10 * 60 * 1000;
-
-const DEFAULT_ORIGINS = [
-  'https://nekhabose.github.io',
-  'https://localhost:8090',
-  'http://localhost:8090',
-];
 
 const SYSTEM = `You are the stylist inside Atelier, a mixed-reality fashion studio. \
 The user has recreated clothes they own as a digital closet. Propose up to three DIFFERENT outfits \
@@ -224,54 +219,7 @@ const BOUTIQUE_SCHEMA = {
 
 // ------------------------------------------------------------------ guardrails
 
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 5000) hits.clear(); // keep memory bounded
-  return recent.length > RATE_LIMIT;
-}
-
-function allowedOrigins(): string[] {
-  const extra = (process.env.ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return [...DEFAULT_ORIGINS, ...extra];
-}
-
-function originAllowed(origin: string | null, host: string | null): boolean {
-  if (!origin) return false;
-  if (allowedOrigins().includes(origin)) return true;
-  // Same-origin requests from this deployment.
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
-
-function cors(origin: string | null): Record<string, string> {
-  return origin
-    ? {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '600',
-        Vary: 'Origin',
-      }
-    : {};
-}
-
-function json(status: number, body: unknown, headers: Record<string, string>): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers },
-  });
-}
+const rateLimited = makeLimiter(RATE_LIMIT, RATE_WINDOW_MS);
 
 const oneOf = <T extends readonly string[]>(list: T, v: unknown): v is T[number] =>
   typeof v === 'string' && (list as readonly string[]).includes(v);
@@ -565,9 +513,7 @@ async function boutique(req: BoutiqueRequest, headers: Record<string, string>): 
 // ------------------------------------------------------------------ handlers
 
 export function OPTIONS(request: Request): Response {
-  const origin = request.headers.get('origin');
-  if (!originAllowed(origin, request.headers.get('host'))) return new Response(null, { status: 403 });
-  return new Response(null, { status: 204, headers: cors(origin) });
+  return preflight(request);
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -576,8 +522,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!originAllowed(origin, request.headers.get('host'))) {
     return json(403, { error: 'origin_not_allowed' }, {});
   }
-  const ip = (request.headers.get('x-forwarded-for') ?? 'local').split(',')[0].trim();
-  if (rateLimited(ip)) return json(429, { error: 'rate_limited' }, headers);
+  if (rateLimited(clientIp(request))) return json(429, { error: 'rate_limited' }, headers);
   if (!process.env.ANTHROPIC_API_KEY) return json(503, { error: 'stylist_not_configured' }, headers);
 
   const text = await request.text();

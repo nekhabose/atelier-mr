@@ -90,6 +90,8 @@ export class MorningSystem extends createSystem({}) {
   layout: Layout | null = null;
   /** The guided tour's sample day is showing (nothing is saved meanwhile). */
   private sample = false;
+  /** The stylist agent (set by AgentSystem); the buttons start a run with it. */
+  runAgent?: (goal: 'today' | 'tomorrow') => void;
   private atelier!: AtelierSystem;
   private closet!: ClosetSystem;
   private stylist!: StylistSystem;
@@ -220,13 +222,33 @@ export class MorningSystem extends createSystem({}) {
     this.ui.today?.setProperties({ text: laid ? 'Wear what I laid out' : 'Dress me for today' });
   }
 
-  /** Today's outfit: what you laid out last night, or the stylist with today's day. */
-  dressToday(): void {
+  /** The day the agent dresses for: its date, occasion, calendar cue and forecast. */
+  day(goal: 'today' | 'tomorrow'): { date: string; occasion: Occasion; cue?: string; forecast?: DayForecast } {
+    const date = goal === 'today' ? localDate() : addDays(localDate(), 1);
+    return { date, ...this.dayFor(date) };
+  }
+
+  /** The agent's plan for tomorrow, kept: it waits on the form in the morning. */
+  keepTomorrow(itemIds: string[], title: string): void {
+    this.layout = { date: addDays(localDate(), 1), itemIds, title };
+    if (!this.sample) write(LAYOUT_KEY, this.layout);
+    this.paint();
+  }
+
+  /**
+   * Today's outfit: what you laid out last night, or the stylist agent with
+   * today's day. `instant` (the guided tour) uses the one-step stylist.
+   */
+  dressToday(opts: { instant?: boolean } = {}): void {
     const laid = this.todayLayout();
     if (laid) {
       this.closet.wearOutfit(laid.itemIds, laid.title, 'Laid out last night. Tap Wear today when you put it on.');
       this.atelier.setHint('Here is what you picked last night. Tailor it, or tap Wear today.');
       sfx.sparkle();
+      return;
+    }
+    if (!opts.instant && this.runAgent) {
+      this.runAgent('today');
       return;
     }
     const day = this.dayFor(localDate());
@@ -241,7 +263,11 @@ export class MorningSystem extends createSystem({}) {
   }
 
   /** Pick tomorrow's outfit tonight; it is waiting on the form in the morning. */
-  layOutTomorrow(): void {
+  layOutTomorrow(opts: { instant?: boolean } = {}): void {
+    if (!opts.instant && this.runAgent) {
+      this.runAgent('tomorrow');
+      return;
+    }
     const date = addDays(localDate(), 1);
     const day = this.dayFor(date);
     const items = this.closet.items.map(describeItem);

@@ -18,6 +18,7 @@ import { sideSection } from './atelier/side-panel.js';
 import { AtelierSystem } from './atelier-system.js';
 import { ClosetSystem } from './closet-system.js';
 import { StylistSystem } from './stylist-system.js';
+import { AgentSystem } from './agent-system.js';
 import { access, ACCESS_LABELS, AccessKey } from './atelier/access.js';
 import { canListen, canSpeak, say, stopSpeaking, VoiceControl } from './atelier/voice.js';
 import { clearLookFromLocation, lookFromLocation, qrSvg, shareUrl } from './atelier/share.js';
@@ -224,6 +225,8 @@ export class AccessSystem extends createSystem({}) {
 
   private commands() {
     const stylist = () => this.world.getSystem(StylistSystem)!;
+    const agent = () => this.world.getSystem(AgentSystem)!;
+    const deciding = () => agent().state === 'deciding';
     const closet = () => this.world.getSystem(ClosetSystem)!;
     const a = () => this.atelier;
     const look = (n: number) => () => a().wearLook(n - 1);
@@ -231,11 +234,16 @@ export class AccessSystem extends createSystem({}) {
     return [
       { phrases: ['style me', 'dress me', 'stylist'], run: () => { stylist().open(); void stylist().styleMe(); } },
       { phrases: ['next', 'next idea', 'another', 'something else'], run: () => stylist().nextIdea() },
-      { phrases: ['keep', 'keep it', 'i like it', 'love it'], run: () => stylist().keep() },
+      {
+        phrases: ['get me ready', 'dress me for today', 'what should i wear', 'plan my outfit', 'dress me for my day'],
+        run: () => void agent().run('today'),
+      },
+      { phrases: ['lay out tomorrow', 'plan tomorrow', 'dress me for tomorrow', 'what should i wear tomorrow'], run: () => void agent().run('tomorrow') },
+      { phrases: ['keep', 'keep it', 'i like it', 'love it'], run: () => (deciding() ? agent().keep() : stylist().keep()) },
       { phrases: ['warmer', 'warm'], run: () => void stylist().refine('warmer') },
       { phrases: ['dressier', 'fancier', 'more formal'], run: () => void stylist().refine('dressier') },
       { phrases: ['more colour', 'more color', 'colour', 'color', 'colourful', 'colorful'], run: () => void stylist().refine('colour') },
-      { phrases: ['undo', 'go back'], run: () => a().undo() },
+      { phrases: ['undo', 'go back'], run: () => (deciding() ? agent().undo() : a().undo()) },
       { phrases: ['redo'], run: () => a().redo() },
       { phrases: ['turn', 'turn around', 'spin', 'show the back'], run: () => a().turnForm(1) },
       { phrases: ['reset', 'start over'], run: () => a().resetLook() },

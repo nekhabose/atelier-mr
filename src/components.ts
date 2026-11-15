@@ -1,5 +1,6 @@
 import { defineComponents } from '@iwsdk/core';
 import {
+  AgentButton,
   BoutiqueSlot,
   BoutiqueTab,
   ClosetSlot,
@@ -23,4 +24,5 @@ export default defineComponents([
   RackTab,
   BoutiqueSlot,
   BoutiqueTab,
+  AgentButton,
 ]);

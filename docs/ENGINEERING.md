@@ -10,6 +10,25 @@ not yet verified.
   `src/index.ts`: studio and tailoring (`atelier-system`), closet, stylist,
   planner, mornings, boutique, marking on your body, room placement, access,
   onboarding, the guided tour, and performance.
+- **Stylist agent** (`src/agent-system.ts`, `api/agent.ts`,
+  `src/atelier/agent-*.ts`). The headset runs the agent loop; Claude decides
+  which of seven tools to call (check the weather, check the calendar, recall
+  preferences, search the closet, put on form, tailor, finish). The tools run
+  in the headset on the user's own data and act through the studio's own
+  methods (the ones hands and voice use), so the agent can do nothing a user
+  cannot. Every call is validated first (known tool, closet ids that exist, a
+  wearable combination, whole centimetres within 20). The function relays one
+  turn: it rebuilds the first message from enums (goal, mood) and the date,
+  accepts the run so far only in known shapes (the model's own blocks echoed
+  unchanged, so the history only grows; tool results as short strings, every
+  call answered), adds the fixed system prompt and strict tool schemas, and
+  returns the next turn. At most 6 model calls and 16 tool calls per run. If
+  the live agent is unavailable, slow (20 s per turn) or declines, the form is
+  put back and an on-device planner makes the same calls, so the plan card,
+  Keep and Undo behave the same. Undo restores the exact snapshot taken before
+  the run. Keep and Undo adjust trait scores (lengths, colours, fabrics,
+  layering, tailoring) stored on the device; the agent reads them as short
+  notes.
 - **Pure modules** in `src/atelier/` hold the logic that matters (garment
   geometry and measurements, the offline stylist, calendar parsing, weather
   mapping, wear statistics, furniture clearance, the body-mark maths, the
@@ -105,8 +124,10 @@ not yet verified.
 - **Entering the headset.** If no session has started 8 s after asking, you get
   a plain explanation (browser, immersive mode, hand tracking).
 - **Nothing depends on the network.** The stylist acts at once on the device
-  and upgrades to the live AI only if it answers in time (8 s cap); offline,
-  the service worker opens the app from the cache.
+  and upgrades to the live AI only if it answers in time (8 s cap); the agent
+  finishes on the device if the live agent fails at any step, and skips the
+  live attempt for 5 minutes after a failure; offline, the service worker
+  opens the app from the cache.
 - **Storage.** Every read of saved data is validated and falls back to
   defaults; writes that fail (private mode, full storage) keep working for the
   visit.
@@ -125,7 +146,9 @@ not yet verified.
   studio placement. Shared looks travel inside the link.
 - **Sent out, and only when you ask:** your location rounded to about 10 km
   for the forecast (Open-Meteo, no account), and closet descriptions or a
-  garment photo to the stylist function.
+  garment photo to the stylist function. The stylist agent sends only what its
+  tools return: the day's forecast summary, the kind of event (never titles or
+  people), the preference notes and the closet descriptions.
 - **The stylist function** validates every request against a schema, caps body
   and image sizes, rate-limits per address, keeps its API key on the server,
   validates the model's structured output, and times out cleanly.
@@ -144,7 +167,8 @@ not yet verified.
 
 | Check | What it proves | How |
 |---|---|---|
-| 81 unit tests | Garment maths, measurements, stylist planning and refinement, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
+| 96 unit tests | Garment maths, measurements, stylist planning and refinement, the agent's tool schemas and input checks, the on-device agent, agent memory, the agent function's request checks, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
+| Stylist agent | Today then Keep, tomorrow then Undo (the form is restored exactly), tomorrow then Keep (the morning layout is saved), memory updated, no errors; Keep by controller ray; Undo by gaze and pinch on the glasses profile, with the card inside the glasses' view | `scripts/check-agent.mjs`, `scripts/agent-fov.mjs` |
 | Typecheck and build | Types across the app and the API | `npm run typecheck`, `npm run build` (CI) |
 | 46-step journey | The whole product, driven with emulated controllers in XR | `scripts/e2e-emulator.sh` |
 | Hand pinches | Marking hem, sleeve and neckline on the body; a pinch held out in front is ignored | Emulated hands, see `docs/SUBMISSION.md` |

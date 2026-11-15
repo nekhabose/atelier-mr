@@ -39,11 +39,13 @@ a sleeve, your collarbone a neckline. Drop a swatch to change the fabric of one
 piece.
 
 The productivity loop is the morning. Recreate the clothes you own in the
-Digital Closet, or photograph one. Atelier reads today's forecast and your
-calendar (an .ics file, read on the device), and the stylist dresses the form
-from your closet for that day. Keep it, see the next idea, or say "dressier"
-and it edits the garments. At night, **Lay out tomorrow** picks tomorrow's
-outfit, and it is waiting on the form in the morning. **Plan week** plans seven
+Digital Closet, or photograph one. **Dress me for today** hands the morning
+to the stylist agent: it checks today's forecast and your calendar (an .ics
+file, read on the device), recalls what you kept and undid before, searches
+your closet, dresses the form and tailors it, and each step ticks off on a
+paper card beside the form. **Keep** it, or **Undo** puts back exactly what you
+had; both teach it what you like. At night, **Lay out tomorrow** does the same
+for tomorrow, and the outfit is waiting on the form in the morning. **Plan week** plans seven
 days around your calendar and forecast; **Pack** finds the fewest pieces for a
 trip.
 
@@ -64,9 +66,13 @@ fabrics are procedural, so tailoring changes real geometry rather than
 swapping meshes. Scene understanding (planes and meshes) places the studio and
 keeps it off furniture, a persistent anchor brings it back, and the Quest 3
 depth API lets your real hands show in front of the form, rail and board. The
-panels are UIKitML. The stylist calls Claude through a Vercel Function with
-validated, structured output, and a deterministic on-device planner gives the
-same flow offline. The photo check runs MediaPipe Pose on the device. The
+panels are UIKitML. The stylist agent is a tool-using agent: Claude decides
+which of seven tools to call, the tools run in the headset on your own data
+through the same studio actions your hands use, and a Vercel Function only
+relays each turn with fixed tool definitions. Every call is validated before
+it runs, and an on-device planner makes the same calls when there is no
+network or key. The other stylist features call Claude with validated,
+structured output and have on-device fallbacks too. The photo check runs MediaPipe Pose on the device. The
 forecast comes from Open-Meteo with your location rounded to about 10 km.
 
 Reliability is engineered in, not hoped for. A quality governor watches the
@@ -79,7 +85,7 @@ placement search keeps the studio clear of furniture and inside the walls,
 shifting, turning or switching to a compact layout; tested in the emulator's
 eight rooms, it found a clear spot by itself in six, and in the other two it
 says to face a clearer spot. 80 random interactions caused no errors. A soak test of 300 actions shows no GPU or
-memory leaks. Typecheck, 81 unit tests and a production build run in CI on
+memory leaks. Typecheck, 96 unit tests and a production build run in CI on
 every push, and a 46-step journey drives the app in the IWSDK emulator with
 emulated controllers and hands. Details: `docs/ENGINEERING.md`.
 
@@ -141,7 +147,8 @@ speech recognition.
    drop a swatch on the form. **Undo** if you like.
 4. Studio panel, **Mark on me**: pinch your own clothes at your knee. The hem
    moves to that height. Try your wrist for a sleeve.
-5. Closet panel, **This morning**: **Dress me for today**, then **Keep**. Then
+5. Closet panel, **This morning**: **Dress me for today**. Watch the card on
+   the left of the form tick off each step, then **Keep** (or **Undo**). Then
    **Lay out tomorrow**.
 6. Closet panel: **Wear today**, then **Style it** next to your least worn
    piece.
@@ -176,6 +183,7 @@ check that ends with a results card. The stylist works without any API key
 | Installable app (manifest, icons, offline service worker), shadows on demand, `?perf` meter, unit tests in CI | Horizon Store packaging (bubblewrap APK) |
 | 12 fabrics applied per garment | Photo-to-garment closet entry |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
+| Stylist agent: chooses its own calls to 7 tools (weather, calendar, preferences, closet search, put on form, tailor, finish), each validated and run in the headset; live plan card; Keep or Undo the whole run; learns from both (on the device); on-device planner with the same tools; Keep and Undo by controller ray and by gaze and pinch (glasses emulator profile) | Multi-day plans in one run |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints |
 | Your mornings: local forecast (Open-Meteo, location rounded to about 10 km), calendar import (.ics, read on the device, only day and kind of event kept), Dress me for today, Lay out tomorrow, week plan by each day's forecast and calendar | Live calendar sync (Google, Outlook) with consent |
 | Wear what you own: wear log per piece from Wear today, cost per wear, least worn piece with Style it | Wardrobe insights over months |
@@ -263,8 +271,9 @@ full-length photo if you show the photo feature.
 
 ## Special awards
 
-Worth claiming: **Best Agentic Interaction** (the stylist plans, acts on the
-form, and you keep, refine or undo), **Best Reason to Come Back** (the morning
+Worth claiming: **Best Agentic Interaction** (the stylist agent chooses its
+own tool calls, acts on the form through the same actions as your hands, shows
+every step on a card, and you keep or undo the whole run; it learns from both), **Best Reason to Come Back** (the morning
 routine, Lay out tomorrow, wear log and streak, the anchored studio), **Best
 First Five Minutes** (ghost-hand tour, a dressed form on first visit),
 **Best Accessibility Forward Experience** (Access panel, tap-to-tailor, voice,

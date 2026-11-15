@@ -310,7 +310,7 @@ export class ShowcaseSystem extends createSystem({}) {
         },
       },
       said(2, 'Dressed for your real day'),
-      { at: word(2, 'dresses', 0.62), sfx: 'sparkle', act: () => morning().dressToday() },
+      { at: word(2, 'dresses', 0.62), sfx: 'sparkle', act: () => morning().dressToday({ instant: true }) },
       said(3, 'Refine in plain words'),
       { at: word(3, 'dressier', 0.66), sfx: 'sparkle', act: () => void stylist().refine('dressier') },
       {
@@ -335,7 +335,7 @@ export class ShowcaseSystem extends createSystem({}) {
       { at: word(7, 'silk', 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
       { at: scene(8), shot: 'stylist' },
       said(8, 'Lay out tomorrow'),
-      { at: word(8, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow() },
+      { at: word(8, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow({ instant: true }) },
       said(9, 'Wear what you own'),
       {
         at: word(9, 'builds', 0.78),

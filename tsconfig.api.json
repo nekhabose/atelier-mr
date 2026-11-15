@@ -4,5 +4,5 @@
     "types": ["node"],
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["api/**/*.ts", "src/atelier/stylist-contract.ts"]
+  "include": ["api/**/*.ts", "src/atelier/stylist-contract.ts", "src/atelier/agent-contract.ts"]
 }

@@ -53,3 +53,8 @@ export const BoutiqueSlot = createComponent('BoutiqueSlot', {
 
 /** The BOUTIQUE tab above the rail. */
 export const BoutiqueTab = createComponent('BoutiqueTab', {});
+
+/** Keep or Undo under the stylist agent's plan card. */
+export const AgentButton = createComponent('AgentButton', {
+  keep: { type: Types.Boolean, default: false },
+});

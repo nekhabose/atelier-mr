@@ -46,9 +46,21 @@ February 2027.
   is sent), and **Import a calendar (.ics)** reads your calendar on the device,
   keeping only the day and kind of event (interview, party, trip, work). On the
   closet panel, **This morning** shows today's weather and plans, with **Dress
-  me for today** (the stylist, set to today) and **Lay out tomorrow** (picked
-  tonight, waiting on the form in the morning). **Plan week** plans each day for
-  its own forecast and calendar.
+  me for today** and **Lay out tomorrow** (picked tonight, waiting on the form
+  in the morning), both run by the stylist agent below. **Plan week** plans each
+  day for its own forecast and calendar.
+- **Stylist agent:** a tool-using agent with its plan in view. It decides which
+  of seven tools to call - check the weather, check the calendar, recall your
+  preferences, search your closet, put an outfit on the form, tailor it,
+  finish - and a paper card beside the form ticks off each step as it happens.
+  The tools run in the headset on your own data, through the same studio
+  actions your hands and voice use, and every call is validated first (known
+  tool, closet ids that exist, a wearable outfit, centimetres in range).
+  **Keep** it, or **Undo** puts back exactly what was on the form; both teach
+  it what you like (kept on the device; **What your stylist remembers** on the
+  start page shows it and forgets it). Claude decides when the server has a key;
+  an on-device planner makes the same calls otherwise. Voice: "get me ready",
+  "lay out tomorrow", "keep", "undo".
 - **Wear what you own:** **Wear today** logs a wear for each closet piece on
   the form. Pieces keep what they cost, so the closet shows cost per wear and
   your least worn piece, with **Style it** to build a look around it.
@@ -211,7 +223,7 @@ node scripts/record-showcase.mjs https://localhost:4173/ docs/video/atelier-show
 Pushes to `main` deploy to Vercel (Git integration) and to GitHub Pages
 (`.github/workflows/deploy.yml`).
 
-### Enabling Claude for the stylist (optional)
+### Enabling Claude for the stylist and the agent (optional)
 
 The key lives only on the server. Locally, put `ANTHROPIC_API_KEY=...` in
 `.env.local` (git-ignored). On Vercel:
@@ -221,8 +233,12 @@ vercel env add ANTHROPIC_API_KEY production
 vercel deploy --prod
 ```
 
-Without a key, `/api/stylist` answers `503 stylist_not_configured` and the
-headset uses the offline planner. The function only accepts allow-listed
+Without a key, `/api/stylist` answers `503 stylist_not_configured`,
+`/api/agent` answers `503 agent_not_configured`, and the headset uses its
+on-device planners. `/api/agent` relays one agent turn: it accepts only the
+goal, the date, the mood and the run so far (the model's own blocks echoed
+back, and short tool results for known tools), adds the fixed system prompt
+and tool definitions, and returns the model's next turn. The function only accepts allow-listed
 origins (`ALLOWED_ORIGINS` adds more), enumerated inputs and short validated
 names, and returns only validated, wearable outfits. Its in-memory request
 counter is not real rate limiting on serverless; for public traffic add a
@@ -232,6 +248,9 @@ Vercel Firewall rate-limit rule and an Anthropic workspace spend limit.
 
 ```
 api/stylist.ts            Vercel Function: Claude stylist (server-side key)
+api/agent.ts              Vercel Function: one turn of the stylist agent
+src/agent-system.ts       stylist agent: run loop, tool execution, plan card
+src/atelier/agent-*.ts    agent tools + validation, on-device planner, memory
 src/atelier/              measurements, garment geometry, fabrics, looks,
                           closet, lookbook, streak, stylist contract + engine
 src/atelier-system.ts     wear, tailor, fabric drop, undo/redo, turntable
