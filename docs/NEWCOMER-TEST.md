@@ -10,7 +10,7 @@ much, shows more than another hour of polishing. Judges arrive cold too.
   headset with controllers put away. Cast to a phone or laptop so you can
   watch (Quest: Camera > Cast).
 - **Without a Quest:** the same link on a laptop. Let them use the mouse and
-  the start page; the 90-second tour is fair game if they find it.
+  the start page; the short tour is fair game if they find it.
 
 ## What you say
 

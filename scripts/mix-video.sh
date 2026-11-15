@@ -4,8 +4,11 @@
 #   bash scripts/mix-video.sh docs/video/atelier-story.mp4 docs/video/atelier-demo.mp4
 #
 # Narration: docs/video/vo/l0.wav ... one clip per line of scripts/narration.txt
-# (your own recording, split with scripts/split-voice.py). Each line starts at
-# its scene's time; if a take runs long, the next line waits until it ends.
+# (your own recording, split with scripts/split-voice.py; the tour is timed to
+# it with scripts/tour-timing.py). Each line starts at its time in the
+# recording (docs/video/frames-mr/cues.json gives when the tour started); if a
+# line runs long, the next one waits until it ends. Sound effects follow the
+# tour's recorded cues.
 # With no clips yet, the cut gets music and sound effects only.
 # (Written for the bash 3.2 that ships with macOS.)
 set -euo pipefail
@@ -13,14 +16,18 @@ cd "$(dirname "$0")/.."
 IN=${1:-docs/video/atelier-story.mp4}
 OUT=${2:-docs/video/atelier-demo.mp4}
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$IN")
-python3 scripts/soundtrack.py docs/video/music.wav docs/video/sfx.wav "$DUR" >/dev/null
+CUES=docs/video/frames-mr/cues.json
+python3 scripts/soundtrack.py docs/video/music.wav docs/video/sfx.wav "$DUR" "$CUES" >/dev/null
 
 # "<clip> <start ms>" for each clip that exists: its scene time, or later if
 # the line before is still being spoken.
 PLAN_FILE=$(mktemp)
 python3 -c '
-import os, subprocess
+import json, os, subprocess
 times = [float(l.split("|")[0]) for l in open("scripts/narration.txt") if l.strip() and not l.startswith("#")]
+# Video seconds when the tour started (the recording begins a moment earlier).
+offset = json.load(open("docs/video/frames-mr/cues.json")).get("offset", 0.0) if os.path.exists("docs/video/frames-mr/cues.json") else 0.0
+times = [offset + t for t in times]
 end = 0.0
 for i, t in enumerate(times):
     f = "docs/video/vo/l%d.wav" % i

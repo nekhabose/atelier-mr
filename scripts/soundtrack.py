@@ -3,8 +3,10 @@ no third-party audio): a soft chord pad, a plucked arpeggio, a bass line, and
 the app's own kinds of sounds (sparkle, swish, tick, settle) at the moments
 the tour acts.
 
-    python3 scripts/soundtrack.py docs/video/music.wav docs/video/sfx.wav 56
+    python3 scripts/soundtrack.py docs/video/music.wav docs/video/sfx.wav 101 docs/video/frames-mr/cues.json
 """
+import json
+import os
 import sys
 import wave
 
@@ -89,7 +91,7 @@ def music(total):
     return np.stack([left * trem * fade, right * trem * fade], axis=1)
 
 
-def sfx(total):
+def sfx(total, cues):
     out = np.zeros((int(total * SR), 2))
     rng = np.random.default_rng(7)
 
@@ -131,30 +133,33 @@ def sfx(total):
         s = np.arange(n) / SR
         add(at, np.sin(2 * np.pi * (150 - 60 * s) * s) * np.exp(-s / 0.12) * 0.22, 0.5)
 
-    # Cues for the story cut (the tour's own times; see showcase-system.ts).
-    settle(8.6)                   # the studio lands in the room
-    sparkle(9.8)                  # title card
-    sparkle(16.6)                 # dressed for today
-    sparkle(23.6)                 # refined: dressier
-    swish(29.9)                   # a dress from the rail
-    sparkle(35.1)                 # marked at the knee
-    for j in range(16):           # pulling the hem pin
-        tick(40.4 + j * 0.15)
-    settle(46.4)                  # satin
-    settle(48.4)                  # silk
-    swish(52.1)                   # tomorrow laid out
-    sparkle(58.6)                 # a look around the least worn piece
-    swish(66.1)                   # boutique try-on
-    settle(72.3)                  # seated layout
-    settle(78.7)                  # standing again
-    settle(85.1)                  # turn
-    settle(87.6)                  # turn
-    sparkle(90.6)                 # end card
+    # Cues: where the tour acted in the recording (cues.json from
+    # record-mr-frames.mjs: video seconds = offset + tour seconds).
+    offset = cues.get('offset', 0.0)
+    for c in cues.get('cues', []):
+        at = offset + c['t']
+        kind = c['kind']
+        if kind == 'reveal':          # the studio lands, then the title card
+            settle(at + 0.2)
+            sparkle(at + 1.5)
+        elif kind == 'pin':           # pulling the hem pin
+            for j in range(16):
+                tick(at + 0.05 + j * 0.15)
+        elif kind == 'sparkle':
+            sparkle(at)
+        elif kind == 'swish':
+            swish(at)
+        elif kind == 'settle':
+            settle(at)
     return out
 
 
 if __name__ == '__main__':
     music_path, sfx_path, total = sys.argv[1], sys.argv[2], float(sys.argv[3])
+    cues = {}
+    if len(sys.argv) > 4 and os.path.exists(sys.argv[4]):
+        with open(sys.argv[4]) as f:
+            cues = json.load(f)
     write(music_path, music(total))
-    write(sfx_path, sfx(total))
+    write(sfx_path, sfx(total, cues))
     print('ok')

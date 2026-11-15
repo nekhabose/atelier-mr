@@ -16,8 +16,8 @@ New Experience) with Meta's [Immersive Web SDK](https://iwsdk.dev) (WebXR).
 
 Open it in the Meta Quest Browser and tap **Enter the studio** (or accept the
 immersive prompt). On a desktop browser the studio opens as a flat 3D preview
-you can click, and **Watch the 90-second tour** plays the whole story with
-captions.
+you can click, and **Watch the tour (under 2 min)** plays the whole story
+with captions.
 
 Live now as a web app; on the Meta Horizon Store (packaged web app) in
 February 2027.
@@ -131,7 +131,7 @@ February 2027.
   (`#look=...`; nothing is uploaded). The start page shows the link and a QR
   code; opening it dresses the form in that look. Shared links are validated
   and every measurement is clamped to the garment's range.
-- **Guided showcase:** a captioned 90-second story (a rainy morning with an
+- **Guided showcase:** a captioned story of under two minutes (a rainy morning with an
   interview at ten) that drives the real systems on the flat page, for judges
   without a headset and for recording the demo video
   (`?showcase`; `?showcase=record` for unattended capture). Under the IWSDK

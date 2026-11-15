@@ -25,10 +25,11 @@ export default async function run({ frame, page }) {
         cam: globalThis.atelier.world.camera.position.toArray().map((v) => Math.round(v * 100) / 100),
         caption: document.querySelector('.atelier-sc [data-title]')?.textContent,
       });
+    // Just before each scene changes (times follow src/atelier/tour-timing.ts).
     for (const [at, label] of [
-      [5, 'opening'], [21, 'dressed for today'], [27.5, 'refined'], [31.5, 'dress from the rail'],
-      [38, 'marked on yourself'], [44, 'pin pulled'], [50, 'fabrics'], [56, 'laid out tomorrow'],
-      [63, 'styled around least worn'], [70, 'boutique try-on'], [83, 'access panel'], [93, 'end card'],
+      [5, 'opening'], [23, 'dressed for today'], [31.3, 'refined'], [35.2, 'dress from the rail'],
+      [43.4, 'marked on yourself'], [48.5, 'pin pulled'], [55.2, 'fabrics'], [62, 'laid out tomorrow'],
+      [69.1, 'styled around least worn'], [78, 'boutique try-on'], [91.9, 'access panel'], [100, 'end card'],
     ]) {
       while (s.t < at && s.playing) await wait(100);
       sample(label);

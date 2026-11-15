@@ -30,6 +30,7 @@ import { MorningSystem } from './morning-system.js';
 import { MarkSystem } from './mark-system.js';
 import { access } from './atelier/access.js';
 import { LOOKS } from './atelier/looks.js';
+import { LINE_LENGTH, LINE_START } from './atelier/tour-timing.js';
 
 interface Shot {
   pos: [number, number, number];
@@ -38,13 +39,22 @@ interface Shot {
 
 type ShotKey = keyof typeof SHOTS;
 
+/** Kinds of sound the video's soundtrack places where the tour acts. */
+type Sfx = 'reveal' | 'sparkle' | 'swish' | 'settle' | 'pin';
+
 interface Step {
   at: number;
   title?: string;
   sub?: string;
   shot?: ShotKey;
   act?: () => void;
+  sfx?: Sfx;
 }
+
+/** Seconds into the tour: `f` of the way through narration line `i`. */
+const line = (i: number, f = 0) => LINE_START[i] + f * LINE_LENGTH[i];
+/** A scene's caption and camera move lead its line slightly. */
+const scene = (i: number) => Math.max(0, LINE_START[i] - 0.4);
 
 const MOVE = 1.6;
 /** Page-camera shots for the flat tour (authored layout: form at 0,0,-1.55). */
@@ -61,7 +71,8 @@ const SHOTS = {
   access: { pos: [0.2, 1.18, -0.12], target: [0.52, 0.8, -0.8] },
   end: { pos: [0, 1.6, 1.0], target: [0, 1.0, -1.5] },
 } satisfies Record<string, Shot>;
-const TOTAL = 93.5;
+/** The tour ends just after the last line. */
+const TOTAL = line(LINE_START.length - 1, 1) + 1.2;
 
 /**
  * Head poses for the mixed-reality cut, in the studio's own frame. Standing
@@ -120,6 +131,12 @@ export class ShowcaseSystem extends createSystem({}) {
   /** The studio frame the head pose was last expressed in (mixed-reality cut). */
   private lastFrame = { x: 0, y: 0, z: 0, yaw: 0 };
   private seatedByTour = false;
+  /** Recording: wait in the empty room until go(), so capture starts first. */
+  private waitForGo = false;
+  /** In XR and waiting for go(). */
+  ready = false;
+  /** When each sound-bearing action ran (tour seconds), for the soundtrack. */
+  cues: { t: number; kind: Sfx }[] = [];
   private m4 = new Matrix4();
   private q = new Quaternion();
   private eye = new Vector3();
@@ -150,8 +167,10 @@ export class ShowcaseSystem extends createSystem({}) {
     return this.world.getSystem(AtelierSystem)!;
   }
 
-  start(mode: 'flat' | 'mr' = 'flat'): void {
+  start(mode: 'flat' | 'mr' = 'flat', opts: { waitForGo?: boolean } = {}): void {
     if (this.playing || this.pendingMR) return;
+    this.waitForGo = !!opts.waitForGo;
+    this.ready = false;
     const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
     if (mode === 'mr' && (!emulatedDevice() || !this.world.xrEnabled)) mode = 'flat';
     if (mode === 'flat' && inXR) return;
@@ -174,7 +193,18 @@ export class ShowcaseSystem extends createSystem({}) {
     this.jump('intro');
   }
 
+  /** Recording: start the tour that start(mode, { waitForGo: true }) readied. */
+  go(): boolean {
+    if (!this.pendingMR || !this.ready) return false;
+    this.waitForGo = false;
+    this.pendingMR = false;
+    this.ready = false;
+    this.begin();
+    return true;
+  }
+
   private begin(): void {
+    this.cues = [];
     this.curTarget.set(0, 1, -1.5);
     this.steps = this.script();
     this.next = 0;
@@ -237,6 +267,8 @@ export class ShowcaseSystem extends createSystem({}) {
     const room = () => this.world.getSystem(RoomPlacementSystem)!;
     const mr = this.mode === 'mr';
     const dress = Math.max(0, LOOKS.findIndex((l) => l.id === 'velvet-hour'));
+    // Scenes follow the narration (src/atelier/tour-timing.ts); each action
+    // lands on its words, e.g. the hem moves on "knee".
     return [
       {
         at: 0,
@@ -249,18 +281,19 @@ export class ShowcaseSystem extends createSystem({}) {
         },
       },
       {
-        at: 8,
+        at: scene(1),
         shot: 'wide',
         title: 'Your room becomes a studio',
         sub: mr
           ? 'Atelier stands on your real floor, clear of your furniture, and remembers the spot.'
           : 'On Quest it stands on your real floor, clear of your furniture, and remembers the spot.',
+        sfx: 'reveal',
         act: () => {
           if (mr) room().hold = false;
         },
       },
       {
-        at: 14.5,
+        at: scene(2),
         shot: 'stylist',
         title: 'Dressed for your real day',
         sub: "Today's forecast and your calendar set the brief. The stylist dresses the form from your closet.",
@@ -269,11 +302,13 @@ export class ShowcaseSystem extends createSystem({}) {
           closet().backToBrowse();
         },
       },
-      { at: 16.5, act: () => morning().dressToday() },
-      { at: 22, title: 'Refine in plain words', sub: '"Dressier." Every change lands on the form.' },
-      { at: 23.5, act: () => void stylist().refine('dressier') },
+      // "...and dresses the form"
+      { at: line(2, 0.62), sfx: 'sparkle', act: () => morning().dressToday() },
+      { at: scene(3), title: 'Refine in plain words', sub: '"Dressier." Every change lands on the form.' },
+      // "I say dressier"
+      { at: line(3, 0.66), sfx: 'sparkle', act: () => void stylist().refine('dressier') },
       {
-        at: 28.5,
+        at: scene(4),
         shot: 'rack',
         title: 'Tap a look',
         sub: 'For tonight, a dress from the rail. The form wears it, life-size.',
@@ -282,40 +317,48 @@ export class ShowcaseSystem extends createSystem({}) {
           closet().setMode(false);
         },
       },
-      { at: 29.8, act: () => a().wearLook(dress) },
+      // "a dress from the rail"
+      { at: line(4, 0.6), sfx: 'swish', act: () => a().wearLook(dress) },
       {
-        at: 32.5,
+        at: scene(5),
         shot: 'hem',
         title: 'Mark it on yourself',
         sub: 'Too long? Pinch your own clothes at the knee, and the form takes the measurement.',
       },
-      { at: 35, act: () => this.world.getSystem(MarkSystem)?.demo('hem', 52) },
-      { at: 39.5, title: 'Or pull a pin', sub: 'The tape measure reads the length in centimetres as you go.' },
-      { at: 40.3, act: () => this.startHem() },
-      { at: 45, shot: 'board', title: 'Drop a fabric', sub: 'Satin, silk, velvet, denim: swatches re-skin the garment.' },
-      { at: 46.3, shot: 'form', act: () => a().applyFabric('navy-satin') },
-      { at: 48.3, act: () => a().applyFabric('ivory-silk') },
+      // "at the knee"
+      { at: line(5, 0.72), sfx: 'sparkle', act: () => this.world.getSystem(MarkSystem)?.demo('hem', 52) },
+      { at: scene(6), title: 'Or pull a pin', sub: 'The tape measure reads the length in centimetres as you go.' },
+      // "I pull a pin"
+      { at: line(6, 0.12), sfx: 'pin', act: () => this.startHem() },
+      { at: scene(7), shot: 'board', title: 'Drop a fabric', sub: 'Satin, silk, velvet, denim: swatches re-skin the garment.' },
+      { at: line(7, 0.42), shot: 'form' },
+      // "satin, then silk"
+      { at: line(7, 0.78), sfx: 'settle', act: () => a().applyFabric('navy-satin') },
+      { at: line(7, 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
       {
-        at: 51,
+        at: scene(8),
         shot: 'stylist',
         title: 'Lay out tomorrow',
         sub: "Pick tomorrow's outfit tonight. It is waiting on the form in the morning.",
       },
-      { at: 52, act: () => morning().layOutTomorrow() },
+      // "I lay out tomorrow's outfit"
+      { at: line(8, 0.35), sfx: 'swish', act: () => morning().layOutTomorrow() },
       {
-        at: 57,
+        at: scene(9),
         title: 'Wear what you own',
         sub: 'Your least worn piece, its cost per wear, and a look built around it.',
       },
+      // "and builds a look around it"
       {
-        at: 58.5,
+        at: line(9, 0.78),
+        sfx: 'sparkle',
         act: () => {
           const item = closet().leastWornItem();
           if (item) stylist().styleAround(item.id);
         },
       },
       {
-        at: 64,
+        at: scene(10),
         shot: 'boutique',
         title: 'Shop against your closet',
         sub: 'How many outfits a new piece adds, and an honest buy-or-skip verdict.',
@@ -325,24 +368,31 @@ export class ShowcaseSystem extends createSystem({}) {
           boutique().open(1);
         },
       },
-      { at: 66, act: () => boutique().tryOn(1) },
+      // "it counts the outfits it would add"
+      { at: line(10, 0.5), sfx: 'swish', act: () => boutique().tryOn(1) },
       {
-        at: 72,
+        at: scene(11),
         title: 'Sit down, it comes to you',
         sub: 'Seated, the form, the rail and the panels are all within reach.',
+        act: () => boutique().close(true),
+      },
+      // "when I sit down"
+      {
+        at: line(11, 0.3),
+        sfx: mr ? 'settle' : undefined,
         act: () => {
-          boutique().close(true);
           if (mr && !access.settings.seated) {
             this.seatedByTour = true;
             access.set('seated', true);
           }
         },
       },
-      { at: 72.6, shot: 'seated' },
+      { at: line(11, 0.42), shot: 'seated' },
       {
-        at: 78.5,
+        at: scene(12),
         title: 'Accessible by design',
         sub: 'Large text, high contrast, calm motion, voice, and tailoring by tap.',
+        sfx: mr ? 'settle' : undefined,
         act: () => {
           if (this.seatedByTour) {
             this.seatedByTour = false;
@@ -351,19 +401,21 @@ export class ShowcaseSystem extends createSystem({}) {
           accessSys().togglePanel(true);
         },
       },
-      { at: 79.2, shot: 'access' },
+      { at: scene(12) + 0.6, shot: 'access' },
       {
-        at: 85,
+        at: scene(13),
         shot: 'end',
         title: 'Get dressed for your real day',
         sub: 'Open it in the Quest browser today. On the Meta Horizon Store in February 2027.',
+        sfx: 'settle',
         act: () => {
           accessSys().togglePanel(false);
           a().turnForm(1);
         },
       },
-      { at: 87.5, act: () => a().turnForm(1) },
-      { at: 90.5, act: () => this.showEnd() },
+      { at: line(13, 0.3), sfx: 'settle', act: () => a().turnForm(1) },
+      // "Open it in your Quest browser today"
+      { at: line(13, 0.45), sfx: 'sparkle', act: () => this.showEnd() },
     ];
   }
 
@@ -380,6 +432,10 @@ export class ShowcaseSystem extends createSystem({}) {
       const room = this.world.getSystem(RoomPlacementSystem);
       const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
       if (inXR && (room?.hold || room?.isPlaced)) {
+        if (this.waitForGo) {
+          this.ready = true;
+          return;
+        }
         this.pendingMR = false;
         this.begin();
       }
@@ -391,6 +447,7 @@ export class ShowcaseSystem extends createSystem({}) {
       const s = this.steps[this.next++];
       if (s.shot) this.moveTo(s.shot);
       if (s.title !== undefined) this.setCaption(s.title, s.sub ?? '');
+      if (s.sfx) this.cues.push({ t: Math.round(this.t * 1000) / 1000, kind: s.sfx });
       try {
         s.act?.();
       } catch (err) {

@@ -20,12 +20,14 @@ media). It takes about five minutes.
 
 ```sh
 python3 scripts/split-voice.py docs/video/voice-take.m4a
-bash scripts/mix-video.sh docs/video/atelier-story.mp4 docs/video/atelier-demo.mp4
+python3 scripts/tour-timing.py
 ```
 
-Each line has a time budget (the scene it belongs to). Going a little over is
-fine: the next line waits. If most lines run long, tell me and I will slow the
-tour down to match.
+then record the picture again and mix (the steps are under Demo video in
+`docs/SUBMISSION.md`).
+
+Each line has a rough time budget. Going over is fine: the tour is timed to
+your recording (`scripts/tour-timing.py`), so the picture waits for your voice.
 
 ## The lines
 

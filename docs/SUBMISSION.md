@@ -6,8 +6,8 @@ Deadline: **Nov 18, 2026, 12:00 PM PT**. Track: **Productivity**. Division: **Ne
 
 - Play: https://atelier-mr.vercel.app (mirror: https://nekhabose.github.io/atelier-mr/)
 - Code: https://github.com/nekhabose/atelier-mr
-- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (about 94 s, 1080p; kept out of git) once your narration is mixed in. See Demo video below.
-- No headset? Open the link on a desktop and press **Watch the 90-second tour**: it plays the real app with captions.
+- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (1:43, 1080p, narrated by you; kept out of git). See Demo video below.
+- No headset? Open the link on a desktop and press **Watch the tour (under 2 min)**: it plays the real app with captions.
 
 ## Name and tagline
 
@@ -139,8 +139,8 @@ Before entering, on the start page: **Your mornings > Use my local weather**
 and **Import a calendar (.ics)** set up the morning (both optional; without
 them the stylist uses the weather you pick).
 
-No headset at hand: open the link on a desktop and press **Watch the 90-second
-tour** for a captioned walk through the same story.
+No headset at hand: open the link on a desktop and press **Watch the tour
+(under 2 min)** for a captioned walk through the same story.
 
 Optional: **https://atelier-mr.vercel.app/?perf** shows frame rate, draw calls
 and triangles above the studio panel. The stylist works without any API key
@@ -177,14 +177,16 @@ whether Quest Browser provides speech synthesis and recognition is not yet
 verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.
 
-## Demo video (about 94 s)
+## Demo video (1:43)
 
 `docs/video/atelier-story.mp4` is the picture: the real app recorded in the
 Immersive Web Emulator's simulated living room, with the emulated headset
 moving like a person's head while the guided tour drives the real systems.
-Captions are burned in. `docs/video/atelier-demo.mp4` adds the original music
-bed and UI sounds; it gets your narration once you record it (see
-`docs/RECORDING.md`): there is no synthetic voice in this cut. On Devpost,
+Captions are burned in. `docs/video/atelier-demo.mp4` adds your narration
+(recorded in one take, split into lines and lightly cleaned; long pauses inside
+a line shortened), an original music bed and UI sounds. There is no synthetic
+voice. The tour is timed to your recording, so each action lands on its words
+(the hem moves on "knee", the fabric on "satin" and "silk"). On Devpost,
 describe it as emulator footage narrated by you.
 
 It tells one story, a real morning, so the features arrive as reasons:
@@ -193,32 +195,33 @@ It tells one story, a real morning, so the features arrive as reasons:
 |---|---|---|
 | 0:00 | The empty living room, "7:40 am" | Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear. |
 | 0:08 | The studio settles into the room, clear of the furniture | So I put on my headset, and my own room becomes a fitting studio. |
-| 0:15 | "This morning: 9°C, rain likely. An interview", the stylist dresses the form | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
-| 0:22 | "Dressier" recuts the outfit in satin | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
-| 0:29 | A dress from the rail | For tonight, I take a dress from the rail. |
-| 0:33 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
-| 0:40 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |
-| 0:45 | Satin, then silk | A different fabric? I drop a swatch on it: satin, then silk. |
-| 0:51 | Tomorrow laid out | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
-| 0:57 | Least worn piece, a look built around it | It shows me what I never wear, what it costs per wear, and builds a look around it. |
-| 1:04 | Boutique try-on with a verdict | Before I buy something new, it counts the outfits it would add, and gives me an honest verdict. |
-| 1:12 | Seated: the studio comes to the chair | And when I sit down, the whole studio comes within reach. |
-| 1:19 | The Access panel | Large text, high contrast, calm motion, voice, and tailoring by tap are all built in. |
-| 1:25 | The form turns; end card with the URL and launch date | Atelier. Get dressed for your real day. Open it in your Quest browser today. |
+| 0:14 | "This morning: 9°C, rain likely. An interview", the stylist dresses the form | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
+| 0:23 | "Dressier" recuts the outfit in satin | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
+| 0:31 | A dress from the rail | For tonight, I take a dress from the rail. |
+| 0:35 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
+| 0:43 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |
+| 0:48 | Satin, then silk | A different fabric? I drop a swatch on it: satin, then silk. |
+| 0:55 | Tomorrow laid out | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
+| 1:02 | Least worn piece, a look built around it | It shows me what I never wear, what it costs per wear, and builds a look around it. |
+| 1:09 | Boutique try-on with a verdict | Before I buy something new, it counts the outfits it would add, and gives me an honest verdict. |
+| 1:18 | Seated: the studio comes to the chair | And when I sit down, the whole studio comes within reach. |
+| 1:23 | The Access panel | Large text, high contrast, calm motion, voice, and tailoring by tap are all built in. |
+| 1:32 | The form turns; end card with the URL and launch date | Atelier. Get dressed for your real day. Open it in your Quest browser today. |
 
 Rebuild it:
 
 ```sh
+python3 scripts/split-voice.py docs/video/voice-take.m4a   # your take -> one clip per line
+python3 scripts/tour-timing.py                              # time the tour to your lines
 npx @iwsdk/cli dev restart --ai-mode agent --allow-browser-automation   # hides emulator controls
 npx @iwsdk/cli browser run scripts/record-mr-frames.mjs --timeout 110000
 node scripts/frames-to-mp4.mjs docs/video/frames-mr docs/video/atelier-story.mp4 --crop-toolbar
-python3 scripts/split-voice.py docs/video/voice-take.m4a                 # your narration
 bash scripts/mix-video.sh docs/video/atelier-story.mp4 docs/video/atelier-demo.mp4
 npx @iwsdk/cli dev restart --ai-mode collaborate --allow-browser-automation
 ```
 
-Lines and times live in `scripts/narration.txt` (the tour's times are in
-`src/showcase-system.ts`). If you get time on a real Quest, a 10-second clip
+Lines and times live in `scripts/narration.txt`; the tour reads the same
+times from `src/atelier/tour-timing.ts` (both written by tour-timing.py). If you get time on a real Quest, a 10-second clip
 of your hands pinching a pin would be the strongest addition (Meta Quest
 Developer Hub can record or cast).
 

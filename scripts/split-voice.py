@@ -1,87 +1,159 @@
 """Split one narration take into the story's lines.
 
 Record all the lines of scripts/narration.txt in order, in one take, with a
-clear pause (about two seconds) between lines. This finds the pauses, cuts the
-take into one clip per line, cleans each clip (low rumble off, light noise
-reduction, even loudness) and writes docs/video/vo/l0.wav, l1.wav, ...
+pause between lines. This finds the lines, cuts the take into one clip per
+line, shortens long pauses inside a line (to --max-pause), cleans each clip
+(low rumble off, light noise reduction, even loudness) and writes
+docs/video/vo/l0.wav, l1.wav, ... plus docs/video/vo/lengths.json.
 
     python3 scripts/split-voice.py docs/video/voice-take.m4a
 
-If it finds a different number of lines than the script has, it lists what it
-found (start and length of each piece) and writes nothing; try --noise -40 for
-a noisy room, or --gap 0.7 for shorter pauses. A fluffed line you re-read
-right away counts as an extra piece: drop it with --skip 3 (0-based, can repeat).
+Finding the lines: first by pauses alone. A relaxed read often pauses inside a
+line as long as between lines; then the pauses are matched to the script
+instead (each line's length follows its word count, and lines break at the
+longer pauses). The table it prints shows where each line was cut. A fluffed
+line you re-read counts as extra speech: drop a piece with --skip (0-based
+index from the first table, can repeat), or re-record.
 """
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
 
+import numpy as np
+
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+SR = 48000
 
 
-def lines():
+def script_lines():
     path = os.path.join(ROOT, 'scripts', 'narration.txt')
     with open(path, encoding='utf-8') as f:
         return [l.split('|', 1)[1].strip() for l in f if l.strip() and not l.startswith('#')]
 
 
-def duration(path):
-    out = subprocess.run(
-        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path],
-        capture_output=True, text=True, check=True,
-    )
-    return float(out.stdout.strip())
-
-
-def speech_spans(path, noise_db, gap):
+def pieces(path, noise_db, gap):
+    """Speech pieces (start, end) between silences of at least `gap` seconds."""
     out = subprocess.run(
         ['ffmpeg', '-hide_banner', '-nostats', '-i', path, '-af', f'highpass=f=80,silencedetect=noise={noise_db}dB:d={gap}', '-f', 'null', '-'],
         capture_output=True, text=True,
     ).stderr
     starts = [float(x) for x in re.findall(r'silence_start: ([0-9.]+)', out)]
     ends = [float(x) for x in re.findall(r'silence_end: ([0-9.]+)', out)]
-    total = duration(path)
-    # Speech is what lies between silences.
+    total = float(re.search(r'Duration: (\d+):(\d+):([0-9.]+)', out).group(3)) + 60 * float(
+        re.search(r'Duration: (\d+):(\d+)', out).group(2)) + 3600 * float(re.search(r'Duration: (\d+)', out).group(1))
     edges = [0.0]
     for s, e in zip(starts, ends + [total] * (len(starts) - len(ends))):
         edges += [s, e]
     edges.append(total)
-    spans = []
-    for a, b in zip(edges[0::2], edges[1::2]):
-        if b - a > 0.35:  # ignore clicks and breaths
-            spans.append((a, b))
-    return spans
+    return [(a, b) for a, b in zip(edges[0::2], edges[1::2]) if b - a > 0.12]
+
+
+def fit(parts, words, pause_weight=0.8):
+    """Group speech pieces into len(words) lines: lengths follow word counts,
+    breaks prefer long pauses. Dynamic programming over break positions."""
+    n, lines = len(parts), len(words)
+    gaps = [parts[k + 1][0] - parts[k][1] for k in range(n - 1)]
+
+    def solve(rate):
+        inf = float('inf')
+        cost = [[inf] * (n + 1) for _ in range(lines + 1)]
+        back = [[0] * (n + 1) for _ in range(lines + 1)]
+        cost[0][0] = 0.0
+        for i in range(1, lines + 1):
+            for j in range(i, n + 1):
+                for k in range(i - 1, j):
+                    if cost[i - 1][k] == inf:
+                        continue
+                    want = rate * words[i - 1]
+                    c = ((parts[j - 1][1] - parts[k][0] - want) / want) ** 2
+                    if k > 0:
+                        c -= pause_weight * min(gaps[k - 1], 2.0)
+                    if cost[i - 1][k] + c < cost[i][j]:
+                        cost[i][j] = cost[i - 1][k] + c
+                        back[i][j] = k
+        out, j = [], n
+        for i in range(lines, 0, -1):
+            k = back[i][j]
+            out.append((k, j))
+            j = k
+        return out[::-1]
+
+    rate = sum(b - a for a, b in parts) / sum(words)
+    groups = solve(rate)
+    for _ in range(3):
+        rate = sum(parts[j - 1][1] - parts[k][0] for k, j in groups) / sum(words)
+        groups = solve(rate)
+    return [parts[k:j] for k, j in groups]
+
+
+def decode(path):
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path, '-ac', '1', '-ar', str(SR), '-f', 'f32le', '-'],
+                         capture_output=True, check=True).stdout
+    return np.frombuffer(raw, dtype=np.float32)
+
+
+def assemble(audio, group, max_pause):
+    """One line: its pieces, with pauses inside it shortened to max_pause."""
+    fade = int(0.012 * SR)
+    out = []
+    for i, (a, b) in enumerate(group):
+        a = max(0.0, a - (0.08 if i == 0 else 0.03))
+        b = b + (0.12 if i == len(group) - 1 else 0.03)
+        seg = audio[int(a * SR):int(b * SR)].copy()
+        if len(seg) > 2 * fade:
+            seg[:fade] *= np.linspace(0, 1, fade)
+            seg[-fade:] *= np.linspace(1, 0, fade)
+        if i > 0:
+            gap = group[i][0] - group[i - 1][1]
+            out.append(np.zeros(int(min(gap, max_pause) * SR), dtype=np.float32))
+        out.append(seg)
+    return np.concatenate(out)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('take')
     ap.add_argument('--noise', type=float, default=-35, help='silence threshold in dB (default -35)')
-    ap.add_argument('--gap', type=float, default=0.9, help='shortest pause between lines, seconds')
+    ap.add_argument('--gap', type=float, default=0.9, help='pause between lines for the first, pauses-only pass')
+    ap.add_argument('--max-pause', type=float, default=0.35, help='longest pause kept inside a line, seconds')
     ap.add_argument('--skip', type=int, action='append', default=[], help='piece index to drop (a fluffed line)')
     args = ap.parse_args()
-    want = lines()
-    spans = [s for i, s in enumerate(speech_spans(args.take, args.noise, args.gap)) if i not in args.skip]
-    if len(spans) != len(want):
-        print(f'Found {len(spans)} spoken pieces, the script has {len(want)} lines. Nothing written.')
-        for i, (a, b) in enumerate(spans):
-            print(f'  piece {i}: starts {a:6.2f} s, {b - a:4.1f} s long')
-        sys.exit(1)
+    lines = script_lines()
+    words = [len(l.split()) for l in lines]
+
+    coarse = [s for i, s in enumerate(pieces(args.take, args.noise, args.gap)) if i not in args.skip]
+    fine = pieces(args.take, args.noise, 0.3)
+    if len(coarse) == len(lines):
+        groups = [[p for p in fine if p[0] >= a - 0.01 and p[1] <= b + 0.01] or [(a, b)] for a, b in coarse]
+        how = 'pauses'
+    else:
+        print(f'Pauses alone give {len(coarse)} pieces for {len(lines)} lines; matching to the script instead.')
+        groups = fit(fine, words)
+        how = 'script'
+
+    audio = decode(args.take)
     out_dir = os.path.join(ROOT, 'docs', 'video', 'vo')
     os.makedirs(out_dir, exist_ok=True)
-    for i, ((a, b), text) in enumerate(zip(spans, want)):
-        a = max(0.0, a - 0.08)
-        b = b + 0.12
+    lengths = []
+    for i, (group, text) in enumerate(zip(groups, lines)):
+        line = assemble(audio, group, args.max_pause)
+        tmp = os.path.join(out_dir, f'_raw{i}.f32')
+        line.astype(np.float32).tofile(tmp)
         dst = os.path.join(out_dir, f'l{i}.wav')
         subprocess.run(
-            ['ffmpeg', '-y', '-loglevel', 'error', '-ss', f'{a:.3f}', '-to', f'{b:.3f}', '-i', args.take,
-             '-af', 'highpass=f=80,afftdn=nf=-25,loudnorm=I=-18:TP=-2:LRA=7,afade=t=in:d=0.03,areverse,afade=t=in:d=0.06,areverse',
-             '-ar', '48000', '-ac', '1', dst],
+            ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', tmp,
+             '-af', 'highpass=f=80,afftdn=nf=-25,loudnorm=I=-18:TP=-2:LRA=7', '-ar', str(SR), '-ac', '1', dst],
             check=True,
         )
-        print(f'l{i}.wav  {b - a:4.1f} s  {text}')
+        os.remove(tmp)
+        length = len(line) / SR
+        lengths.append(round(length, 2))
+        print(f'l{i:<2} {group[0][0]:6.2f}-{group[-1][1]:6.2f} s in the take -> {length:4.1f} s  {text}')
+    with open(os.path.join(out_dir, 'lengths.json'), 'w') as f:
+        json.dump({'found_by': how, 'lengths': lengths}, f)
 
 
 if __name__ == '__main__':
