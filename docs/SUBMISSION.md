@@ -6,7 +6,7 @@ Deadline: **Nov 18, 2026, 12:00 PM PT**. Track: **Productivity**. Division: **Ne
 
 - Play: https://atelier-mr.vercel.app (mirror: https://nekhabose.github.io/atelier-mr/)
 - Code: https://github.com/nekhabose/atelier-mr
-- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (1:35, 1080p; kept out of git). See Demo video below.
+- Video: _YouTube or Vimeo link, public, under 3:00_. Upload `docs/video/atelier-demo.mp4` (1:32, 1080p; kept out of git). See Demo video below.
 - No headset? Open the link on a desktop and press **Watch the tour (under 2 min)**: it plays the real app with captions.
 
 ## Name and tagline
@@ -275,22 +275,22 @@ whether Quest Browser provides speech synthesis and recognition is not yet
 verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
 Runtime and desktop browsers.
 
-## Demo video (1:35)
+## Demo video (1:32)
 
 `docs/video/atelier-story.mp4` is the picture: the real app recorded in the
 Immersive Web Emulator's simulated living room, with the emulated headset
 moving like a person's head while the guided tour drives the real systems.
 Captions are burned in and show the narration word for word.
 `docs/video/atelier-demo.mp4` adds the narration, an original music bed and UI
-sounds. **The narration is my own voice**, recorded in one take and split
-into its 14 lines; only the pauses inside a line were shortened (to 0.25 s,
-keeping the room sound). The tour is timed to that recording: each line
+sounds. **The narration is my own voice**, recorded in one take and cut
+into its 15 lines (one line I read twice; the clearer read is used); only the
+pauses inside a line were shortened (to 0.25 s, keeping the room sound). The tour is timed to that recording: each line
 starts when the last one ends, and each action lands on its spoken word (the
 hem moves on "knee", the fabric on "satin" and "silk", and each of the
-stylist agent's steps ticks off as it is named). The word times come from
-the recording itself: its pauses mark the phrases and its syllable peaks the
-words, checked against an alignment with a reference reading of the same
-script. In the video the agent runs on the device (its card says
+stylist agent's steps ticks off as it is named). The word times come from a
+transcript of the recording made on this Mac (Whisper, offline), checked
+against the finished mix: each action word lands within a few hundredths of a
+second of its cue. In the video the agent runs on the device (its card says
 "On-device agent"), so the tour is the same every time; with the server key,
 the live Claude agent makes the same tool calls. On Devpost, describe it as
 emulator footage of the real app, narrated by the creator. The video says so
@@ -304,23 +304,26 @@ It tells one story, a real morning, so the features arrive as reasons:
 |---|---|---|
 | 0:00 | The empty living room, "7:40 am" | Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear. |
 | 0:08 | The studio settles into the room, clear of the furniture | So I put on my headset, and my own room becomes a fitting studio. |
-| 0:14 | The stylist agent's plan card beside the form ticks off each step: the weather (9°C, rain likely), the interview on the calendar, what you like, the closet; it dresses the form in the cocoa satin slip midi with a double-breasted black blazer, then offers Keep or Undo | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
-| 0:22 | "Dressier" recuts the blazer in black satin, tuxedo style; the card adds the step, then Keep | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
-| 0:30 | A chocolate velvet slip maxi from the rail | For tonight, I take a dress from the rail. |
-| 0:34 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
-| 0:42 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |
-| 0:46 | Satin, then silk | A different fabric? I drop a swatch on it: satin, then silk. |
-| 0:53 | Tomorrow (a party) laid out: the silver sequin halter mini | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
-| 0:59 | The never-worn burgundy corset mini (cost per wear), and a look built around it | It shows me what I never wear, what it costs per wear, and builds a look around it. |
-| 1:06 | Boutique try-on: an emerald satin halter maxi, with a verdict | Before I buy something new, it counts the outfits it would add, and gives me an honest verdict. |
-| 1:14 | Seated: the studio comes to the chair | And when I sit down, the whole studio comes within reach. |
-| 1:19 | The Access panel | Large text, high contrast, calm motion, voice, and tailoring by tap are all built in. |
-| 1:27 | The form turns; end card with the URL and launch date | Atelier. Get dressed for your real day. Open it in your Quest browser today. |
+| 0:13 | The stylist agent's plan card beside the form ticks off each step: the weather (9°C, rain likely), the interview on the calendar, what you like, the closet; it dresses the form in the cocoa satin slip midi with a double-breasted black blazer, then offers Keep or Undo | Atelier checks today's forecast and my calendar, and dresses the form from my own closet. |
+| 0:20 | "Dressier" recuts the blazer in black satin, tuxedo style; the card adds the step, then Keep | It's an interview, so I want it sharper. I say dressier, and the outfit changes. |
+| 0:26 | Asked in my own words: the card opens with "Listened to you", says there is no forecast for Friday on this device, and dresses the form in the black lace midi slip dress ("dressed for Friday") | Or I just ask: dinner on Friday, something black. |
+| 0:33 | A chocolate velvet slip maxi from the rail | For tonight, I take a dress from the rail. |
+| 0:36 | Hem marked at the knee, tape measure | It's too long for me, so I pinch my own leg at the knee, and the hem moves there. |
+| 0:43 | A pin pulls the hem up, the tape reads it | Or I pull a pin, and the tape measure reads the length as I go. |
+| 0:48 | Satin, then silk | A different fabric? I drop a swatch on it: satin, then silk. |
+| 0:54 | Tomorrow (a party) laid out: the silver sequin halter mini | Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me. |
+| 1:00 | The never-worn burgundy corset mini (cost per wear), and a look built around it | It shows me what I never wear, and its cost per wear, and builds a look around it. |
+| 1:06 | Boutique try-on: an emerald satin halter maxi, with a verdict | Before I buy something new, it counts the outfits it would add, and it gives me an honest verdict. |
+| 1:12 | Seated: the studio comes to the chair | And when I sit down, the whole studio comes within reach. |
+| 1:18 | The Access panel | Large text, high contrast, calm motion, voice, and tailoring by tap are all built in. |
+| 1:25 | The form turns; end card with the URL and launch date | Atelier. Get dressed for your real day. Open it in your Quest browser today. |
 
 Rebuild it:
 
 ```sh
-python3 scripts/split-voice.py docs/video/voice-take.m4a   # your take -> one clip per line
+python3 scripts/split-voice.py docs/video/voice-take.m4a   # your take -> one clip per line (automatic)
+# or, with re-reads in the take: hand-checked line windows and a Whisper transcript
+python3 scripts/cut-voice-lines.py docs/video/voice-take-2.m4a windows.json words.json
 python3 scripts/tour-timing.py                              # time the tour to your lines
 npx @iwsdk/cli dev restart --ai-mode agent --allow-browser-automation   # hides emulator controls
 npx @iwsdk/cli browser run scripts/record-mr-frames.mjs --timeout 110000
@@ -340,7 +343,8 @@ Developer Hub can record or cast).
 `docs/screenshots/`: put **00-thumbnail** first (Devpost uses the first image
 as the project card), then the stills from the story cut (Immersive Web
 Emulator, simulated living room) and the start page: 01-a-real-morning,
-02-room-becomes-studio, 03-dressed-for-today, 04-mark-on-yourself,
+02-room-becomes-studio, 03-dressed-for-today, 03b-ask-in-your-own-words,
+04-mark-on-yourself,
 05-start-page, 06-tape-measure, 07-lay-out-tomorrow, 08-wear-what-you-own,
 09-boutique-verdict, 10-seated, 11-accessibility, 12-get-dressed. The
 emulator stills and the thumbnail carry the same small "Quest emulator ·

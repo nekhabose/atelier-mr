@@ -10,12 +10,24 @@
 //
 //   npx @iwsdk/cli dev restart --ai-mode agent --allow-browser-automation
 //   npx @iwsdk/cli browser run scripts/record-mr-frames.mjs --timeout 110000
-import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT = join(process.cwd(), 'docs/video/frames-mr');
 const W = 1920;
 const H = 1080;
+// Short on disk? {"every": 2} in docs/video/frames-mr/settings.json (or
+// FRAME_EVERY=2) keeps every second frame (~27 a second, for a 30 fps video:
+// about half the space); "quality" (FRAME_QUALITY) sets the JPEG quality.
+const SETTINGS = (() => {
+  try {
+    return JSON.parse(readFileSync(join(OUT, 'settings.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+})();
+const EVERY = Math.max(1, Number(process.env.FRAME_EVERY ?? SETTINGS.every ?? 1));
+const QUALITY = Number(process.env.FRAME_QUALITY ?? SETTINGS.quality ?? 92);
 
 export default async function run({ frame, page, cdp }) {
   const app = frame ?? page;
@@ -41,7 +53,7 @@ export default async function run({ frame, page, cdp }) {
     n++;
     await cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
   });
-  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 92, maxWidth: W, maxHeight: H, everyNthFrame: 1 });
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: QUALITY, maxWidth: W, maxHeight: H, everyNthFrame: EVERY });
   while (n === 0) await page.waitForTimeout(20);
   // Start the story; note the wall-clock time (same clock as frame timestamps).
   const goAt = await app.evaluate(() => {
@@ -54,5 +66,5 @@ export default async function run({ frame, page, cdp }) {
   const cues = await app.evaluate(() => globalThis.showcase.cues);
   writeFileSync(join(OUT, 'cues.json'), JSON.stringify({ offset: Math.max(0, goAt - firstTs), cues }, null, 1));
   await cdp.send('Emulation.clearDeviceMetricsOverride').catch(() => {});
-  return { frames: n, offset: goAt - firstTs, cues: cues.length };
+  return { frames: n, offset: goAt - firstTs, cues: cues.length, every: EVERY, quality: QUALITY };
 }

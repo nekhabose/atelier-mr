@@ -1,16 +1,16 @@
 # start seconds | line   (the story cut; read by split-voice.py and mix-video.sh)
 0.6|Seven forty. Rain later, an interview at ten, and a closet full of clothes I hardly wear.
-8.51|So I put on my headset, and my own room becomes a fitting studio.
-14.14|Atelier checks today's forecast and my calendar, and dresses the form from my own closet.
-21.98|It's an interview, so I want it sharper. I say dressier, and the outfit changes.
-29.77|Or I just ask: dinner on Friday, something black.
-37.37|For tonight, I take a dress from the rail.
-41.28|It's too long for me, so I pinch my own leg at the knee, and the hem moves there.
-49.17|Or I pull a pin, and the tape measure reads the length as I go.
-54.09|A different fabric? I drop a swatch on it: satin, then silk.
-60.28|Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.
-66.62|It shows me what I never wear, what it costs per wear, and builds a look around it.
-73.3|Before I buy something new, it counts the outfits it would add, and gives me an honest verdict.
-81.5|And when I sit down, the whole studio comes within reach.
-86.23|Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.
-94.28|Atelier. Get dressed for your real day. Open it in your Quest browser today.
+8.24|So I put on my headset, and my own room becomes a fitting studio.
+13.22|Atelier checks today's forecast and my calendar, and dresses the form from my own closet.
+20.5|It's an interview, so I want it sharper. I say dressier, and the outfit changes.
+26.1|Or I just ask: dinner on Friday, something black.
+33.46|For tonight, I take a dress from the rail.
+36.55|It's too long for me, so I pinch my own leg at the knee, and the hem moves there.
+43.92|Or I pull a pin, and the tape measure reads the length as I go.
+48.42|A different fabric? I drop a swatch on it: satin, then silk.
+54.13|Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.
+59.95|It shows me what I never wear, and its cost per wear, and builds a look around it.
+66.01|Before I buy something new, it counts the outfits it would add, and it gives me an honest verdict.
+72.81|And when I sit down, the whole studio comes within reach.
+78.18|Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.
+85.76|Atelier. Get dressed for your real day. Open it in your Quest browser today.
