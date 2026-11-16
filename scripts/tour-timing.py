@@ -24,20 +24,21 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 FIRST = 0.6
 BREATH = 0.5
 # Extra hold after a line (0-based) where the picture needs a moment.
-HOLD = {1: 0.7, 5: 1.0, 7: 1.0, 10: 0.8}
+# Line 4 (asking in your own words) holds while the stylist works and dresses the form.
+HOLD = {1: 0.7, 4: 3.6, 6: 1.0, 8: 1.0, 11: 0.8}
 # Words the tour acts on (0-based line: words). Each gets its time in the line.
 TARGETS = {
     2: ['forecast', 'calendar', 'dresses', 'form', 'closet'],
     3: ['dressier'],
-    4: ['dress'],
-    5: ['knee'],
-    6: ['pull'],
-    7: ['satin', 'silk'],
-    8: ['lay'],
-    9: ['builds'],
-    10: ['counts'],
-    11: ['sit'],
-    13: ['Get', 'Open'],
+    5: ['dress'],
+    6: ['knee'],
+    7: ['pull'],
+    8: ['satin', 'silk'],
+    9: ['lay'],
+    10: ['builds'],
+    11: ['counts'],
+    12: ['sit'],
+    14: ['Get', 'Open'],
 }
 
 

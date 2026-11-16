@@ -13,7 +13,25 @@
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <title>Atelier — Hands-First Fashion Studio</title>
   </head>
-  <body style="margin: 0">
+  <body style="margin: 0; background: #f4ede1">
+    <!-- Shown at once, before any script runs, until the studio's first frame
+         (a cold start on a headset can take several seconds). The thread
+         animates on the compositor, so it keeps moving while the app starts. -->
+    <style>
+      #boot { position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f4ede1; color: #2a231c; font-family: Georgia, 'Times New Roman', serif; transition: opacity 0.45s ease; }
+      #boot h1 { margin: 0; font-weight: 400; font-size: clamp(44px, 7vw, 76px); letter-spacing: 0.02em; }
+      #boot p { margin: 14px 24px 28px; font: 19px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; opacity: 0.78; text-align: center; }
+      #boot .thread { width: min(320px, 60vw); height: 3px; border-radius: 2px; overflow: hidden; background: rgba(42, 35, 28, 0.12); }
+      #boot .thread i { display: block; width: 40%; height: 100%; background: #a8442c; will-change: transform; animation: boot-run 1.4s ease-in-out infinite; }
+      #boot.gone { opacity: 0; pointer-events: none; }
+      @keyframes boot-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+      @media (prefers-reduced-motion: reduce) { #boot .thread i { animation-duration: 3.5s; } }
+    </style>
+    <div id="boot" role="status" aria-live="polite">
+      <h1>Atelier</h1>
+      <p>Setting up your fitting studio</p>
+      <div class="thread"><i></i></div>
+    </div>
     <div id="scene-container"></div>
     <script type="module" src="/src/index.ts"></script>
   </body>

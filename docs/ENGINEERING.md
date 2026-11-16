@@ -95,8 +95,9 @@ not yet verified.
 
 ## Performance
 
-- **Budget.** The judging floor is 60 fps on Quest; Quest renders at 72 Hz
-  (13.9 ms a frame).
+- **Budget.** The judging floor is 60 fps on Quest. Meta's WebXR guidance
+  gives 13.7 ms a frame at 72 fps and 11.1 ms at 90 (the emulated Quest 3
+  starts at 90 Hz and offers 72, 80, 90 and 120).
 - **Shadows on demand.** The shadow map is redrawn only when a caster moves
   (0 redraws a second while the studio is still, instead of 72).
 - **Light drags.** While a pin is pulled the garment is rebuilt as a light
@@ -108,8 +109,12 @@ not yet verified.
   half the triangles) with standard cloth shading (no sheen or clearcoat
   layers; sheer lace and tulle cut out rather than blended, so no overdraw).
   It steps back up after 10 s on time. A short hitch
-  changes nothing. Verified in the emulator by slowing the CPU: it stepped
-  down to the lightest tier and switched occlusion off.
+  changes nothing. Before it cuts detail, a headset running above 72 Hz is
+  asked for its next lower refresh rate (90 to 80 to 72, never below 72, the
+  rate Meta's own WebXR samples target), except in a session's first 6 s,
+  when shaders are still compiling: then only detail steps down, since it
+  comes back. Verified in the emulator: a fresh session cut detail in its
+  first seconds, then stepped 90, 80, 72 Hz (`scripts/check-quest-class-xr.mjs`).
 - **Measured** (Immersive Web Emulator on a Mac, capped at 60 Hz, headless,
   full quality held for the measurement): every rail look renders at 48-59 fps
   steady, with 158-184 draw calls and 156k-215k triangles per stereo frame
@@ -117,7 +122,35 @@ not yet verified.
   the denim-and-halter look. No shadow redraws while still. The new sequin,
   leather-look and lame finishes get their shine from metalness and low
   roughness rather than the costly clearcoat layer. `?perf` shows these
-  numbers and the quality tier inside the headset.
+  numbers, the quality tier and the refresh rate inside the headset.
+- **Loading screen.** `index.html` shows the Atelier name and a moving thread
+  before any script runs (first paint 0.2 s in the cold start check below),
+  until the studio's first frame. The thread animates on the compositor, so
+  it keeps moving while the app starts.
+- **The video holds full quality.** The emulator's browser draws at most about
+  60 frames a second against a 90 Hz emulated headset, which the governor
+  would read as a slow headset; recording the tour holds tier 0.
+
+## Quest-class checks without a Quest
+
+No headset was available, and Meta documents no way to measure a WebXR app's
+performance without one. These checks reproduce what can be reproduced on a
+laptop. They are early warnings, not headset measurements: the GPU is not
+slowed, and the real display, hands and depth sensor are not involved.
+
+| Check | Conditions | Result |
+|---|---|---|
+| Cold start (`scripts/check-cold-start.mjs`) | Production build in Chromium identifying as Quest 3 Browser, with no Web Speech API, CPU slowed 4x, 25 Mbit/s and 40 ms latency, empty cache | Loading screen at 0.2 s; studio drawn in 4.3-5.5 s (one very first run, while the browser warmed up, took 11.4 s); 1.2 MB in 12 requests before the studio is ready; longest main-thread block 1.8-2.2 s; a tap on a look shows in about 0.1 s; voice features report themselves unavailable; no errors (the local self-signed certificate aside) |
+| In the headset, full quality (`scripts/check-quest-class-xr.mjs`) | Emulated Quest 3 session, CPU slowed 4x, governor held at full quality, while the stylist agent runs, "dressier", a boutique try-on, fabric swaps and rail looks | 44-60 fps median across the actions over two runs (60 is the browser's cap), worst frame 18-39 ms; every action finishes in under 0.1 s |
+| In the headset, lightest tier | The same at tier 2 | 54-60 fps median |
+| Governor order | Fresh session, governor on | Detail first in the first 6 s, then 90, 80, 72 Hz |
+
+What Quest Browser does that the emulator does not, and that helps on the
+headset: IWSDK renders both eyes in one pass (multiview, `multiviewStereo`),
+which Meta says cuts CPU time 25-50% for CPU-bound WebXR apps; three.js asks
+for full fixed foveation (edges of each eye at lower resolution) by default;
+and the emulator's own controls and simulated room cost CPU time a headset
+does not spend (`scripts/cpu-profile.mjs` separates them).
 
 ## Reliability safety nets (`src/atelier/safety.ts`)
 
@@ -179,12 +212,14 @@ not yet verified.
 
 | Check | What it proves | How |
 |---|---|---|
-| 106 unit tests | Garment maths and the modern cuts, measurements, stylist planning and refinement, the agent's tool schemas and input checks, the on-device agent, agent memory, requests in your own words (reading, routing, colour families), the agent function's request checks, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor, the safety nets | `npm test` (CI on every push) |
+| 108 unit tests | Garment maths and the modern cuts, measurements, stylist planning and refinement, the agent's tool schemas and input checks, the on-device agent, agent memory, requests in your own words (reading, routing, colour families), the agent function's request checks, boutique maths, share links, API validation, calendar parsing, weather mapping, wear stats, furniture clearance, body marks, the quality governor and its refresh-rate step, a weekday you name not borrowing today's forecast, the safety nets | `npm test` (CI on every push) |
 | Stylist agent | Today then Keep, tomorrow then Undo (the form is restored exactly), tomorrow then Keep (the morning layout is saved), memory updated, no errors; Keep by controller ray; Undo by gaze and pinch on the glasses profile, with the card inside the glasses' view | `scripts/check-agent.mjs`, `scripts/agent-fov.mjs` |
 | Asking in your own words | Typed on the start page and spoken: the request reaches the agent and shapes the outfit (occasion, day, colour); a clothing change still reaches the tailor; the lean shading tier swaps and restores materials; no errors | `scripts/check-ask.mjs` |
 | Frame cost | Draw calls, triangles and steady frame rate for every rail look in XR at full quality | `scripts/check-frame-cost.mjs` |
+| Quest-class cold start | Quest 3 Browser identity, no speech API, CPU 4x slower, home Wi-Fi speed, empty cache (see above) | `scripts/check-cold-start.mjs` |
+| Quest-class in the headset | CPU 4x slower in an emulated Quest 3 session: headroom at full and lightest quality, and the governor's order (see above) | `scripts/check-quest-class-xr.mjs` |
 | Typecheck and build | Types across the app and the API | `npm run typecheck`, `npm run build` (CI) |
-| 46-step journey | The whole product, driven with emulated controllers in XR | `scripts/e2e-emulator.sh` |
+| 46-step journey | The whole product, driven with emulated controllers in XR. After a clean first visit the studio can shift itself in the emulated living room; the hem-pin drag step then starts the pull but does not register the cut, while the other 45 steps pass (the pin itself is covered by the soak and random-input checks) | `scripts/e2e-emulator.sh` |
 | Hand pinches | Marking hem, sleeve and neckline on the body; a pinch held out in front is ignored | Emulated hands, see `docs/SUBMISSION.md` |
 | Gaze and pinch | Every rail look and panel button by gaze on the glasses profile; hand-ray fallback; every panel button inside the glasses' view | iwsdk-glasses-test procedure |
 | Guided tour | Every beat of the story puts the right thing on the form, and the stylist agent's steps run on their cues (checks weather, calendar, preferences, closet, dresses, tailors, finishes, then "dressier") | `scripts/check-showcase.mjs` |

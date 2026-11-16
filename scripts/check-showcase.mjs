@@ -30,9 +30,10 @@ export default async function run({ frame, page }) {
     const { LINE_START: L } = await import('/src/atelier/tour-timing.ts');
     const before = (i) => L[i] - 1.1;
     for (const [at, label] of [
-      [5, 'opening'], [before(3), 'dressed for today'], [before(4), 'refined'], [before(5), 'dress from the rail'],
-      [L[6] - 0.5, 'marked on yourself'], [before(7), 'pin pulled'], [before(8), 'fabrics'], [L[9] - 0.5, 'laid out tomorrow'],
-      [before(10), 'styled around least worn'], [before(11), 'boutique try-on'], [before(13), 'access panel'], [L[13] + 6, 'end card'],
+      [5, 'opening'], [before(3), 'dressed for today'], [before(4), 'refined'], [L[5] - 0.3, 'asked in own words'],
+      [before(6), 'dress from the rail'], [L[7] - 0.5, 'marked on yourself'], [before(8), 'pin pulled'], [before(9), 'fabrics'],
+      [L[10] - 0.5, 'laid out tomorrow'], [before(11), 'styled around least worn'], [before(12), 'boutique try-on'],
+      [before(14), 'access panel'], [L[14] + 6, 'end card'],
     ]) {
       while (s.t < at && s.playing) await wait(100);
       sample(label);

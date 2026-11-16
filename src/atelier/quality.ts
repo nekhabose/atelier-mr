@@ -48,3 +48,21 @@ export function govern(g: Governor, fps: number, window: number, reportedRate?: 
   }
   return g.tier;
 }
+
+/** The lowest refresh rate the governor will ask for (Meta's own WebXR samples target 72 Hz). */
+export const FLOOR_HZ = 72;
+
+/**
+ * Before cutting any detail, a headset running faster than 72 Hz is asked for
+ * the next lower rate it supports (90 -> 72 gives 13.7 ms per frame instead of
+ * 11.1). Returns that rate, or null when there is none.
+ */
+export function lowerRate(supported: ArrayLike<number> | undefined, now: number | undefined): number | null {
+  if (!supported || !now) return null;
+  let best: number | null = null;
+  for (let i = 0; i < supported.length; i++) {
+    const r = supported[i];
+    if (r >= FLOOR_HZ && r < now - 0.5 && (best === null || r > best)) best = r;
+  }
+  return best;
+}

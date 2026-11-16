@@ -29,6 +29,7 @@ import { RoomPlacementSystem } from './room-system.js';
 import { MorningSystem } from './morning-system.js';
 import { MarkSystem } from './mark-system.js';
 import { AgentSystem } from './agent-system.js';
+import { PerfSystem } from './perf-system.js';
 import { access } from './atelier/access.js';
 import { LOOKS } from './atelier/looks.js';
 import { LINE_LENGTH, LINE_START, LINE_TEXT, WORD_AT } from './atelier/tour-timing.js';
@@ -67,6 +68,8 @@ const scene = (i: number) => Math.max(0, LINE_START[i] - 0.8);
 const said = (i: number, title: string) => ({ at: Math.max(0, LINE_START[i] - 0.3), title, sub: LINE_TEXT[i] });
 
 const MOVE = 1.6;
+/** What line 4 of the narration asks the stylist, word for word after "ask:". */
+const ASKED = 'dinner on Friday, something black';
 /** Page-camera shots for the flat tour (authored layout: form at 0,0,-1.55). */
 const SHOTS = {
   intro: { pos: [0, 1.55, 1.1], target: [0, 1.1, -1.5] },
@@ -126,6 +129,8 @@ export class ShowcaseSystem extends createSystem({}) {
   private steps: Step[] = [];
   private next = 0;
   private record = false;
+  /** The governor setting to restore after a recording. */
+  private heldGovernor?: boolean;
   private overlay?: HTMLDivElement;
   private caption?: HTMLDivElement;
   private endCard?: HTMLDivElement;
@@ -188,6 +193,15 @@ export class ShowcaseSystem extends createSystem({}) {
 
   start(mode: 'flat' | 'mr' = 'flat', opts: { waitForGo?: boolean } = {}): void {
     if (this.playing || this.pendingMR) return;
+    // Recording the video in the emulator: its browser draws at most ~60
+    // frames a second against a 90 Hz emulated headset, which the quality
+    // governor would read as a slow headset. Hold full quality for the take.
+    const perf = this.world.getSystem(PerfSystem);
+    if (this.record && perf) {
+      this.heldGovernor = perf.governor;
+      perf.governor = false;
+      perf.setTier(0);
+    }
     this.waitForGo = !!opts.waitForGo;
     this.ready = false;
     const inXR = this.world.visibilityState.peek() !== VisibilityState.NonImmersive;
@@ -270,6 +284,11 @@ export class ShowcaseSystem extends createSystem({}) {
     document.body.classList.remove('atelier-showcase');
     if (this.overlay) this.overlay.style.display = 'none';
     (globalThis as unknown as { showcaseDone?: boolean }).showcaseDone = true;
+    const perf = this.world.getSystem(PerfSystem);
+    if (perf && this.heldGovernor !== undefined) {
+      perf.governor = this.heldGovernor;
+      this.heldGovernor = undefined;
+    }
   }
 
   private setTourHeld(held: boolean): void {
@@ -337,34 +356,55 @@ export class ShowcaseSystem extends createSystem({}) {
       said(3, 'Refine in plain words'),
       { at: word(3, 'dressier', 0.66) - MOVE - 0.1, act: () => this.frameCard(1.05, 0.34, 0.32) },
       { at: word(3, 'dressier', 0.66), sfx: 'sparkle', act: () => void agent().refine('dressier') },
-      { at: scene(4) - 0.45, act: () => agent().press(true) },
+      // Keep the sharper look, then ask in your own words: the card opens
+      // with what it heard, works through its tools and dresses the form.
+      { at: line(4) - 0.45, act: () => agent().press(true) },
       {
-        at: scene(4),
-        shot: 'rack',
+        at: line(4) - 0.1,
         act: () => {
           agent().keep();
           stylist().keep();
-          closet().setMode(false);
         },
       },
-      said(4, 'Tap a look'),
-      { at: word(4, 'dress', 0.6), sfx: 'swish', act: () => a().wearLook(dress) },
-      { at: scene(5), shot: 'hem' },
-      said(5, 'Mark it on yourself'),
-      { at: word(5, 'knee', 0.72), sfx: 'sparkle', act: () => this.world.getSystem(MarkSystem)?.demo('hem', 52) },
-      said(6, 'Or pull a pin'),
-      { at: word(6, 'pull', 0.12), sfx: 'pin', act: () => this.startHem() },
-      { at: scene(7), shot: 'board' },
-      said(7, 'Drop a fabric'),
-      { at: line(7, 0.38), shot: 'form' },
-      { at: word(7, 'satin', 0.78), sfx: 'settle', act: () => a().applyFabric('navy-satin') },
-      { at: word(7, 'silk', 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
-      { at: scene(8), shot: 'stylist' },
-      said(8, 'Lay out tomorrow'),
-      { at: word(8, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow({ instant: true, seed: 7 }) },
-      said(9, 'Wear what you own'),
+      said(4, 'Ask in your own words'),
+      { at: line(4, 1) - 0.15, act: () => agent().begin('today', 7, ASKED) },
+      // Mixed-reality cut: push in as the card opens so "Listened to you" can be read.
+      { at: line(4, 1) - 0.1, act: () => this.frameCard(0.6, 0.17, 0.12) },
+      { at: line(4, 1) + 0.15, act: () => agent().advanceTo('check_weather') },
+      { at: line(4, 1) + 0.35, act: () => agent().advanceTo('check_calendar') },
+      { at: line(4, 1) + 0.55, act: () => agent().advanceTo('recall_preferences') },
+      { at: line(4, 1) + 0.75, act: () => agent().advanceTo('search_closet') },
+      { at: line(4, 1) + 0.95, sfx: 'sparkle', act: () => agent().advanceTo('put_on_form') },
+      { at: line(4, 1) + 1.2, act: () => agent().advanceTo('tailor') },
+      { at: line(4, 1) + 1.4, act: () => agent().advanceTo('finish') },
+      // The rail: the card stays up while the camera turns, then Keep.
+      { at: scene(5), shot: 'rack', act: () => closet().setMode(false) },
+      { at: scene(5) + 0.55, act: () => agent().press(true) },
       {
-        at: word(9, 'builds', 0.78),
+        at: scene(5) + 0.95,
+        act: () => {
+          agent().keep();
+          stylist().keep();
+        },
+      },
+      said(5, 'Tap a look'),
+      { at: word(5, 'dress', 0.6), sfx: 'swish', act: () => a().wearLook(dress) },
+      { at: scene(6), shot: 'hem' },
+      said(6, 'Mark it on yourself'),
+      { at: word(6, 'knee', 0.72), sfx: 'sparkle', act: () => this.world.getSystem(MarkSystem)?.demo('hem', 52) },
+      said(7, 'Or pull a pin'),
+      { at: word(7, 'pull', 0.12), sfx: 'pin', act: () => this.startHem() },
+      { at: scene(8), shot: 'board' },
+      said(8, 'Drop a fabric'),
+      { at: line(8, 0.38), shot: 'form' },
+      { at: word(8, 'satin', 0.78), sfx: 'settle', act: () => a().applyFabric('navy-satin') },
+      { at: word(8, 'silk', 0.98), sfx: 'settle', act: () => a().applyFabric('ivory-silk') },
+      { at: scene(9), shot: 'stylist' },
+      said(9, 'Lay out tomorrow'),
+      { at: word(9, 'lay', 0.35), sfx: 'swish', act: () => morning().layOutTomorrow({ instant: true, seed: 7 }) },
+      said(10, 'Wear what you own'),
+      {
+        at: word(10, 'builds', 0.78),
         sfx: 'sparkle',
         act: () => {
           const item = closet().leastWornItem();
@@ -372,7 +412,7 @@ export class ShowcaseSystem extends createSystem({}) {
         },
       },
       {
-        at: scene(10),
+        at: scene(11),
         shot: 'boutique',
         act: () => {
           stylist().keep();
@@ -381,12 +421,12 @@ export class ShowcaseSystem extends createSystem({}) {
           boutique().open(0);
         },
       },
-      said(10, 'Shop against your closet'),
-      { at: word(10, 'counts', 0.5), sfx: 'swish', act: () => boutique().tryOn(2) },
-      { at: scene(11), act: () => boutique().close(true) },
-      said(11, 'Sit down, it comes to you'),
+      said(11, 'Shop against your closet'),
+      { at: word(11, 'counts', 0.5), sfx: 'swish', act: () => boutique().tryOn(2) },
+      { at: scene(12), act: () => boutique().close(true) },
+      said(12, 'Sit down, it comes to you'),
       {
-        at: word(11, 'sit', 0.3),
+        at: word(12, 'sit', 0.3),
         sfx: mr ? 'settle' : undefined,
         act: () => {
           if (mr && !access.settings.seated) {
@@ -395,9 +435,9 @@ export class ShowcaseSystem extends createSystem({}) {
           }
         },
       },
-      { at: word(11, 'sit', 0.3) + 0.15, shot: 'seated' },
+      { at: word(12, 'sit', 0.3) + 0.15, shot: 'seated' },
       {
-        at: scene(12),
+        at: scene(13),
         sfx: mr ? 'settle' : undefined,
         act: () => {
           if (this.seatedByTour) {
@@ -407,17 +447,17 @@ export class ShowcaseSystem extends createSystem({}) {
           accessSys().togglePanel(true);
         },
       },
-      { at: scene(12) + 0.3, shot: 'access' },
-      said(12, 'Accessible by design'),
+      { at: scene(13) + 0.3, shot: 'access' },
+      said(13, 'Accessible by design'),
       {
-        at: scene(13),
+        at: scene(14),
         shot: 'end',
         act: () => accessSys().togglePanel(false),
       },
-      said(13, 'Get dressed for your real day'),
-      { at: word(13, 'get', 0.2), sfx: 'settle', act: () => a().turnForm(1) },
+      said(14, 'Get dressed for your real day'),
+      { at: word(14, 'get', 0.2), sfx: 'settle', act: () => a().turnForm(1) },
       // "Open it in your Quest browser today": the end card with the address.
-      { at: word(13, 'open', 0.45), sfx: 'sparkle', act: () => this.showEnd() },
+      { at: word(14, 'open', 0.45), sfx: 'sparkle', act: () => this.showEnd() },
     ];
   }
 

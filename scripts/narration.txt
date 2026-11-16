@@ -3,13 +3,14 @@
 8.51|So I put on my headset, and my own room becomes a fitting studio.
 14.14|Atelier checks today's forecast and my calendar, and dresses the form from my own closet.
 21.98|It's an interview, so I want it sharper. I say dressier, and the outfit changes.
-29.77|For tonight, I take a dress from the rail.
-33.68|It's too long for me, so I pinch my own leg at the knee, and the hem moves there.
-41.57|Or I pull a pin, and the tape measure reads the length as I go.
-46.49|A different fabric? I drop a swatch on it: satin, then silk.
-52.68|Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.
-59.02|It shows me what I never wear, what it costs per wear, and builds a look around it.
-65.7|Before I buy something new, it counts the outfits it would add, and gives me an honest verdict.
-73.9|And when I sit down, the whole studio comes within reach.
-78.63|Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.
-86.68|Atelier. Get dressed for your real day. Open it in your Quest browser today.
+29.77|Or I just ask: dinner on Friday, something black.
+37.37|For tonight, I take a dress from the rail.
+41.28|It's too long for me, so I pinch my own leg at the knee, and the hem moves there.
+49.17|Or I pull a pin, and the tape measure reads the length as I go.
+54.09|A different fabric? I drop a swatch on it: satin, then silk.
+60.28|Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.
+66.62|It shows me what I never wear, what it costs per wear, and builds a look around it.
+73.3|Before I buy something new, it counts the outfits it would add, and gives me an honest verdict.
+81.5|And when I sit down, the whole studio comes within reach.
+86.23|Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.
+94.28|Atelier. Get dressed for your real day. Open it in your Quest browser today.

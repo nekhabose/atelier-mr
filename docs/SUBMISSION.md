@@ -81,15 +81,16 @@ forecast comes from Open-Meteo with your location rounded to about 10 km.
 
 Reliability is engineered in, not hoped for. A quality governor watches the
 frame rate in the headset and, below 85% of the refresh rate (61 fps at
-72 Hz), steps quality down (depth occlusion, shadow updates, garment detail)
-and back up when there is headroom, so the studio stays above the 60 fps
-floor. One failing system cannot freeze the view: every system's frame update
+72 Hz), first asks the headset for a lower refresh rate (90 to 80 to 72 Hz,
+the rate Meta's own WebXR samples target), then steps quality down (depth
+occlusion, shadow updates, garment detail) and back up when there is
+headroom, so the studio stays above the 60 fps floor. One failing system cannot freeze the view: every system's frame update
 is guarded, errors are recorded, and a graphics reset recovers on its own. A
 placement search keeps the studio clear of furniture and inside the walls,
 shifting, turning or switching to a compact layout; tested in the emulator's
 eight rooms, it found a clear spot by itself in six, and in the other two it
 says to face a clearer spot. 80 random interactions caused no errors. A soak test of 300 actions shows no GPU or
-memory leaks. Typecheck, 96 unit tests and a production build run in CI on
+memory leaks. Typecheck, 108 unit tests and a production build run in CI on
 every push, and a 46-step journey drives the app in the IWSDK emulator with
 emulated controllers and hands. Details: `docs/ENGINEERING.md`.
 
@@ -125,10 +126,15 @@ app, in **February 2027**.
 quality, every rail look renders at 48-59 fps steady (the emulator caps at
 60), with 158-184 draw calls and 156k-215k triangles per stereo frame, and no
 shadow redraws while the studio is still. In the headset a quality governor
-holds the frame rate: below 85% of the refresh rate for 1.5 seconds it steps
-down (depth occlusion and shadow updates first, then lighter garments with
-simpler cloth shading) and steps back up when there is headroom. Not yet
-measured on a Quest headset; `?check` runs a 30-second device benchmark that
+holds the frame rate: below 85% of the refresh rate for 1.5 seconds it first
+asks for a lower refresh rate (never below 72 Hz), then steps down (depth
+occlusion and shadow updates first, then lighter garments with simpler cloth
+shading) and steps back up when there is headroom. With the CPU slowed 4x
+in an emulated Quest 3 session, full quality ran 44-60 fps and the lightest
+tier 54-60 fps while the agent, boutique and fabrics were in use; as Quest 3
+Browser at home Wi-Fi speed, the studio is ready in 4.3-5.5 s
+(`docs/ENGINEERING.md`, Quest-class checks). Not yet measured on a Quest
+headset; `?check` runs a 30-second device benchmark that
 anyone with a Quest can run from the link.
 
 ## How Atelier meets the judging criteria
@@ -160,9 +166,13 @@ furniture and inside the walls in rooms it never saw (6 of the emulator's 8
 rooms clear on their own; the other 2 say why). A quality governor holds the
 frame rate; every system's update is guarded so one failure cannot freeze the
 view. Every agent tool call is validated on the server and in the headset.
-106 unit tests, a 46-step end-to-end journey with emulated hands and
+108 unit tests, a 46-step end-to-end journey with emulated hands and
 controllers, a 300-action soak test (no leaks) and 80 random interactions (no
-errors) back it. Not yet run on a physical Quest.
+errors) back it. Without a headset, Quest-class checks slow the CPU 4x: as
+Quest 3 Browser on home Wi-Fi with no speech API, the studio is ready in
+about 5 s with no errors; in an emulated Quest 3 session the lightest tier
+holds 54-60 fps while the agent, boutique and fabrics run. Not yet run on a
+physical Quest.
 
 **Polish & Presentation.** One art direction throughout: paper-and-ink
 panels, hang tags, pinned labels and the agent's card. Original music and UI
@@ -171,7 +181,8 @@ labelled as such, narrated in my own voice.
 
 **The four tests.** Hands-first: the whole experience works with hands, and a
 controller is optional. Airplane seat: Seated mode puts everything within
-reach. One bus stop: the studio opens dressed, and "Dress me for today" gives
+reach. One bus stop: a loading screen appears at once and the studio opens
+dressed in about 5 s even on a Quest-class CPU; "Dress me for today" gives
 a complete outfit in seconds; the system menu pauses sound and saves the
 studio. Take it away: without the AI service, the on-device stylist and agent
 plan with the same tools, so nothing stops working.

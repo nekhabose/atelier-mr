@@ -101,7 +101,9 @@ export function planAgentOffline(input: OfflineInput): AgentToolCall[] {
   // Your words come first: the occasion, weather and mood you named.
   const req = input.request;
   const occasion = req?.occasion ?? day.occasion;
-  const weather: Weather = req?.weather ?? day.weather ?? 'mild';
+  // Today's forecast says nothing about another day you named ("Friday").
+  const forecast = req?.day ? undefined : day.weather;
+  const weather: Weather = req?.weather ?? forecast ?? 'mild';
   const plan = planOffline(pieces, occasion, weather, req?.mood ?? mood, req?.colors.length ? 16 : 8, input.seed ?? Date.now());
   if (plan.options.length === 0) {
     calls.push(
@@ -134,7 +136,7 @@ export function planAgentOffline(input: OfflineInput): AgentToolCall[] {
     }
   });
   const outfit = best.itemIds.map((id) => byId.get(id)!);
-  const named = req?.weather ?? day.weather;
+  const named = req?.weather ?? forecast;
   const why = named ? `For ${OCCASION_NOTE[occasion]} and ${WEATHER_NOTE[named]}` : `For ${OCCASION_NOTE[occasion]}`;
   calls.push(call('put_on_form', { item_ids: best.itemIds, title: best.title, note: why }));
 

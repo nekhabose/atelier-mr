@@ -28,10 +28,21 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   });
 }
 
+// The loading screen in index.html: gone once the studio has drawn a frame,
+// or a plain message if the browser cannot start it.
+const boot = document.getElementById('boot');
+let started = false;
+const bootDone = () => {
+  if (!boot) return;
+  boot.classList.add('gone');
+  setTimeout(() => boot.remove(), 600);
+};
+
 World.create(
   document.getElementById('scene-container') as HTMLDivElement,
   projectOptions,
 ).then((world) => {
+  started = true;
   world.registerSystem(AtelierSystem);
   world.registerSystem(ClosetSystem);
   world.registerSystem(LookbookSystem);
@@ -104,4 +115,12 @@ World.create(
       .catch(() => {});
   }
 
+  requestAnimationFrame(() => requestAnimationFrame(bootDone));
+}).catch((error: unknown) => {
+  console.error('[atelier] could not start', error);
+  // The studio is up but a later step failed: the safety nets report it.
+  if (started) return bootDone();
+  const line = boot?.querySelector('p');
+  if (line) line.textContent = 'Atelier could not start in this browser. Reload the page to try again.';
+  boot?.querySelector('.thread')?.remove();
 });

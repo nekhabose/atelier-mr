@@ -190,6 +190,19 @@ describe('asking the stylist in your own words', () => {
     expect(requestWords(parseRequest('job interview'))).toBe('an interview');
   });
 
+  it('a weekday you name is not today, so today\'s forecast is left out', () => {
+    expect(parseRequest('dinner on Friday, something red')).toMatchObject({ goal: 'today', occasion: 'date', day: 'Friday', colors: ['red'] });
+    expect(parseRequest('dinner tonight, Friday vibes').day).toBeUndefined();
+    expect(requestWords(parseRequest('dinner on Friday, something red'))).toBe('a dinner on Friday, something red');
+    const closet = loadCloset().map((item) => ({ ...describeItem(item), worn: 0, daysSince: null, onForm: false }));
+    const burgundy = closet.find((p) => p.color.toLowerCase() === 'burgundy')!;
+    // The tour's line: today is an interview in the rain; the request is for Friday.
+    const calls = planAgentOffline({ goal: 'today', day: { occasion: 'interview', weather: 'rainy' }, mood: 'classic', pieces: closet, memory: emptyMemory(), request: parseRequest('dinner on Friday, something red'), seed: 7 });
+    expect(calls.find((c) => c.name === 'put_on_form')!.input.item_ids).toContain(burgundy.id);
+    expect(calls.some((c) => c.name === 'tailor' && /rain/.test(String(c.input.note)))).toBe(false);
+    expect(String(calls[calls.length - 1].input.reason)).toMatch(/^You asked for a dinner on Friday, something red\./);
+  });
+
   it('sends outfit requests to the stylist and clothing changes to the tailor', () => {
     expect(isStylingRequest('a dinner date tonight, something red')).toBe(true);
     expect(isStylingRequest('what should I wear tomorrow')).toBe(true);

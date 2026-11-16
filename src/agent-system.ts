@@ -266,12 +266,17 @@ export class AgentSystem extends createSystem({
    * The guided tour: plan on the device now (a fixed seed, no memory, so the
    * tour is the same every time), then advanceTo() runs each call on its cue.
    */
-  begin(goal: AgentGoal, seed = 7): void {
+  begin(goal: AgentGoal, seed = 7, request?: string): void {
     this.cancel();
-    this.prepare(goal, false);
+    const { record } = this.prepare(goal, false);
     this.scripted = true;
-    this.request = undefined;
-    this.parsed = undefined;
+    // A request in your own words, as the tour says it aloud.
+    this.request = cleanRequest(request) ?? undefined;
+    this.parsed = this.request ? parseRequest(this.request) : undefined;
+    if (this.request) {
+      record.request = this.request;
+      this.addStep({ label: 'Listened to you', detail: `"${this.request}"`, state: 'done' });
+    }
     const d = this.morning.day(goal);
     this.script = planAgentOffline({
       goal,
@@ -279,6 +284,7 @@ export class AgentSystem extends createSystem({
       mood: this.stylist.mood,
       pieces: this.pieces(),
       memory: emptyMemory(),
+      request: this.parsed,
       seed,
     });
     this.scriptAt = 0;
@@ -468,6 +474,14 @@ export class AgentSystem extends createSystem({
     switch (v.name) {
       case 'check_weather': {
         const f = this.morning.day(v.day).forecast;
+        // You named another day ("Friday"): this device only has today's and tomorrow's.
+        const asked = this.parsed?.day;
+        if (asked) {
+          this.addStep({ label: 'Checked the weather', detail: `No forecast for ${asked} on this device`, state: 'done' });
+          return {
+            content: `No forecast for ${asked} on this device${f ? ` (${v.day}: ${describeDay(f)})` : ''}. Assume a mild day for ${asked} and say so.`,
+          };
+        }
         if (!f) {
           this.addStep({ label: 'Checked the weather', detail: 'No forecast on this device', state: 'done' });
           return { content: 'No forecast on this device. Assume a mild day and say so.' };
@@ -479,8 +493,14 @@ export class AgentSystem extends createSystem({
       case 'check_calendar': {
         const d = this.morning.day(v.day);
         const what = d.cue ? `${d.cue} on the calendar` : `nothing on the calendar, so ${d.occasion === 'weekend' ? 'a weekend day' : 'a workday'}`;
-        this.addStep({ label: 'Checked your calendar', detail: what[0].toUpperCase() + what.slice(1), state: 'done' });
-        return { content: `${d.date}: occasion ${d.occasion}${d.cue ? ` (${d.cue} on the calendar)` : ' (nothing on the calendar)'}.` };
+        const asked = this.parsed?.day;
+        const detail = asked ? `Today: ${d.cue ?? 'nothing'}. ${asked}: your ${this.parsed?.cue ?? 'plans'}` : what[0].toUpperCase() + what.slice(1);
+        this.addStep({ label: 'Checked your calendar', detail, state: 'done' });
+        return {
+          content:
+            `${d.date}: occasion ${d.occasion}${d.cue ? ` (${d.cue} on the calendar)` : ' (nothing on the calendar)'}.` +
+            (asked ? ` The request is for ${asked}, which this device's calendar does not cover.` : ''),
+        };
       }
       case 'recall_preferences': {
         const notes = preferenceNotes(this.memory);
@@ -577,7 +597,9 @@ export class AgentSystem extends createSystem({
     this.thinking = false;
     this.outcome = { title: v.title, reason: v.reason, tip: v.tip, itemIds: [...this.dressedIds] };
     if (this.record) this.record.outcome = this.outcome;
-    this.atelier.setBadge(this.goal === 'today' ? 'Your stylist: dressed for today' : 'Your stylist: laid out for tomorrow');
+    // The day you asked for ("Friday"), else today or tomorrow.
+    const day = this.parsed?.day;
+    this.atelier.setBadge(this.goal === 'tomorrow' ? 'Your stylist: laid out for tomorrow' : `Your stylist: dressed for ${day ?? 'today'}`);
     this.draw();
     this.setButtons(true);
     sfx.success();
@@ -780,7 +802,7 @@ export class AgentSystem extends createSystem({
     ctx.fillStyle = INK_SOFT;
     ctx.font = `500 30px ${SANS}`;
     const source = this.record?.source === 'live' ? 'Live AI agent' : 'On-device agent';
-    ctx.fillText(`${source}, dressing you for ${this.goal}`, 56, 176);
+    ctx.fillText(`${source}, dressing you for ${this.parsed?.day ?? this.goal}`, 56, 176);
 
     const rows: Step[] = [...this.steps];
     if (this.thinking) rows.push({ label: 'Thinking', detail: this.steps.length ? 'Deciding the next step' : 'Reading your day', state: 'doing' });

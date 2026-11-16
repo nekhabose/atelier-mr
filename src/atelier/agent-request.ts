@@ -17,6 +17,8 @@ export interface ParsedRequest {
   mood?: Mood;
   /** Closet colour keys asked for, in order. */
   colors: string[];
+  /** A weekday you named ("Friday"): not today, so today's forecast does not apply. */
+  day?: string;
 }
 
 const has = (s: string, words: string[]) => words.some((w) => new RegExp(`(^|[^a-z])${w}([^a-z]|$)`).test(s));
@@ -32,6 +34,7 @@ const MOOD: [Mood, string[]][] = [
   ['relaxed', ['relaxed', 'comfy', 'comfortable', 'casual', 'easy', 'chill', 'cosy', 'cozy']],
   ['classic', ['classic', 'elegant', 'timeless', 'simple', 'polished', 'sharp', 'smart', 'minimal']],
 ];
+const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 /** Colour words to the closet's colour keys. */
 const COLOURS: [string, string[]][] = [
   ['red', ['red', 'crimson', 'scarlet']],
@@ -67,6 +70,8 @@ export function parseRequest(text: string): ParsedRequest {
   out.weather = WEATHER.find(([, w]) => has(s, w))?.[0];
   out.mood = MOOD.find(([, w]) => has(s, w))?.[0];
   for (const [key, words] of COLOURS) if (has(s, words)) out.colors.push(key);
+  const day = WEEKDAYS.find((d) => has(s, [d]));
+  if (day && out.goal === 'today' && !has(s, ['today', 'tonight'])) out.day = day[0].toUpperCase() + day.slice(1);
   return out;
 }
 
@@ -87,8 +92,8 @@ export function requestWords(p: ParsedRequest): string {
   const parts: string[] = [];
   if (p.cue) {
     const article = p.cue === 'the weekend' || p.cue.endsWith('s') ? '' : /^[aeiou]/.test(p.cue) ? 'an ' : 'a ';
-    parts.push(`${article}${p.cue}`);
-  }
+    parts.push(`${article}${p.cue}${p.day ? ` on ${p.day}` : ''}`);
+  } else if (p.day) parts.push(p.day);
   if (p.weather) parts.push(p.weather);
   if (p.mood) parts.push(`${p.mood} mood`);
   if (p.colors.length) parts.push(`something ${p.colors.join(' or ')}`);

@@ -218,7 +218,7 @@ node scripts/check-pwa.mjs http://localhost:4174/          # installable + offli
 
 The mixed-reality demo video (emulator room, captions, music, your own
 narration) is rebuilt with the steps in `docs/SUBMISSION.md` (Demo video);
-`docs/RECORDING.md` has the 14 lines and how to record them, and
+`docs/RECORDING.md` has the 15 lines and how to record them, and
 `docs/NEWCOMER-TEST.md` a 15-minute test with someone new to Atelier.
 
 How it stays fast and reliable (quality governor, safety nets, rooms of any

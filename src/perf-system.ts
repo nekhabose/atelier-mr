@@ -10,7 +10,10 @@
  * Quality governor (in the headset): the judging floor is 60 fps on Quest.
  * When the frame rate stays under 85% of the display's refresh rate (61 fps
  * on a 72 Hz Quest) for 1.5 s, quality steps down
- * one tier, and steps back up after 10 s at the device's refresh rate:
+ * one tier, and steps back up after 10 s at the device's refresh rate.
+ * First, though, a headset running above 72 Hz is asked for the next lower
+ * rate it supports (Meta's WebXR samples target 72 Hz: 13.7 ms a frame
+ * instead of 11.1 at 90), and detail is cut only if it still falls behind:
  *   tier 0  everything on;
  *   tier 1  depth occlusion off, shadows redrawn at most 4 times a second;
  *   tier 2  also lighter worn garments (about half the triangles) with
@@ -25,9 +28,11 @@
 import { createSystem, DepthSensingSystem, Mesh, MeshBasicMaterial, Object3D, VisibilityState } from '@iwsdk/core';
 import { AtelierSystem } from './atelier-system.js';
 import { makeLabel } from './atelier/labels.js';
-import { govern, MAX_TIER, newGovernor } from './atelier/quality.js';
+import { DOWN_AFTER, govern, lowerRate, MAX_TIER, newGovernor } from './atelier/quality.js';
 
 const METER_INTERVAL = 0.5;
+/** Seconds into a session before the governor may lower the refresh rate. */
+const REFRESH_GRACE_S = 6;
 
 export interface PerfStats {
   fps: number;
@@ -40,7 +45,15 @@ export interface PerfStats {
   foveation: number | null;
   /** Quality tier set by the governor (0 = full). */
   tier: number;
+  /** The headset's refresh rate (Hz) in a session, after any step down; null on the page. */
+  refreshHz: number | null;
 }
+
+type RatedSession = XRSession & {
+  frameRate?: number;
+  supportedFrameRates?: Float32Array;
+  updateTargetFrameRate?: (rate: number) => Promise<void>;
+};
 
 export class PerfSystem extends createSystem({}) {
   stats: PerfStats = {
@@ -53,10 +66,15 @@ export class PerfSystem extends createSystem({}) {
     shadowSkipRatio: 0,
     foveation: null,
     tier: 0,
+    refreshHz: null,
   };
   /** Set false to hold the current quality tier (tests, comparisons). */
   governor = true;
   private gov = newGovernor();
+  /** The refresh rate the governor asked for in this session, if any. */
+  private askedHz?: number;
+  /** When this session started (clock seconds): no refresh change in its first seconds. */
+  private sessionAt = 0;
   private clock = 0;
   private lastShadow = -Infinity;
   private shadowGap = 0;
@@ -92,6 +110,8 @@ export class PerfSystem extends createSystem({}) {
         renderer.shadowMap.needsUpdate = true;
         // Each session finds its own level.
         this.gov = newGovernor();
+        this.askedHz = undefined;
+        this.sessionAt = this.clock;
         if (state === VisibilityState.NonImmersive && this.stats.tier !== 0) this.setTier(0);
         if (this.dom) this.dom.style.display = state === VisibilityState.NonImmersive ? 'block' : 'none';
         if (this.label) this.label.visible = state !== VisibilityState.NonImmersive;
@@ -120,9 +140,30 @@ export class PerfSystem extends createSystem({}) {
 
   /** Called twice a second in the headset with the measured frame rate. */
   private govern(fps: number, window: number): void {
-    const session = this.world.renderer.xr.getSession() as (XRSession & { frameRate?: number }) | null;
-    const tier = govern(this.gov, fps, window, session?.frameRate);
+    const session = this.world.renderer.xr.getSession() as RatedSession | null;
+    this.stats.refreshHz = session?.frameRate ?? null;
+    const tier = govern(this.gov, fps, window, this.askedHz ?? session?.frameRate);
+    // Falling behind: a lower refresh rate first, then less detail (and still
+    // behind at the lightest detail: a lower rate too).
+    const wantsLess = tier > this.stats.tier || (this.stats.tier === MAX_TIER && this.gov.lowT >= DOWN_AFTER);
+    if (wantsLess && this.lowerRefresh(session)) return;
     if (tier !== this.stats.tier) this.setTier(tier);
+  }
+
+  /** Ask the headset for its next lower refresh rate (not below 72 Hz). */
+  private lowerRefresh(session: RatedSession | null): boolean {
+    // A slow first few seconds (shaders compiling) is not a reason to give up
+    // the higher rate for the whole session: cut detail then (it comes back).
+    if (this.clock - this.sessionAt < REFRESH_GRACE_S) return false;
+    const rate = lowerRate(session?.supportedFrameRates, this.askedHz ?? session?.frameRate);
+    if (!session?.updateTargetFrameRate || rate === null) return false;
+    this.askedHz = rate;
+    session.updateTargetFrameRate(rate).catch(() => {});
+    // Start measuring again against the new rate, at the same detail.
+    this.gov = newGovernor();
+    this.gov.tier = this.stats.tier;
+    console.info(`[atelier] behind at ${session.frameRate} Hz: asked the headset for ${rate} Hz before cutting detail`);
+    return true;
   }
 
   update(delta: number): void {
@@ -173,7 +214,7 @@ export class PerfSystem extends createSystem({}) {
 
   private text(): string {
     const s = this.stats;
-    return `${s.fps} fps  ${s.frameMs} ms (worst ${s.worstFrameMs})  |  ${s.drawCalls} calls  ${Math.round(s.triangles / 1000)}k tris  |  shadows ${s.shadowRedrawsPerSec}/s  |  quality ${['full', 'reduced', 'light'][s.tier]}`;
+    return `${s.fps} fps  ${s.frameMs} ms (worst ${s.worstFrameMs})  |  ${s.drawCalls} calls  ${Math.round(s.triangles / 1000)}k tris  |  shadows ${s.shadowRedrawsPerSec}/s  |  quality ${['full', 'reduced', 'light'][s.tier]}${s.refreshHz ? `  |  ${Math.round(s.refreshHz)} Hz` : ''}`;
   }
 
   private buildDom(): void {

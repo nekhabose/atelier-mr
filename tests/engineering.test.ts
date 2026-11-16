@@ -1,9 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
-import { govern, MAX_TIER, newGovernor } from '../src/atelier/quality';
+import { govern, lowerRate, MAX_TIER, newGovernor } from '../src/atelier/quality';
 import { wallPlan } from '../src/atelier/clearance';
 import { guardSystems, health, record } from '../src/atelier/safety';
 
 describe('quality governor', () => {
+  it('asks for a lower refresh rate (never below 72 Hz) before cutting detail', () => {
+    expect(lowerRate([72, 80, 90, 120], 120)).toBe(90);
+    expect(lowerRate(new Float32Array([72, 80, 90, 120]), 90)).toBe(80);
+    expect(lowerRate([72, 90], 90)).toBe(72);
+    expect(lowerRate([60, 72], 72)).toBeNull();
+    expect(lowerRate(undefined, 90)).toBeNull();
+    expect(lowerRate([72, 90], undefined)).toBeNull();
+  });
+
   it('steps down after 1.5 s behind a 72 Hz refresh, one tier at a time', () => {
     const g = newGovernor();
     expect(govern(g, 55, 0.5, 72)).toBe(0);
