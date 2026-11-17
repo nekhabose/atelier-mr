@@ -365,8 +365,8 @@ Developer Hub can record or cast).
 
 ## Screenshots
 
-`docs/screenshots/`: put **00-thumbnail** first (Devpost uses the first image
-as the project card), then the stills from the story cut (Immersive Web
+`docs/screenshots/`: put **00-cover** first (3:2, as Devpost asks; it is the
+project card; 00-thumbnail is the older cover), then the stills from the story cut (Immersive Web
 Emulator, simulated living room) and the start page: 01-a-real-morning,
 02-room-becomes-studio, 03-dressed-for-today, 03b-ask-in-your-own-words,
 04-mark-on-yourself,
@@ -376,6 +376,23 @@ emulator stills and the thumbnail carry the same small "Quest emulator ·
 simulated room" tag as the video; the start page is the desktop browser.
 Replace with on-device captures when a Quest is available. Use only your own
 full-length photo if you show the photo feature.
+
+Captions (140 characters each, in upload order):
+
+1. `00-cover.png`: Atelier: a fitting room in your own room on Meta Quest. Tailor with a pinch, and an AI stylist dresses you for your real day.
+2. `01-a-real-morning.png`: 7:40 am, rain later, an interview at ten. Shown in the Quest emulator's living room; on a headset, it's your own room.
+3. `02-room-becomes-studio.png`: The studio places itself in your room: a life-size dress form, a clothes rail and a fabric board, clear of your furniture.
+4. `03-dressed-for-today.png`: The stylist agent checks your weather and calendar, searches your closet and dresses the form, ticking off each step.
+5. `03b-ask-in-your-own-words.png`: Ask in your own words: "dinner on Friday, something black". The agent plans from your words and dresses the form.
+6. `04-mark-on-yourself.png`: Mark it on yourself: pinch your own leg at the knee, and the hem moves there, scaled from your height.
+7. `05-start-page.png`: On a desktop: enter the studio, watch the tour, make the form you, set up your mornings, or ask your stylist.
+8. `06-tape-measure.png`: Pull a pin and the hem is recut as you pull, while a tape measure reads the length.
+9. `07-lay-out-tomorrow.png`: Lay out tomorrow at night, and the outfit is waiting on the form in the morning.
+10. `08-wear-what-you-own.png`: Wear what you own: it finds the piece you never wear, shows its cost per wear and builds a look around it.
+11. `09-boutique-verdict.png`: Before you buy, the boutique counts the outfits a new piece would add, and gives an honest verdict.
+12. `10-seated.png`: Sit down, and the whole studio comes within reach of your chair.
+13. `11-accessibility.png`: Large text, high contrast, calm motion, voice and tailoring by tap are all built in.
+14. `12-get-dressed.png`: Atelier. Get dressed for your real day. Live now at atelier-mr.vercel.app in the Meta Quest Browser.
 
 ## Special awards
 
