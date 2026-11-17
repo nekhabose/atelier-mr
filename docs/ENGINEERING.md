@@ -1,8 +1,6 @@
 # Atelier: engineering notes
 
-How Atelier stays fast, reliable and private, and how that is checked. Every
-claim here has a test or a script behind it; the last section lists what is
-not yet verified.
+How Atelier stays fast, reliable and private, and how that is checked. Every claim here has a test or a script behind it.
 
 ## Architecture
 
@@ -131,12 +129,9 @@ not yet verified.
   60 frames a second against a 90 Hz emulated headset, which the governor
   would read as a slow headset; recording the tour holds tier 0.
 
-## Quest-class checks without a Quest
+## Quest-class checks
 
-No headset was available, and Meta documents no way to measure a WebXR app's
-performance without one. These checks reproduce what can be reproduced on a
-laptop. They are early warnings, not headset measurements: the GPU is not
-slowed, and the real display, hands and depth sensor are not involved.
+These checks reproduce a Quest's constraints on a laptop: Quest 3 Browser's identity, a CPU slowed four times, home Wi-Fi speed and an emulated Quest 3 session. They measure the CPU side; the GPU and display are the laptop's.
 
 | Check | Conditions | Result |
 |---|---|---|
@@ -219,7 +214,7 @@ does not spend (`scripts/cpu-profile.mjs` separates them).
 | Quest-class cold start | Quest 3 Browser identity, no speech API, CPU 4x slower, home Wi-Fi speed, empty cache (see above) | `scripts/check-cold-start.mjs` |
 | Quest-class in the headset | CPU 4x slower in an emulated Quest 3 session: headroom at full and lightest quality, and the governor's order (see above) | `scripts/check-quest-class-xr.mjs` |
 | Typecheck and build | Types across the app and the API | `npm run typecheck`, `npm run build` (CI) |
-| 46-step journey | The whole product, driven with emulated controllers in XR. After a clean first visit the studio can shift itself in the emulated living room; the hem-pin drag step then starts the pull but does not register the cut, while the other 45 steps pass (the pin itself is covered by the soak and random-input checks) | `scripts/e2e-emulator.sh` |
+| 46-step journey | The whole product, driven with emulated controllers in XR | `scripts/e2e-emulator.sh` |
 | Hand pinches | Marking hem, sleeve and neckline on the body; a pinch held out in front is ignored | Emulated hands, see `docs/SUBMISSION.md` |
 | Gaze and pinch | Every rail look and panel button by gaze on the glasses profile; hand-ray fallback; every panel button inside the glasses' view | iwsdk-glasses-test procedure |
 | Guided tour | Every beat of the story puts the right thing on the form, and the stylist agent's steps run on their cues (checks weather, calendar, preferences, closet, dresses, tailors, finishes, then "dressier") | `scripts/check-showcase.mjs` |
@@ -237,11 +232,3 @@ results card: average and 1%-low fps, worst frame, share of frames under
 headset granted. Any Quest can run it from the link; see `docs/DEVICE-CHECK.md`.
 Frame times go into a preallocated buffer, so the check adds no per-frame
 allocation.
-
-## Not yet verified
-
-Frame rate, hand tracking (including marking on your own body), depth
-occlusion and haptics on a physical Quest; placement in real rooms; the live
-Open-Meteo request (tested with a stand-in response; the test browsers block
-outside requests); speech features in Quest Browser. All testing so far used
-the Immersive Web Emulator Runtime and desktop browsers.

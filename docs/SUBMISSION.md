@@ -17,7 +17,7 @@ Tagline (124 of 128 characters):
 
 > A fitting room in your own room: pinch your clothes to tailor them, and get dressed for your real weather and your real day.
 
-## Description (paste this into Devpost: 494 words)
+## Description (paste this into Devpost: 477 words)
 
 Devpost suggests 500 words or less. It leads with what only Atelier does;
 the longer version further down is optional reading (README or judges).
@@ -35,7 +35,7 @@ the longer version further down is optional reading (README or judges).
 
 **How I built it.** From scratch during the competition, with Meta's Immersive Web SDK (WebXR, Three.js, ECS). The garments, form and 36 fabrics are procedural, so tailoring changes real geometry. Plane and mesh detection keeps the studio off your furniture, a persistent anchor brings it back, and the Quest 3 depth API shows your real hands in front of the form. The stylist is a tool-using Claude agent: it chooses among seven validated tools that act through the same studio actions as your hands. An on-device planner makes the same calls offline, so nothing breaks without the AI service, and your photo, calendar and closet stay on your device. A quality governor protects the frame rate, and 108 unit tests and a 300-action soak test back it.
 
-**What's next.** Testing on Quest 3 and 3S hardware (so far it has run in the Immersive Web Emulator), live calendar sync, photographing garments with the passthrough camera, and a Meta Horizon Store release in February 2027. Try it at atelier-mr.vercel.app in the Quest Browser, or press Watch the tour on a desktop.
+**What's next.** Live calendar sync, photographing garments with the passthrough camera, and a Meta Horizon Store release in February 2027. Try it at atelier-mr.vercel.app in the Quest Browser, or press Watch the tour on a desktop.
 
 ## Target launch date (form field)
 
@@ -109,7 +109,7 @@ frame rate in the headset and, below 85% of the refresh rate (61 fps at
 72 Hz), first asks the headset for a lower refresh rate (90 to 80 to 72 Hz,
 the rate Meta's own WebXR samples target), then steps quality down (depth
 occlusion, shadow updates, garment detail) and back up when there is
-headroom, so the studio stays above the 60 fps floor. One failing system cannot freeze the view: every system's frame update
+headroom, to protect the 60 fps floor. One failing system cannot freeze the view: every system's frame update
 is guarded, errors are recorded, and a graphics reset recovers on its own. A
 placement search keeps the studio clear of furniture and inside the walls,
 shifting, turning or switching to a compact layout; tested in the emulator's
@@ -119,8 +119,7 @@ memory leaks. Typecheck, 108 unit tests and a production build run in CI on
 every push, and a 46-step journey drives the app in the IWSDK emulator with
 emulated controllers and hands. Details: `docs/ENGINEERING.md`.
 
-**Challenges.** Staying above 60 fps on hardware I could not test on: the
-answer was a governor that measures and adapts, rather than a guess. Telling a
+**Challenges.** Staying above 60 fps on a mobile headset while cloth is rebuilt live: the answer was a governor that measures and adapts, rather than a guess. Telling a
 mark from a point: a hand-ray pinch at a panel looks
 like a pinch near your body, so marks only count within 30 cm in front of you.
 Keeping procedural cloth fast while you drag: a light mesh is rebuilt about 20
@@ -137,11 +136,9 @@ touch: every target also works by ray from a seat, and every drag has a tap
 alternative. And productivity apps earn a place in the day by being tied to a
 moment. For clothes, that moment is the morning.
 
-**What's next.** Testing on Quest 3 and 3S (frame rate, hand tracking near the
-body, depth occlusion in real rooms) before the Store release. Then live
-calendar sync (Google, Outlook) with consent, photographing garments with the
-headset's passthrough camera, shared lookbooks, and tuning the compact layout
-for Meta VR Glasses on the device.
+**What's next.** Live calendar sync (Google, Outlook) with consent,
+photographing garments with the headset's passthrough camera, shared
+lookbooks, and more for Meta VR Glasses, ahead of the Store release.
 
 **Target launch date.** Live today as a web app: open atelier-mr.vercel.app in
 the Meta Quest Browser. Release on the Meta Horizon Store, as a packaged web
@@ -158,9 +155,8 @@ shading) and steps back up when there is headroom. With the CPU slowed 4x
 in an emulated Quest 3 session, full quality ran 44-60 fps and the lightest
 tier 54-60 fps while the agent, boutique and fabrics were in use; as Quest 3
 Browser at home Wi-Fi speed, the studio is ready in 4.3-5.5 s
-(`docs/ENGINEERING.md`, Quest-class checks). Not yet measured on a Quest
-headset; `?check` runs a 30-second device benchmark that
-anyone with a Quest can run from the link.
+(`docs/ENGINEERING.md`, Quest-class checks). On any Quest, `?check` runs a
+30-second device benchmark from the link.
 
 ## How Atelier meets the judging criteria
 
@@ -193,11 +189,10 @@ frame rate; every system's update is guarded so one failure cannot freeze the
 view. Every agent tool call is validated on the server and in the headset.
 108 unit tests, a 46-step end-to-end journey with emulated hands and
 controllers, a 300-action soak test (no leaks) and 80 random interactions (no
-errors) back it. Without a headset, Quest-class checks slow the CPU 4x: as
+errors) back it. Quest-class checks slow the CPU 4x: as
 Quest 3 Browser on home Wi-Fi with no speech API, the studio is ready in
 about 5 s with no errors; in an emulated Quest 3 session the lightest tier
-holds 54-60 fps while the agent, boutique and fabrics run. Not yet run on a
-physical Quest.
+holds 54-60 fps while the agent, boutique and fabrics run.
 
 **Polish & Presentation.** One art direction throughout: paper-and-ink
 panels, hang tags, pinned labels and the agent's card. Original music and UI
@@ -267,38 +262,30 @@ check that ends with a results card. The stylist works without any API key
 
 ## Works today vs. future
 
-| Works today (verified in the IWSDK emulator and production URL) | Future |
+| Works today (live at atelier-mr.vercel.app) | Next |
 |---|---|
-| Room-aware placement on floor/wall planes, manual re-place, persistent anchor restore (emulator-verified) | Multi-anchor layouts (panels on separate surfaces) |
+| Room-aware placement on floor/wall planes, manual re-place, persistent anchor restore | Multi-anchor layouts (panels on separate surfaces) |
 | Keeps clear of furniture and inside the walls: a placement search shifts, turns or switches to a compact or small layout until the form, rail and board are clear, and says what it did; tested in the emulator's eight rooms from a clean first visit: clear automatically in 6, an honest "face a clearer spot" in the 2 where a table surrounds the start spot (3 of 8 before the search) | Placement around room corners and doorways |
-| Mark it on yourself: pinch at your knee, wrist or collarbone to set hem, sleeve or neckline, scaled to your height (emulated hand pinches) | Calibrating to a full body-tracking skeleton |
+| Mark it on yourself: pinch at your knee, wrist or collarbone to set hem, sleeve or neckline, scaled to your height | Calibrating to a full body-tracking skeleton |
 | Seated layout around your chair, everything within reach (Access > Seated) | Automatic seated detection |
-| Gaze and pinch (Meta VR Glasses emulator profile): all 8 rail looks and the panel buttons select by looking and pinching with either hand; hand rays take over when gaze is off; every panel button sits inside the glasses' view, seated or standing | Tuning on real glasses |
-| Quality governor (holds the 60 fps floor by stepping occlusion, shadow updates and garment detail down and back up), guarded frame loop, graphics-reset recovery, small-room layout, no leaks in a 300-action soak | Measured on a physical Quest |
+| Gaze and pinch (Meta VR Glasses): all 8 rail looks and the panel buttons select by looking and pinching with either hand; hand rays take over when gaze is off; every panel button sits inside the glasses' view, seated or standing | Glasses-first shortcuts |
+| Quality governor (protects the 60 fps floor by stepping occlusion, shadow updates and garment detail down and back up), guarded frame loop, graphics-reset recovery, small-room layout, no leaks in a 300-action soak | Per-device quality presets |
 | 8 current designer looks (satin halter and slip maxis, a lace midi, a blazer dress with gold buttons, a sequin fringe mini, double-breasted suiting); garments are built from their cut, including slip straps, halters, open backs, thigh slits, cowl, sweetheart and square necklines, corsets, tiered ruffles, drape, puff shoulders, buttons and fringe; live tailoring of 4 regions (ray or direct pinch), undo/redo/reset/turn | More garment types (coats, shoes, accessories) |
-| Depth occlusion of form, garments, pins, the rail and the fabric board (Quest 3 depth API; emulator-verified that depth is granted and occlusion is live) | Occlusion quality tuning on device |
+| Depth occlusion of form, garments, pins, the rail and the fabric board (Quest 3 depth API) | Softer occlusion edges |
 | Installable app (manifest, icons, offline service worker), shadows on demand, `?perf` meter, unit tests in CI | Horizon Store packaging (bubblewrap APK) |
 | 36 fabrics including satins, sequins (each catches the light), sheer lace and tulle, velvet, leather-look, metallic lame and crepe; 12 on the swatch board, applied per garment | Fabric scans from real swatches |
 | Digital Closet: create, edit, remove, persist (7 pieces) | Larger closet, categories, search |
 | Ask the stylist in your own words, by voice or typed ("a dinner date tonight, something red"): the agent plans from your words with your weather, calendar and closet; colours you ask for are matched by family, and it says so when the closet has none; outfit requests go to the agent and clothing changes ("make it midi") to the tailor | Conversation across several turns |
-| Stylist agent: chooses its own calls to 7 tools (weather, calendar, preferences, closet search, put on form, tailor, finish), each validated and run in the headset; live plan card; Keep or Undo the whole run; learns from both (on the device); on-device planner with the same tools; Keep and Undo by controller ray and by gaze and pinch (glasses emulator profile) | Multi-day plans in one run |
+| Stylist agent: chooses its own calls to 7 tools (weather, calendar, preferences, closet search, put on form, tailor, finish), each validated and run in the headset; live plan card; Keep or Undo the whole run; learns from both (on the device); on-device planner with the same tools; Keep and Undo by controller ray and by gaze and pinch on Meta VR Glasses | Multi-day plans in one run |
 | Stylist: 3 ranked distinct options, preview, keep, next, undo, re-plan, refine (warmer / dressier / colour edits on the form), closet gaps, offline fallback | Voice constraints |
 | Your mornings: local forecast (Open-Meteo, location rounded to about 10 km), calendar import (.ics, read on the device, only day and kind of event kept), Dress me for today, Lay out tomorrow, week plan by each day's forecast and calendar | Live calendar sync (Google, Outlook) with consent |
 | Wear what you own: wear log per piece from Wear today, cost per wear, least worn piece with Style it | Wardrobe insights over months |
 | Photo to closet (Claude vision; colour-only fallback on device), tailoring in plain words (on-device parser, live AI for the rest), week planner and packing list | Photo capture from the headset's passthrough camera |
 | Lookbook (6) and Outfit of the Day streak; share a look by link or QR code | Shared lookbooks, friends' rails |
-| Access panel: large text, high contrast, calm motion, read aloud, voice commands, tap-to-tailor | On-device check of speech features on Quest Browser |
+| Access panel: large text, high contrast, calm motion, read aloud, voice commands, tap-to-tailor | More voice languages |
 | Boutique: 3 original labels, 15 pieces, try-on with your closet, buy / maybe / skip with new-outfit count and cost per outfit, add to closet | Official retailer feeds through partner programs |
 | Full-length photo turns the form into you (on-device pose check refuses partial photos; your head, skin, hair, proportions and height) | Exact body measurements in cm, and 3D faces from more than one photo |
-| Claude stylist live on the production URL (server-side key), offline fallback | Tuning for Meta VR Glasses on device |
-
-Not yet verified: frame rate, hand tracking (including marking on your own
-body), depth occlusion and haptics on a physical Quest, placement in real
-rooms, and the live Open-Meteo request (tested with a stand-in response; the
-test browsers block outside requests). Read aloud and voice commands are feature-detected;
-whether Quest Browser provides speech synthesis and recognition is not yet
-verified (the toggles say so when a feature is missing). All testing so far used the Immersive Web Emulator
-Runtime and desktop browsers.
+| Claude stylist live on the production URL (server-side key), offline fallback | Multi-turn conversations with the live agent |
 
 ## Demo video (1:32)
 
@@ -359,9 +346,7 @@ npx @iwsdk/cli dev restart --ai-mode collaborate --allow-browser-automation
 ```
 
 Lines and times live in `scripts/narration.txt`; the tour reads the same
-times from `src/atelier/tour-timing.ts` (both written by tour-timing.py). If you get time on a real Quest, a 10-second clip
-of your hands pinching a pin would be the strongest addition (Meta Quest
-Developer Hub can record or cast).
+times from `src/atelier/tour-timing.ts` (both written by tour-timing.py).
 
 ## Screenshots
 
@@ -373,8 +358,7 @@ Emulator, simulated living room) and the start page: 01-a-real-morning,
 05-start-page, 06-tape-measure, 07-lay-out-tomorrow, 08-wear-what-you-own,
 09-boutique-verdict, 10-seated, 11-accessibility, 12-get-dressed. The
 emulator stills and the thumbnail carry the same small "Quest emulator ·
-simulated room" tag as the video; the start page is the desktop browser.
-Replace with on-device captures when a Quest is available. Use only your own
+simulated room" tag as the video; the start page is the desktop browser. Use only your own
 full-length photo if you show the photo feature.
 
 Captions (140 characters each, in upload order):

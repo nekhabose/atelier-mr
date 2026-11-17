@@ -205,7 +205,7 @@ npm test           # unit tests (vitest; also run in CI on every push)
 Regression checks against the emulator (dev server running, XR session entered):
 
 ```sh
-bash scripts/e2e-emulator.sh                         # 42-step hands-free journey
+bash scripts/e2e-emulator.sh                         # 46-step hands-free journey
 npx @iwsdk/cli browser run scripts/check-me-photo.mjs      # needs dev up --allow-browser-automation
 npx @iwsdk/cli browser run scripts/check-pause-resume.mjs  # system menu blur / resume
 npx @iwsdk/cli browser run scripts/check-layout.mjs        # FoV-aware layout decision

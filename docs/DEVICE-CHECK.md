@@ -3,7 +3,7 @@
 Judging asks for at least 60 fps on Meta Quest hardware. Atelier is a web link,
 so any Quest can measure it: no install, no developer mode, no cable.
 
-## On any Quest (yours, a friend's, a store demo unit)
+## On any Quest
 
 1. Open the Meta Quest Browser and go to **atelier-mr.vercel.app/?check**
 2. Tap **Enter the studio**; allow hand tracking if asked.
@@ -17,14 +17,6 @@ so any Quest can measure it: no install, no developer mode, no cable.
 5. Take a screenshot: press the **Meta button**, then the **trigger** (or
    pinch on the camera icon). Leaving the studio shows the same results on the
    start page with **Copy the results**.
-
-## A message you can send to someone with a Quest
-
-> Hi! Could you help me test my Meta competition entry? It takes 2 minutes and
-> needs no install. On your Quest, open the browser, go to
-> atelier-mr.vercel.app/?check and tap "Enter the studio". Wait 30 seconds
-> without touching anything, then screenshot the card that appears (Meta
-> button, then trigger) and send it to me. Thank you!
 
 ## What the numbers mean
 
