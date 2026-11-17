@@ -11,6 +11,6 @@
 54.13|Before bed, I lay out tomorrow's outfit, and in the morning it's waiting for me.
 59.95|It shows me what I never wear, and its cost per wear, and builds a look around it.
 66.01|Before I buy something new, it counts the outfits it would add, and it gives me an honest verdict.
-72.81|And when I sit down, the whole studio comes within reach.
+72.51|And when I sit down, the whole studio comes within reach.
 78.18|Large text, high contrast, calm motion, voice, and tailoring by tap are all built in.
 85.76|Atelier. Get dressed for your real day. Open it in your Quest browser today.
