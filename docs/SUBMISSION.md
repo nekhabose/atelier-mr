@@ -17,7 +17,32 @@ Tagline (124 of 128 characters):
 
 > A fitting room in your own room: pinch your clothes to tailor them, and get dressed for your real weather and your real day.
 
-## Description
+## Description (paste this into Devpost: 494 words)
+
+Devpost suggests 500 words or less. It leads with what only Atelier does;
+the longer version further down is optional reading (README or judges).
+
+**Pinch your own skirt at the knee, and the hem moves there.** Atelier stands a fitting studio in your real room on Meta Quest: a life-size dress form, rail and fabric board, placed around your furniture. You tailor with your hands, not menus, and a stylist agent dresses the form from the clothes you actually own, for your real weather and your real day.
+
+**Inspiration.** Most mornings I reach into a full wardrobe for the same few things. Getting dressed is physical, yet wardrobe apps turn clothes into flat photos in a grid. I wanted a fitting room I could step into at 7:40 on a rainy morning, one that already knows I have an interview at ten.
+
+**What it does.**
+
+- **Tailor on yourself.** Pinch your own hem, wrist or collarbone, and the form's hem, sleeve or neckline moves there, scaled from your height. Or pull a pin while a tape measure reads the length.
+- **A stylist that acts, not chats.** Say "Dress me for today", or ask in your own words: "dinner on Friday, something black". The agent checks your forecast and calendar, recalls what you liked, searches your closet, and dresses and tailors the form, ticking off each step on a card. Keep it, or Undo puts back exactly what you had.
+- **A morning habit.** Lay out tomorrow at night, and it is waiting on the form in the morning. Wear today tracks cost per wear and styles the piece you never wear. Before you buy, the boutique counts the outfits a new piece would add.
+- **For everyone.** Everything works with a pinch, near or far, without a controller. Seated mode brings the studio within reach of your chair; Access adds large text, high contrast, voice and tailoring by tap. A compact layout fits the narrower view of Meta VR Glasses, with gaze and pinch.
+
+**How I built it.** From scratch during the competition, with Meta's Immersive Web SDK (WebXR, Three.js, ECS). The garments, form and 36 fabrics are procedural, so tailoring changes real geometry. Plane and mesh detection keeps the studio off your furniture, a persistent anchor brings it back, and the Quest 3 depth API shows your real hands in front of the form. The stylist is a tool-using Claude agent: it chooses among seven validated tools that act through the same studio actions as your hands. An on-device planner makes the same calls offline, so nothing breaks without the AI service, and your photo, calendar and closet stay on your device. A quality governor protects the frame rate, and 108 unit tests and a 300-action soak test back it.
+
+**What's next.** Testing on Quest 3 and 3S hardware (so far it has run in the Immersive Web Emulator), live calendar sync, photographing garments with the passthrough camera, and a Meta Horizon Store release in February 2027. Try it at atelier-mr.vercel.app in the Quest Browser, or press Watch the tour on a desktop.
+
+## Target launch date (form field)
+
+Live today as a web app at atelier-mr.vercel.app (open it in the Meta Quest
+Browser). Meta Horizon Store release, as a packaged web app, in February 2027.
+
+## Longer description (optional: for the README, or judges who want more)
 
 **Inspiration.** Most mornings I stand in front of a full wardrobe and wear
 the same three things. Getting dressed is a physical decision (how long, how
